@@ -1,0 +1,26 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+---
+<BaseLayout title="About Me" description="Meet Tilana van Tonder and learn about her experience-led approach to movement, everyday strength, and nourishing habits after birth.">
+  <PageHero eyebrow="About me" title="Hi, I'm Tilana." script="This is my story." intro="I know how strange it can feel to find your rhythm again after birth. This space grew from the practical lessons that helped me begin again." />
+  <section class="section"><div class="container story-grid"><div class="photo-placeholder"><span>Add Tilana's relaxed, natural-light portrait here</span></div><div><p class="eyebrow">Why I started</p><h2 class="heading-lg">A more realistic way forward.</h2><div class="copy"><p>Motherhood changed my time, my energy, and the way I related to my body. I learned that progress did not need to look dramatic to matter.</p><p>Simple strength sessions, balanced everyday meals, and smaller promises to myself helped me feel steady again. I created this website to share those lessons with other women who want encouragement without pressure.</p><p>I am sharing lived experience and general education—not presenting myself as a doctor, dietitian, physiotherapist, or postpartum rehabilitation specialist.</p></div></div></div></section>
+  <section class="section values"><div class="container"><p class="eyebrow">What matters here</p><h2 class="heading-lg">Kind, honest, sustainable.</h2><div class="value-grid"><article><span>01</span><h3>Real life first</h3><p>Your plan should fit around your life, not make you feel guilty for having one.</p></article><article><span>02</span><h3>Progress over pressure</h3><p>Small actions repeated gently can build meaningful strength and confidence.</p></article><article><span>03</span><h3>Clear boundaries</h3><p>Health concerns belong with an appropriately qualified healthcare professional.</p></article></div></div></section>
+  <section class="about-cta"><div class="container"><h2 class="heading-lg">See what the program includes.</h2><a class="button button-dark" href="/program">Explore Strong Again</a></div></section>
+</BaseLayout>
+<style>
+  .story-grid { display: grid; align-items: center; gap: clamp(3rem, 8vw, 7rem); grid-template-columns: 0.85fr 1.15fr; }
+  .story-grid .photo-placeholder { min-height: 34rem; }
+  .story-grid h2 { margin-bottom: 1.5rem; }
+  .copy p { margin: 0 0 1.1rem; }
+  .values { background: color-mix(in srgb, var(--sand) 58%, var(--cream)); }
+  .values .heading-lg { margin-bottom: 2.5rem; }
+  .value-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, 1fr); }
+  .value-grid article { padding: 2rem; border-radius: var(--radius-lg); background: var(--cream); }
+  .value-grid span { color: var(--caramel); font-size: 0.7rem; font-weight: 700; }
+  .value-grid h3 { margin: 2.5rem 0 0.7rem; color: var(--ink); font-family: var(--font-heading); font-size: 1.5rem; }
+  .value-grid p { margin: 0; font-size: 0.85rem; }
+  .about-cta { padding-block: 4.5rem; background: var(--terracotta); text-align: center; }
+  .about-cta h2 { margin-bottom: 1.7rem; }
+  @media (max-width: 48rem) { .story-grid, .value-grid { grid-template-columns: 1fr; } .story-grid .photo-placeholder { min-height: 26rem; } }
+</style>

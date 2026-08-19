@@ -1,0 +1,30 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import { programme } from '../data/site';
+---
+<BaseLayout title={programme.name} description={programme.description}>
+  <PageHero eyebrow={programme.eyebrow} title="Build strength for" script="the life you have." intro={programme.description} />
+  <section class="section"><div class="container program-grid"><div class="cover"><span>{programme.duration}</span><strong>{programme.name}</strong><small>Move · nourish · reconnect</small></div><div><p class="eyebrow">Program overview</p><h2 class="heading-lg">A simple eight-week starting point.</h2><p class="lede">Three manageable sessions each week, everyday habit prompts, and practical alternatives for the days when life changes the plan.</p><ul>{programme.includes.map((item) => <li><span>✓</span>{item}</li>)}</ul><a class="button button-primary" href="/pricing">View pricing</a></div></div></section>
+  <section class="section path"><div class="container"><p class="eyebrow">How it works</p><h2 class="heading-lg">Three calm chapters.</h2><div class="phase-grid"><article><span>Weeks 1–2</span><h3>Reconnect</h3><p>Learn the movements, choose comfortable starting points, and create a realistic rhythm.</p></article><article><span>Weeks 3–5</span><h3>Build</h3><p>Add manageable repetitions or resistance while keeping good control and confidence.</p></article><article><span>Weeks 6–8</span><h3>Own it</h3><p>Notice what has changed and prepare a simple plan for what comes next.</p></article></div></div></section>
+  <section class="safety"><div class="container"><strong>Important:</strong> begin only after appropriate medical clearance. Pain, leaking, pelvic pressure, birth complications, or other symptoms should be discussed with your doctor or a registered pelvic-health physiotherapist. This is general fitness education, not rehabilitation.</div></section>
+</BaseLayout>
+<style>
+  .program-grid { display: grid; align-items: center; gap: clamp(3rem, 8vw, 7rem); grid-template-columns: 0.9fr 1.1fr; }
+  .cover { display: flex; min-height: 33rem; flex-direction: column; justify-content: space-between; padding: 2.2rem; border-radius: var(--radius-lg); color: var(--ink); background: var(--terracotta); box-shadow: var(--shadow-md); }
+  .cover span, .cover small { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+  .cover strong { font-family: var(--font-heading); font-size: clamp(3rem, 7vw, 5.5rem); font-weight: 600; line-height: 0.95; }
+  .program-grid h2 { margin-bottom: 1.2rem; }
+  ul { display: grid; gap: 0.8rem; margin: 2rem 0; padding: 0; list-style: none; }
+  li { display: flex; align-items: flex-start; gap: 0.7rem; font-size: 0.88rem; }
+  li span { color: var(--caramel); font-weight: 700; }
+  .path { background: color-mix(in srgb, var(--sand) 58%, var(--cream)); }
+  .path .heading-lg { margin-bottom: 2.5rem; }
+  .phase-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, 1fr); }
+  .phase-grid article { padding: 2rem; border-radius: var(--radius-lg); background: var(--cream); }
+  .phase-grid span { color: var(--caramel); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+  .phase-grid h3 { margin: 3rem 0 0.8rem; color: var(--ink); font-family: var(--font-heading); font-size: 1.7rem; }
+  .phase-grid p { margin: 0; font-size: 0.84rem; }
+  .safety { padding-block: 2rem; color: var(--ink); background: var(--sage); font-size: 0.8rem; line-height: 1.6; }
+  @media (max-width: 48rem) { .program-grid, .phase-grid { grid-template-columns: 1fr; } .cover { min-height: 25rem; } }
+</style>

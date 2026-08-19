@@ -1,0 +1,22 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+export async function getStaticPaths() { const posts = await getCollection('blog', ({ data }) => !data.draft); return posts.map((post) => ({ params: { id: post.id }, props: { post } })); }
+const { post } = Astro.props;
+const { Content } = await render(post);
+---
+<BaseLayout title={post.data.title} description={post.data.description} image={null}>
+  <article><header><div class="container"><a href="/blog">← Back to blog</a><p>{post.data.category} · {post.data.readingTime}</p><h1>{post.data.title}</h1><time datetime={post.data.publishedAt.toISOString()}>{post.data.publishedAt.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}</time></div></header><div class="container article-body"><div class="prose"><Content /></div><aside><strong>Please note</strong><p>This article is general education based on lived experience. It does not diagnose, treat, or replace advice from an appropriately qualified healthcare professional.</p></aside></div></article>
+</BaseLayout>
+<style>
+  header { padding: clamp(4.5rem, 10vw, 8rem) 0; background: color-mix(in srgb, var(--sand) 58%, var(--cream)); }
+  header a { color: var(--caramel); font-size: 0.75rem; font-weight: 650; }
+  header p { margin: 3rem 0 0.8rem; color: var(--caramel); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+  header h1 { max-width: 13ch; margin: 0; color: var(--ink); font-family: var(--font-heading); font-size: clamp(3rem, 7vw, 5.5rem); font-weight: 600; letter-spacing: -0.04em; line-height: 1; }
+  time { display: block; margin-top: 1.5rem; font-size: 0.75rem; }
+  .article-body { display: grid; max-width: 70rem; align-items: start; gap: 4rem; padding-block: var(--section-space); grid-template-columns: 1fr 16rem; }
+  aside { padding: 1.2rem; border-radius: var(--radius-md); background: var(--sage); }
+  aside strong { color: var(--ink); font-size: 0.7rem; text-transform: uppercase; }
+  aside p { margin: 0.5rem 0 0; color: var(--chocolate); font-size: 0.7rem; line-height: 1.6; }
+  @media (max-width: 48rem) { .article-body { grid-template-columns: 1fr; } }
+</style>

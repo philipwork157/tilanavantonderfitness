@@ -1,0 +1,41 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { programme } from '../data/site';
+const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf()).slice(0, 3);
+---
+<BaseLayout>
+  <section class="hero section"><div class="container hero-grid"><div><p class="eyebrow">Realistic strength for motherhood</p><h1 class="display">Move better.<br />Feel stronger.<br /><span class="script">Live healthier.</span></h1><p class="lede">Simple movement, balanced habits, and honest encouragement for women rebuilding confidence after birth—without guilt or quick fixes.</p><div class="actions"><a class="button button-primary" href="/program">Explore the program</a><a class="button button-secondary" href="/about">Meet Tilana</a></div></div><div class="photo-placeholder"><span>Add Tilana's natural-light lifestyle portrait here</span></div></div></section>
+  <section class="section approach"><div class="container"><p class="eyebrow">A gentler approach</p><h2 class="heading-xl">Built for real life.</h2><div class="three-grid"><article class="card"><span class="badge">Move</span><h3 class="heading-md">Everyday strength</h3><p>Beginner-friendly weight training with simple options for home or gym.</p></article><article class="card"><span class="badge">Nourish</span><h3 class="heading-md">Balanced habits</h3><p>General healthy-eating ideas that work around family life and busy weeks.</p></article><article class="card"><span class="badge">Reconnect</span><h3 class="heading-md">Steady confidence</h3><p>Small, repeatable steps that help you feel more at home in your body.</p></article></div></div></section>
+  <section class="section program-preview"><div class="container split"><div class="program-card"><span>{programme.duration}</span><strong>{programme.name}</strong><small>Strength · habits · confidence</small></div><div><p class="eyebrow">The program</p><h2 class="heading-xl">Strong again,<br /><span class="script">your way.</span></h2><p class="lede">{programme.description}</p><a class="button button-dark" href="/program">View the program</a></div></div></section>
+  <section class="section blog-preview"><div class="container"><div class="section-head"><div><p class="eyebrow">From the blog</p><h2 class="heading-lg">Useful, honest notes.</h2></div><a href="/blog">View all posts →</a></div><div class="three-grid">{posts.map((post) => <article class="post-card"><div class="post-art"></div><div><span>{post.data.category}</span><h3>{post.data.title}</h3><p>{post.data.description}</p><a href={`/blog/${post.id}`}>Read article →</a></div></article>)}</div></div></section>
+  <section class="simple-cta"><div class="container"><p class="eyebrow">Start a conversation</p><h2 class="heading-xl">Ready to begin?</h2><a class="button button-dark" href="/contact">Get in touch</a></div></section>
+</BaseLayout>
+<style>
+  .hero { padding-top: clamp(3rem, 7vw, 6rem); }
+  .hero-grid, .split { display: grid; align-items: center; gap: clamp(2.5rem, 7vw, 6rem); grid-template-columns: 1.05fr 0.95fr; }
+  .hero .lede { margin: 1.6rem 0 2rem; }
+  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+  .approach { background: color-mix(in srgb, var(--sand) 60%, var(--cream)); }
+  .approach .heading-xl { margin-bottom: 2.8rem; }
+  .three-grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(3, 1fr); }
+  .card .heading-md { margin: 2rem 0 0.8rem; }
+  .card p { margin: 0; font-size: 0.88rem; }
+  .program-card { display: flex; min-height: 30rem; flex-direction: column; justify-content: space-between; padding: 2.2rem; border-radius: var(--radius-lg); color: var(--ink); background: var(--terracotta); box-shadow: var(--shadow-md); }
+  .program-card span, .program-card small { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+  .program-card strong { font-family: var(--font-heading); font-size: clamp(3rem, 7vw, 5.5rem); font-weight: 600; line-height: 0.95; }
+  .program-preview .lede { margin: 1.4rem 0 2rem; }
+  .blog-preview { background: var(--white); }
+  .section-head { display: flex; align-items: end; justify-content: space-between; gap: 2rem; margin-bottom: 2.5rem; }
+  .section-head > a { color: var(--caramel); font-size: 0.82rem; font-weight: 650; }
+  .post-card { overflow: hidden; border-radius: var(--radius-md); background: var(--cream); box-shadow: var(--shadow-sm); }
+  .post-art { aspect-ratio: 16/9; background: linear-gradient(135deg, var(--sage), color-mix(in srgb, var(--sage) 45%, var(--cream))); }
+  .post-card > div:last-child { padding: 1.3rem; }
+  .post-card span { color: var(--caramel); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+  .post-card h3 { margin: 0.65rem 0; color: var(--ink); font-family: var(--font-heading); font-size: 1.35rem; line-height: 1.25; }
+  .post-card p { margin: 0; font-size: 0.78rem; }
+  .post-card a { display: inline-block; margin-top: 1rem; color: var(--caramel); font-size: 0.75rem; font-weight: 650; }
+  .simple-cta { padding-block: var(--section-space); text-align: center; background: var(--terracotta); }
+  .simple-cta .heading-xl { margin-bottom: 2rem; }
+  @media (max-width: 48rem) { .hero-grid, .split, .three-grid { grid-template-columns: 1fr; } .hero-grid .photo-placeholder { min-height: 23rem; } .program-card { min-height: 24rem; } .section-head { align-items: flex-start; flex-direction: column; } }
+</style>

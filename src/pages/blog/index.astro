@@ -1,0 +1,23 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/PageHero.astro';
+const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
+---
+<BaseLayout title="Blog" description="Practical notes from Tilana van Tonder on everyday strength, balanced habits, and finding your rhythm after birth.">
+  <PageHero eyebrow="The blog" title="Useful notes for" script="real life." intro="Simple, encouraging writing about movement, balanced habits, and beginning again—without miracle claims." />
+  <section class="section"><div class="container post-grid">{posts.map((post, index) => <article><div class:list={['art', `art-${index + 1}`]}></div><div class="copy"><span>{post.data.category} · {post.data.readingTime}</span><h2>{post.data.title}</h2><p>{post.data.description}</p><a href={`/blog/${post.id}`}>Read article →</a></div></article>)}</div></section>
+</BaseLayout>
+<style>
+  .post-grid { display: grid; gap: 1.5rem; grid-template-columns: repeat(3, 1fr); }
+  article { overflow: hidden; border-radius: var(--radius-md); background: color-mix(in srgb, var(--sand) 45%, var(--cream)); box-shadow: var(--shadow-sm); }
+  .art { aspect-ratio: 16/9; background: var(--sage); }
+  .art-2 { background: var(--terracotta); }
+  .art-3 { background: var(--sand); }
+  .copy { padding: 1.4rem; }
+  span { color: var(--caramel); font-size: 0.63rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+  h2 { margin: 0.8rem 0; color: var(--ink); font-family: var(--font-heading); font-size: 1.45rem; line-height: 1.25; }
+  p { margin: 0; font-size: 0.8rem; }
+  a { display: inline-block; margin-top: 1.2rem; color: var(--caramel); font-size: 0.75rem; font-weight: 650; }
+  @media (max-width: 48rem) { .post-grid { grid-template-columns: 1fr; } }
+</style>
