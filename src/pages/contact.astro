@@ -7,6 +7,27 @@ import { site } from '../data/site';
   <PageHero eyebrow="Get in touch" title="Let's find the" script="right fit." intro="Tell me a little about what you're looking for. I'll reply honestly, even if a qualified healthcare professional is the better next step." />
   <section class="section"><div class="container contact-grid" data-reveal><div><p class="eyebrow">Contact details</p><h2 class="heading-lg">A personal reply, without the pressure.</h2><p class="lede">Email is the simplest way to reach me. Please do not send diagnoses, medical records, or other sensitive health information.</p><a class="email" href={`mailto:${site.email}`}>{site.email}</a><div class="note"><strong>Not a clinical service</strong><p>For medical concerns, pain, leaking, pelvic pressure, birth complications, or emergencies, contact an appropriately qualified healthcare professional.</p></div></div><form action={`mailto:${site.email}`} method="post" enctype="text/plain"><label>Full name<input required name="name" autocomplete="name" placeholder="Your name" /></label><label>Email<input required type="email" name="email" autocomplete="email" placeholder="you@example.com" /></label><label>What are you interested in?<span class="select-wrap"><select name="interest"><option>Strong Again</option><option>Guided support</option><option>General question</option></select><span class="select-caret" aria-hidden="true"></span></span></label><label>Message<textarea required name="message" rows="5" placeholder="How can I help?"></textarea></label><label class="consent"><input required type="checkbox" name="consent" /> <span>I agree that these details may be used to respond to my enquiry.</span></label><button class="button button-primary" type="submit">Prepare email</button><small>This opens your email app with the enquiry ready to send.</small></form></div></section>
 </BaseLayout>
+<script>
+  const selectWrap = document.querySelector<HTMLElement>('.select-wrap');
+  const interestSelect = selectWrap?.querySelector<HTMLSelectElement>('select');
+
+  if (selectWrap && interestSelect) {
+    const closeCaret = () => selectWrap.classList.remove('is-open');
+
+    interestSelect.addEventListener('pointerdown', () => {
+      selectWrap.classList.toggle('is-open');
+    });
+    interestSelect.addEventListener('change', closeCaret);
+    interestSelect.addEventListener('blur', closeCaret);
+    interestSelect.addEventListener('keydown', (event) => {
+      if (['Enter', ' ', 'ArrowDown', 'ArrowUp'].includes(event.key)) selectWrap.classList.add('is-open');
+      if (['Escape', 'Tab'].includes(event.key)) closeCaret();
+    });
+    document.addEventListener('pointerdown', (event) => {
+      if (event.target instanceof Node && !selectWrap.contains(event.target)) closeCaret();
+    }, { capture: true });
+  }
+</script>
 <style>
   .contact-grid { display: grid; align-items: start; gap: clamp(3rem, 8vw, 7rem); grid-template-columns: 0.85fr 1.15fr; }
   .contact-grid h2 { margin-bottom: 1.2rem; }
@@ -24,7 +45,7 @@ import { site } from '../data/site';
   .select-wrap { position: relative; display: block; }
   select { appearance: none; padding-right: 3.4rem; cursor: pointer; }
   .select-caret { position: absolute; top: 50%; right: 1.25rem; width: 0.62rem; height: 0.62rem; border-right: 2px solid var(--chocolate); border-bottom: 2px solid var(--chocolate); pointer-events: none; transform: translateY(-70%) rotate(45deg); transition: transform 200ms ease; }
-  .select-wrap:focus-within .select-caret { transform: translateY(-25%) rotate(225deg); }
+  .select-wrap.is-open .select-caret { transform: translateY(-25%) rotate(225deg); }
   .consent { display: flex; align-items: flex-start; gap: 0.6rem; color: var(--chocolate); font-size: 0.68rem; font-weight: 500; }
   .consent input { flex: 0 0 1.1rem; width: 1.1rem; min-height: 1.1rem; height: 1.1rem; margin: 0.12rem 0 0; padding: 0; border-width: 1px; border-radius: 0.25rem; box-shadow: none; accent-color: var(--caramel); transform: none; }
   button { cursor: pointer; }
