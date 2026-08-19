@@ -11,14 +11,17 @@ const currentPath = Astro.url.pathname;
   </div>
 </header>
 <style>
-  .site-header { position: relative; z-index: 30; background: var(--cream); }
+  .site-header { position: sticky; z-index: 30; top: 0; border-bottom: 1px solid rgb(168 126 99 / 12%); background: color-mix(in srgb, var(--cream) 90%, transparent); backdrop-filter: blur(18px); }
   .nav-shell { display: grid; min-height: 5.5rem; align-items: center; gap: 2rem; grid-template-columns: 1fr auto 1fr; }
-  .wordmark { color: var(--caramel); font-family: var(--font-script); font-size: clamp(2rem, 3vw, 2.5rem); line-height: 1; }
+  .wordmark { color: var(--caramel); font-family: var(--font-script); font-size: clamp(2rem, 3vw, 2.5rem); line-height: 1; transition: color 220ms ease, transform 220ms ease; }
+  .wordmark:hover { color: var(--chocolate); transform: translateY(-2px) rotate(-1deg); }
   .desktop-nav { display: flex; align-items: center; gap: 1.6rem; }
-  .desktop-nav a { color: var(--ink); font-size: 0.84rem; font-weight: 550; }
-  .desktop-nav a:hover, .desktop-nav a.active { color: var(--caramel); }
-  .nav-cta { padding: 0.65rem 1.15rem; border-radius: var(--radius-pill); color: var(--ink); background: var(--terracotta); font-size: 0.8rem; font-weight: 650; justify-self: end; transition: background 160ms ease; }
-  .nav-cta:hover { background: var(--caramel); }
+  .desktop-nav a { position: relative; padding-block: 0.7rem; color: var(--ink); font-size: 0.84rem; font-weight: 550; transition: color 220ms ease, transform 220ms ease; }
+  .desktop-nav a::after { position: absolute; right: 0; bottom: 0.38rem; left: 0; height: 2px; border-radius: var(--radius-pill); background: var(--terracotta); content: ''; transform: scaleX(0); transform-origin: right; transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .desktop-nav a:hover, .desktop-nav a.active { color: var(--caramel); transform: translateY(-1px); }
+  .desktop-nav a:hover::after, .desktop-nav a.active::after { transform: scaleX(1); transform-origin: left; }
+  .nav-cta { padding: 0.68rem 1.2rem; border-radius: var(--radius-pill); color: var(--ink); background: var(--terracotta); font-size: 0.8rem; font-weight: 650; box-shadow: 0 8px 20px rgb(97 70 53 / 9%); justify-self: end; transition: background 220ms ease, box-shadow 220ms ease, transform 220ms ease; }
+  .nav-cta:hover { background: var(--caramel); box-shadow: 0 12px 28px rgb(97 70 53 / 20%); transform: translateY(-3px); }
   .mobile-nav { display: none; }
   @media (max-width: 58rem) {
     .nav-shell { display: flex; justify-content: space-between; }
@@ -26,9 +29,13 @@ const currentPath = Astro.url.pathname;
     .mobile-nav { display: block; }
     summary { display: grid; width: 2.75rem; height: 2.75rem; place-content: center; gap: 4px; border: 1px solid var(--sand); border-radius: 50%; cursor: pointer; list-style: none; }
     summary::-webkit-details-marker { display: none; }
-    summary span { width: 1.1rem; height: 1.5px; background: var(--ink); }
-    .mobile-nav nav { position: absolute; top: 5rem; right: var(--page-pad); left: var(--page-pad); display: flex; flex-direction: column; padding: 1rem; border: 1px solid var(--sand); border-radius: var(--radius-md); background: var(--cream); box-shadow: var(--shadow-md); }
+    summary span { width: 1.1rem; height: 1.5px; background: var(--ink); transition: opacity 180ms ease, transform 220ms ease; }
+    .mobile-nav[open] summary span:first-child { transform: translateY(5.5px) rotate(45deg); }
+    .mobile-nav[open] summary span:nth-child(2) { opacity: 0; }
+    .mobile-nav[open] summary span:last-child { transform: translateY(-5.5px) rotate(-45deg); }
+    .mobile-nav nav { position: absolute; top: 5rem; right: var(--page-pad); left: var(--page-pad); display: flex; flex-direction: column; padding: 1rem; border: 1px solid var(--sand); border-radius: var(--radius-md); background: var(--cream); box-shadow: var(--shadow-md); animation: menu-in 240ms cubic-bezier(0.22, 1, 0.36, 1); }
     .mobile-nav nav a { padding: 0.8rem 0.5rem; color: var(--ink); font-weight: 550; }
     .mobile-nav .mobile-cta { margin-top: 0.5rem; border-radius: var(--radius-pill); background: var(--terracotta); text-align: center; }
   }
+  @keyframes menu-in { from { opacity: 0; transform: translateY(-0.6rem) scale(0.98); } }
 </style>

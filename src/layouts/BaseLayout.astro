@@ -60,5 +60,44 @@ const socialImage = image ? new URL(image, Astro.site) : null;
       <slot />
     </main>
     <Footer />
+    <script is:inline>
+      (() => {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+        const selectors = [
+          '[data-reveal]',
+          '.card',
+          '.post-card',
+          '.price-card',
+          '.value-grid article',
+          '.phase-grid article',
+          '.post-grid article',
+          '.program-card',
+          '.cover',
+          'form',
+        ].join(',');
+        const items = [...document.querySelectorAll(selectors)];
+        if (!items.length) return;
+
+        items.forEach((item) => {
+          item.setAttribute('data-reveal', '');
+          const siblings = [...(item.parentElement?.children ?? [])];
+          const siblingIndex = Math.max(0, siblings.indexOf(item));
+          item.style.setProperty('--reveal-delay', `${Math.min(siblingIndex * 80, 240)}ms`);
+          if (item.getBoundingClientRect().top < window.innerHeight * 0.92) item.classList.add('is-visible');
+        });
+
+        document.documentElement.classList.add('motion-ready');
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          });
+        }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+
+        items.filter((item) => !item.classList.contains('is-visible')).forEach((item) => observer.observe(item));
+      })();
+    </script>
   </body>
 </html>

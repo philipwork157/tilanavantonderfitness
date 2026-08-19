@@ -5,7 +5,7 @@ import { site } from '../data/site';
 ---
 <BaseLayout title="Contact" description="Contact Tilana van Tonder about the Strong Again program or a general question.">
   <PageHero eyebrow="Get in touch" title="Let's find the" script="right fit." intro="Tell me a little about what you're looking for. I'll reply honestly, even if a qualified healthcare professional is the better next step." />
-  <section class="section"><div class="container contact-grid"><div><p class="eyebrow">Contact details</p><h2 class="heading-lg">A personal reply, without the pressure.</h2><p class="lede">Email is the simplest way to reach me. Please do not send diagnoses, medical records, or other sensitive health information.</p><a class="email" href={`mailto:${site.email}`}>{site.email}</a><div class="note"><strong>Not a clinical service</strong><p>For medical concerns, pain, leaking, pelvic pressure, birth complications, or emergencies, contact an appropriately qualified healthcare professional.</p></div></div><form action={`mailto:${site.email}`} method="post" enctype="text/plain"><label>Full name<input required name="name" autocomplete="name" placeholder="Your name" /></label><label>Email<input required type="email" name="email" autocomplete="email" placeholder="you@example.com" /></label><label>What are you interested in?<select name="interest"><option>Strong Again</option><option>Guided support</option><option>General question</option></select></label><label>Message<textarea required name="message" rows="5" placeholder="How can I help?" ></textarea></label><label class="consent"><input required type="checkbox" name="consent" /> <span>I agree that these details may be used to respond to my enquiry.</span></label><button class="button button-primary" type="submit">Prepare email</button><small>This opens your email app with the enquiry ready to send.</small></form></div></section>
+  <section class="section"><div class="container contact-grid" data-reveal><div><p class="eyebrow">Contact details</p><h2 class="heading-lg">A personal reply, without the pressure.</h2><p class="lede">Email is the simplest way to reach me. Please do not send diagnoses, medical records, or other sensitive health information.</p><a class="email" href={`mailto:${site.email}`}>{site.email}</a><div class="note"><strong>Not a clinical service</strong><p>For medical concerns, pain, leaking, pelvic pressure, birth complications, or emergencies, contact an appropriately qualified healthcare professional.</p></div></div><form action={`mailto:${site.email}`} method="post" enctype="text/plain"><label>Full name<input required name="name" autocomplete="name" placeholder="Your name" /></label><label>Email<input required type="email" name="email" autocomplete="email" placeholder="you@example.com" /></label><label>What are you interested in?<span class="select-wrap"><select name="interest"><option>Strong Again</option><option>Guided support</option><option>General question</option></select><span class="select-caret" aria-hidden="true"></span></span></label><label>Message<textarea required name="message" rows="5" placeholder="How can I help?"></textarea></label><label class="consent"><input required type="checkbox" name="consent" /> <span>I agree that these details may be used to respond to my enquiry.</span></label><button class="button button-primary" type="submit">Prepare email</button><small>This opens your email app with the enquiry ready to send.</small></form></div></section>
 </BaseLayout>
 <style>
   .contact-grid { display: grid; align-items: start; gap: clamp(3rem, 8vw, 7rem); grid-template-columns: 0.85fr 1.15fr; }
@@ -14,14 +14,21 @@ import { site } from '../data/site';
   .note { margin-top: 2rem; padding: 1.2rem; border-radius: var(--radius-md); background: var(--sage); }
   .note strong { color: var(--ink); font-size: 0.72rem; text-transform: uppercase; }
   .note p { margin: 0.45rem 0 0; font-size: 0.72rem; }
-  form { display: grid; gap: 1rem; padding: clamp(1.5rem, 4vw, 2.3rem); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--sand) 58%, var(--cream)); box-shadow: var(--shadow-sm); }
-  label { display: grid; gap: 0.45rem; color: var(--ink); font-size: 0.74rem; font-weight: 650; }
-  input, select, textarea { width: 100%; padding: 0.85rem 1rem; border: 1px solid var(--sand); border-radius: var(--radius-md); color: var(--chocolate); background: var(--white); outline: none; }
-  input:focus, select:focus, textarea:focus { border-color: var(--caramel); }
-  textarea { resize: vertical; }
+  form { display: grid; gap: 1.15rem; padding: clamp(1.6rem, 4vw, 2.5rem); border: 1px solid rgb(168 126 99 / 18%); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--sand) 66%, var(--cream)); box-shadow: var(--shadow-md); }
+  label { display: grid; gap: 0.5rem; color: var(--ink); font-size: 0.74rem; font-weight: 650; }
+  input, select, textarea { width: 100%; border: 1.5px solid color-mix(in srgb, var(--caramel) 42%, var(--sand)); border-radius: var(--radius-md); color: var(--chocolate); background: var(--white); outline: none; box-shadow: inset 0 1px 0 rgb(255 255 255 / 75%); transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease; }
+  input, select { min-height: 3.45rem; padding: 0.8rem 1.1rem; }
+  textarea { min-height: 10rem; padding: 1rem 1.1rem; line-height: 1.6; resize: vertical; }
+  input::placeholder, textarea::placeholder { color: rgb(97 70 53 / 56%); font-weight: 500; }
+  input:focus, select:focus, textarea:focus { border-color: var(--caramel); box-shadow: 0 0 0 4px rgb(213 162 127 / 20%); transform: translateY(-1px); }
+  .select-wrap { position: relative; display: block; }
+  select { appearance: none; padding-right: 3.4rem; cursor: pointer; }
+  .select-caret { position: absolute; top: 50%; right: 1.25rem; width: 0.62rem; height: 0.62rem; border-right: 2px solid var(--chocolate); border-bottom: 2px solid var(--chocolate); pointer-events: none; transform: translateY(-70%) rotate(45deg); transition: transform 200ms ease; }
+  .select-wrap:focus-within .select-caret { transform: translateY(-25%) rotate(225deg); }
   .consent { display: flex; align-items: flex-start; gap: 0.6rem; color: var(--chocolate); font-size: 0.68rem; font-weight: 500; }
-  .consent input { width: auto; margin-top: 0.25rem; accent-color: var(--caramel); }
+  .consent input { flex: 0 0 1.1rem; width: 1.1rem; min-height: 1.1rem; height: 1.1rem; margin: 0.12rem 0 0; padding: 0; border-width: 1px; border-radius: 0.25rem; box-shadow: none; accent-color: var(--caramel); transform: none; }
   button { cursor: pointer; }
+  form > button { width: 100%; }
   small { text-align: center; }
   @media (max-width: 48rem) { .contact-grid { grid-template-columns: 1fr; } }
 </style>
