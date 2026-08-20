@@ -1,0 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Allura&family=Montserrat:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&display=swap');
+
+:root {
+  color-scheme: light;
+
+  --cream: #f6e4d9;
+  --terracotta: #d5a27f;
+  --caramel: #a87e63;
+  --ink: #0f0e13;
+  --sand: #e0c3ae;
+  --chocolate: #614635;
+  --sage: #c9d2b3;
+  --white: #fff;
+
+  --color-background: var(--cream);
+  --color-surface: var(--white);
+  --color-surface-muted: var(--sand);
+  --color-text: var(--ink);
+  --color-text-muted: var(--chocolate);
+  --color-primary: var(--terracotta);
+  --color-primary-strong: var(--caramel);
+  --color-on-primary: #0f0e13;
+  --color-positive: var(--sage);
+  --color-border: color-mix(in srgb, var(--caramel) 28%, transparent);
+
+  --font-heading: 'Playfair Display', Georgia, serif;
+  --font-body: 'Montserrat', system-ui, sans-serif;
+  --font-script: 'Allura', cursive;
+
+  --container: 1280px;
+  --page-pad: clamp(1.25rem, 5vw, 4rem);
+  --section-space: clamp(4.25rem, 7vw, 6.5rem);
+
+  --radius-sm: 10px;
+  --radius-md: 18px;
+  --radius-lg: 28px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 12px 32px rgb(97 70 53 / 11%);
+  --shadow-md: 0 24px 64px rgb(97 70 53 / 17%);
+  --shadow-hover: 0 28px 70px rgb(97 70 53 / 23%);
+
+  --motion-fast: 180ms;
+  --motion-base: 260ms;
+  --motion-slow: 650ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --cream: #171317;
+  --terracotta: #dda986;
+  --caramel: #c28e70;
+  --ink: #fff7f1;
+  --sand: #3a2b30;
+  --chocolate: #d8c0b2;
+  --sage: #667255;
+  --white: #241c21;
+
+  --color-border: rgb(221 169 134 / 24%);
+  --shadow-sm: 0 12px 32px rgb(0 0 0 / 24%);
+  --shadow-md: 0 24px 64px rgb(0 0 0 / 32%);
+  --shadow-hover: 0 28px 70px rgb(0 0 0 / 40%);
+}

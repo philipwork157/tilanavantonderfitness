@@ -1,0 +1,52 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '@tilana/ui-astro/PageHero.astro';
+---
+<BaseLayout title="About Tilana van Tonder" description="Meet Tilana van Tonder and learn about her inclusive, experience-led approach to finding strength and building healthy habits that last.">
+  <PageHero eyebrow="About me" title="Finding strength." script="Building healthy habits." intro="My own journey includes rebuilding after pregnancy, but this space is for women and men at every stage of life who want to move well, feel stronger, and create habits that last." />
+  <section class="section"><div class="container story-grid"><div class="story-gallery"><div class="story-photo" data-reveal><img src="/tilana-training.jpg" alt="Tilana van Tonder training on a gym mat" width="1400" height="771" loading="lazy" decoding="async" /></div><div class="story-photo" data-reveal><img src="/tilana-strength-training.jpg" alt="Tilana van Tonder strength training with dumbbells" width="1327" height="1185" loading="lazy" decoding="async" /></div></div><div><p class="eyebrow">Why I started</p><h2 class="heading-lg">Strength that fits real life.</h2><div class="copy"><p>Pregnancy and motherhood changed my time, my energy, and the way I related to my body. Rebuilding taught me that progress does not need to look dramatic to be meaningful.</p><p>Those lessons reach far beyond pregnancy. Consistent movement, practical nourishment, and small promises kept over time can help anyone build a stronger, healthier foundation.</p><p>This space is for women returning to movement before or after pregnancy, women who have not experienced pregnancy, and men who want a realistic approach to strength and lasting healthy habits—without pressure, perfection, or quick fixes.</p><p>I am not a qualified coach (yet). What I share comes from years of personal experimentation, learning, and lived experience with strength, movement, nutrition, and healthy routines. It is general information, not medical or clinical advice. Pain, injury, pregnancy-related concerns, nutrition concerns, or other health issues should be discussed with an appropriately qualified doctor, physiotherapist, dietitian, or healthcare professional.</p></div></div></div></section>
+  <section class="section values"><div class="container"><p class="eyebrow">What matters here</p><h2 class="heading-lg">Kind, honest, sustainable.</h2><div class="value-grid"><article><span>01</span><h3>Real life first</h3><p>Your plan should fit around your life, not make you feel guilty for having one.</p></article><article><span>02</span><h3>Progress over pressure</h3><p>Small actions repeated gently can build meaningful strength and confidence.</p></article><article><span>03</span><h3>Clear boundaries</h3><p>Health concerns belong with an appropriately qualified healthcare professional.</p></article></div></div></section>
+  <section class="about-cta"><div class="container"><h2 class="heading-lg">See what the program includes.</h2><a class="button button-dark" href="/program">Explore Strong</a></div></section>
+</BaseLayout>
+<style>
+  .story-grid { display: grid; align-items: center; gap: clamp(3rem, 8vw, 7rem); grid-template-columns: 0.85fr 1.15fr; }
+  .story-gallery { display: grid; gap: 1.25rem; }
+  .story-photo { overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--sand); box-shadow: var(--shadow-md); }
+  .story-photo img {
+    display: block;
+    width: 100%;
+    height: auto;
+    transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .story-photo:hover img { transform: scale(1.035); }
+  :global(.motion-ready) .story-photo[data-reveal] {
+    opacity: 0;
+    transform: translate3d(-2rem, 1.5rem, 0) scale(0.96);
+    transition:
+      opacity 750ms cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms),
+      transform 850ms cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms);
+  }
+  :global(.motion-ready) .story-photo:nth-child(2)[data-reveal] {
+    transform: translate3d(2rem, 1.5rem, 0) scale(0.96);
+  }
+  :global(.motion-ready) .story-photo[data-reveal].is-visible {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  .story-grid h2 { margin-bottom: 1.5rem; }
+  .copy p { margin: 0 0 1.1rem; }
+  .values { background: color-mix(in srgb, var(--sand) 58%, var(--cream)); }
+  .values .heading-lg { margin-bottom: 2.5rem; }
+  .value-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, 1fr); }
+  .value-grid article { padding: 2rem; border-radius: var(--radius-lg); background: var(--cream); }
+  .value-grid span { color: var(--caramel); font-size: 0.7rem; font-weight: 700; }
+  .value-grid h3 { margin: 2.5rem 0 0.7rem; color: var(--ink); font-family: var(--font-heading); font-size: 1.5rem; }
+  .value-grid p { margin: 0; font-size: 0.85rem; }
+  .about-cta { padding-block: 4.5rem; background: var(--terracotta); text-align: center; }
+  .about-cta h2 { margin-bottom: 1.7rem; color: var(--color-on-primary); }
+  @media (max-width: 48rem) { .story-grid, .value-grid { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) {
+    .story-photo img { transition: none; }
+    .story-photo:hover img { transform: none; }
+  }
+</style>

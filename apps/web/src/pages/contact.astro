@@ -1,0 +1,85 @@
+---
+import ContactForm from '../components/ContactForm.astro';
+import PageHero from '@tilana/ui-astro/PageHero.astro';
+import { site } from '../data/site';
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Contact"
+  description="Contact Tilana van Tonder about Strong, Move, Nourish, Reconnect, or one-on-one training and find the right fit for your goals."
+>
+  <PageHero
+    eyebrow="Get in touch"
+    title="Let's find the"
+    script="right fit."
+    intro="Tell me a little about what you're looking for. I'll reply honestly, even if a qualified healthcare professional is the better next step."
+  />
+
+  <section class="section">
+    <div class="container contact-grid" data-reveal>
+      <div>
+        <p class="eyebrow">Contact details</p>
+        <h2 class="heading-lg">A personal reply, without the pressure.</h2>
+        <p class="lede">
+          Email is the simplest way to reach me. Please do not send diagnoses, medical records, or
+          other sensitive health information.
+        </p>
+        <a class="email" href={`mailto:${site.email}`}>{site.email}</a>
+        <div class="note">
+          <strong>Not a clinical service</strong>
+          <p>
+            For medical concerns, pain, leaking, pelvic pressure, birth complications, or
+            emergencies, contact an appropriately qualified healthcare professional.
+          </p>
+        </div>
+      </div>
+
+      <ContactForm email={site.email} />
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .contact-grid {
+    display: grid;
+    align-items: start;
+    gap: clamp(3rem, 8vw, 7rem);
+    grid-template-columns: 0.85fr 1.15fr;
+  }
+
+  .contact-grid h2 {
+    margin-bottom: 1.2rem;
+  }
+
+  .email {
+    display: inline-block;
+    margin-top: 0.8rem;
+    color: var(--caramel);
+    font-weight: 650;
+  }
+
+  .note {
+    margin-top: 2rem;
+    padding: 1.2rem;
+    border-radius: var(--radius-md);
+    background: var(--sage);
+  }
+
+  .note strong {
+    color: var(--ink);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+  }
+
+  .note p {
+    margin: 0.45rem 0 0;
+    font-size: 0.72rem;
+  }
+
+  @media (max-width: 48rem) {
+    .contact-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://tilanavantonder.co.za/sitemap-index.xml

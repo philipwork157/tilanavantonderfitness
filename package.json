@@ -1,21 +1,25 @@
 {
-  "name": "tilana-van-tonder-fitness",
-  "type": "module",
+  "name": "tilana-platform",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "astro dev",
-    "start": "astro dev",
-    "build": "astro check && astro build && node scripts/prepare-sites.mjs",
-    "preview": "astro preview",
-    "check": "astro check"
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=22.22.3"
   },
-  "dependencies": {
-    "@astrojs/sitemap": "latest",
-    "astro": "latest"
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:stop": "node scripts/dev.mjs --stop",
+    "dev:web": "turbo run dev --filter=@tilana/web",
+    "dev:admin": "turbo run dev --filter=@tilana/admin",
+    "build": "turbo run build && node scripts/prepare-site-dist.mjs",
+    "build:web": "turbo run build --filter=@tilana/web",
+    "build:admin": "turbo run build --filter=@tilana/admin",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "check": "turbo run lint typecheck",
+    "site:build": "pnpm --filter @tilana/web build && node scripts/prepare-site-dist.mjs"
   },
   "devDependencies": {
-    "@astrojs/check": "latest",
-    "typescript": "^6.0.0"
+    "turbo": "latest"
   }
 }

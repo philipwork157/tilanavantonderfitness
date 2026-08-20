@@ -1,4 +1,10 @@
+autoInstallPeers: false
+packages:
+  - apps/*
+  - packages/*
 allowBuilds:
   esbuild: true
+  unrs-resolver: true
+  vue-demi: true
 onlyBuiltDependencies:
   - esbuild

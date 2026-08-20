@@ -1,0 +1,52 @@
+@import '@tilana/design-system/styles.css';
+@import 'tailwindcss';
+@import '@nuxt/ui';
+
+@theme static {
+  --font-sans: 'Montserrat', system-ui, sans-serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
+
+  --color-brand-50: #fff8f3;
+  --color-brand-100: #fbeee5;
+  --color-brand-200: #f4d9c7;
+  --color-brand-300: #e8bfa2;
+  --color-brand-400: #dda986;
+  --color-brand-500: #d5a27f;
+  --color-brand-600: #bd8663;
+  --color-brand-700: #9e6b4d;
+  --color-brand-800: #805640;
+  --color-brand-900: #684838;
+  --color-brand-950: #38231b;
+}
+
+:root {
+  --ui-radius: 1rem;
+  --ui-container: 80rem;
+  --ui-bg: var(--cream);
+  --ui-bg-muted: color-mix(in srgb, var(--sand) 54%, var(--cream));
+  --ui-bg-elevated: var(--white);
+  --ui-bg-accented: var(--sand);
+  --ui-border: var(--color-border);
+  --ui-text: var(--ink);
+  --ui-text-muted: var(--chocolate);
+  --ui-text-dimmed: color-mix(in srgb, var(--chocolate) 68%, transparent);
+}
+
+html,
+body,
+#__nuxt {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--chocolate);
+  background: var(--cream);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  color: var(--ink);
+  background: var(--terracotta);
+}

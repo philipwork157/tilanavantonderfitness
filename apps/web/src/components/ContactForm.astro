@@ -1,0 +1,337 @@
+---
+interface Props {
+  email: string;
+}
+
+const { email } = Astro.props;
+
+const interestOptions = [
+  { value: 'program', label: 'Strong' },
+  { value: 'move', label: 'Move' },
+  { value: 'nourish', label: 'Nourish' },
+  { value: 'reconnect', label: 'Reconnect' },
+  { value: 'one-on-one', label: 'One-on-one training' },
+  { value: 'general', label: 'General question' },
+] as const;
+---
+
+<form class="contact-form" action={`mailto:${email}`} method="post" enctype="text/plain">
+  <label>
+    Full name
+    <input required name="name" autocomplete="name" placeholder="Your name" />
+  </label>
+  <label>
+    Email
+    <input
+      required
+      type="email"
+      name="email"
+      autocomplete="email"
+      placeholder="you@example.com"
+    />
+  </label>
+  <div class="field">
+    <span id="interest-label">What are you interested in?</span>
+    <div class="select-wrap" data-interest-select>
+      <input type="hidden" name="interest" value="program" />
+      <button
+        class="select-trigger"
+        type="button"
+        aria-labelledby="interest-label interest-value"
+        aria-haspopup="listbox"
+        aria-expanded="false"
+        aria-controls="interest-options"
+      >
+        <span id="interest-value" data-select-value>Strong</span>
+        <span class="select-caret" aria-hidden="true"></span>
+      </button>
+      <div id="interest-options" class="select-options" role="listbox" aria-labelledby="interest-label" hidden>
+        {interestOptions.map((option, index) => (
+          <button
+            class="select-option"
+            type="button"
+            role="option"
+            aria-selected={index === 0 ? 'true' : 'false'}
+            data-value={option.value}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+  <label>
+    Message
+    <textarea required name="message" rows="5" placeholder="How can I help?"></textarea>
+  </label>
+  <label class="consent">
+    <input required type="checkbox" name="consent" />
+    <span>I agree that these details may be used to respond to my enquiry.</span>
+  </label>
+  <button class="button button-primary" type="submit">Prepare email</button>
+  <small>This opens your email app with the enquiry ready to send.</small>
+</form>
+
+<script>
+  const selectWrap = document.querySelector<HTMLElement>('[data-interest-select]');
+  const selectTrigger = selectWrap?.querySelector<HTMLButtonElement>('.select-trigger');
+  const selectMenu = selectWrap?.querySelector<HTMLElement>('.select-options');
+  const selectInput = selectWrap?.querySelector<HTMLInputElement>('input[name="interest"]');
+  const selectValue = selectWrap?.querySelector<HTMLElement>('[data-select-value]');
+  const selectOptions = [...(selectWrap?.querySelectorAll<HTMLButtonElement>('.select-option') ?? [])];
+
+  if (selectWrap && selectTrigger && selectMenu && selectInput && selectValue) {
+    const requestedInterest = new URLSearchParams(window.location.search).get('interest');
+
+    const setOpen = (isOpen: boolean) => {
+      selectWrap.classList.toggle('is-open', isOpen);
+      selectTrigger.setAttribute('aria-expanded', String(isOpen));
+      selectMenu.hidden = !isOpen;
+    };
+
+    const setSelected = (option: HTMLButtonElement) => {
+      selectInput.value = option.dataset.value ?? '';
+      selectValue.textContent = option.textContent?.trim() ?? '';
+      selectOptions.forEach((item) => item.setAttribute('aria-selected', String(item === option)));
+    };
+
+    const requestedOption = selectOptions.find((option) => option.dataset.value === requestedInterest);
+    if (requestedOption) setSelected(requestedOption);
+
+    selectTrigger.addEventListener('click', () => setOpen(selectMenu.hasAttribute('hidden')));
+    selectTrigger.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+        return;
+      }
+
+      if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
+      event.preventDefault();
+      setOpen(true);
+      const selectedIndex = Math.max(0, selectOptions.findIndex((option) => option.getAttribute('aria-selected') === 'true'));
+      const focusIndex = event.key === 'ArrowUp' ? Math.max(0, selectedIndex) : selectedIndex;
+      selectOptions[focusIndex]?.focus();
+    });
+
+    selectOptions.forEach((option, index) => {
+      option.addEventListener('click', () => {
+        setSelected(option);
+        setOpen(false);
+        selectTrigger.focus();
+      });
+
+      option.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          setOpen(false);
+          selectTrigger.focus();
+          return;
+        }
+
+        if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const nextIndex = event.key === 'Home'
+          ? 0
+          : event.key === 'End'
+            ? selectOptions.length - 1
+            : (index + (event.key === 'ArrowDown' ? 1 : -1) + selectOptions.length) % selectOptions.length;
+        selectOptions[nextIndex]?.focus();
+      });
+    });
+
+    document.addEventListener('pointerdown', (event) => {
+      if (event.target instanceof Node && !selectWrap.contains(event.target)) setOpen(false);
+    });
+
+    selectWrap.addEventListener('focusout', (event) => {
+      if (!(event.relatedTarget instanceof Node) || !selectWrap.contains(event.relatedTarget)) setOpen(false);
+    });
+  }
+</script>
+
+<style>
+  .contact-form {
+    display: grid;
+    gap: 1.15rem;
+    padding: clamp(1.6rem, 4vw, 2.5rem);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--sand) 66%, var(--cream));
+    box-shadow: var(--shadow-md);
+  }
+
+  label,
+  .field {
+    display: grid;
+    gap: 0.5rem;
+    color: var(--ink);
+    font-size: 0.74rem;
+    font-weight: 650;
+  }
+
+  input,
+  textarea,
+  .select-trigger {
+    width: 100%;
+    border: 1.5px solid color-mix(in srgb, var(--caramel) 42%, var(--sand));
+    border-radius: var(--radius-md);
+    color: var(--chocolate);
+    background: var(--white);
+    outline: none;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 75%);
+    transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+  }
+
+  input,
+  .select-trigger {
+    min-height: 3.45rem;
+    padding: 0.8rem 1.1rem;
+  }
+
+  textarea {
+    min-height: 10rem;
+    padding: 1rem 1.1rem;
+    line-height: 1.6;
+    resize: vertical;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: color-mix(in srgb, var(--chocolate) 56%, transparent);
+    font-weight: 500;
+  }
+
+  input:focus,
+  textarea:focus,
+  .select-trigger:focus {
+    border-color: var(--caramel);
+    box-shadow: 0 0 0 4px rgb(213 162 127 / 20%);
+    transform: translateY(-1px);
+  }
+
+  .select-wrap {
+    position: relative;
+    display: block;
+  }
+
+  .select-trigger {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-right: 3.4rem;
+    font: inherit;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .select-caret {
+    position: absolute;
+    top: 50%;
+    right: 1.25rem;
+    width: 0.62rem;
+    height: 0.62rem;
+    border-right: 2px solid var(--chocolate);
+    border-bottom: 2px solid var(--chocolate);
+    pointer-events: none;
+    transform: translateY(-70%) rotate(45deg);
+    transition: transform 200ms ease;
+  }
+
+  .select-wrap.is-open .select-caret {
+    transform: translateY(-25%) rotate(225deg);
+  }
+
+  .select-options {
+    position: absolute;
+    z-index: 5;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    left: 0;
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.45rem;
+    border: 1px solid color-mix(in srgb, var(--caramel) 42%, var(--sand));
+    border-radius: var(--radius-md);
+    background: var(--white);
+    box-shadow: var(--shadow-md);
+    max-height: min(21rem, 52svh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .select-options[hidden] {
+    display: none;
+  }
+
+  .select-option {
+    width: 100%;
+    padding: 0.75rem 0.85rem;
+    border: 0;
+    border-radius: calc(var(--radius-md) - 0.45rem);
+    color: var(--chocolate);
+    background: transparent;
+    font: inherit;
+    font-weight: 550;
+    text-align: left;
+    cursor: pointer;
+    transition: color 180ms ease, background-color 180ms ease, transform 180ms ease;
+  }
+
+  .select-option:hover,
+  .select-option:focus-visible,
+  .select-option[aria-selected='true'] {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--sage) 70%, var(--white));
+  }
+
+  .select-option:hover,
+  .select-option:focus-visible {
+    transform: translateX(0.2rem);
+  }
+
+  .consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    color: var(--chocolate);
+    font-size: 0.68rem;
+    font-weight: 500;
+  }
+
+  .consent input {
+    flex: 0 0 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+    min-height: 1.1rem;
+    margin: 0.12rem 0 0;
+    padding: 0;
+    border-width: 1px;
+    border-radius: 0.25rem;
+    box-shadow: none;
+    accent-color: var(--caramel);
+    transform: none;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  .contact-form > button {
+    width: 100%;
+  }
+
+  small {
+    text-align: center;
+  }
+
+  @media (max-width: 48rem) {
+    input,
+    textarea,
+    .select-trigger,
+    .select-option {
+      font-size: 1rem;
+    }
+  }
+</style>

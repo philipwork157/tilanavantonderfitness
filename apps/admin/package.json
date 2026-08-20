@@ -1,0 +1,27 @@
+{
+  "name": "@tilana/admin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "NUXT_TELEMETRY_DISABLED=1 nuxt dev --host 127.0.0.1 --port 3001",
+    "build": "nuxt build",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "pnpm lint --fix",
+    "typecheck": "nuxt typecheck",
+    "prepare": "nuxt prepare",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@tilana/design-system": "workspace:*",
+    "@tilana/ui-nuxt": "workspace:*",
+    "nuxt": "latest"
+  },
+  "devDependencies": {
+    "@iconify-json/lucide": "latest",
+    "@nuxt/eslint": "latest",
+    "eslint": "^10.8.1",
+    "typescript": "^6.0.0",
+    "vue-tsc": "latest"
+  }
+}

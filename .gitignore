@@ -1,8 +1,50 @@
+# Dependencies and package-manager state
 node_modules/
 .pnpm-store/
+
+# Astro, Nuxt, Nitro, and Turborepo output
 dist/
 .astro/
-.DS_Store
+.nuxt/
+.output/
+.nitro/
+.turbo/
+
+# Tool caches and generated type state
+.cache/
+.vite/
+.eslintcache
+*.tsbuildinfo
+
+# Test and coverage output
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Local logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local environment and Cloudflare secrets
 .env
 .env.*
 !.env.example
+!.env.*.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.wrangler/
+
+# Generated local deliverables and scratch files
+/output/
+/tmp/
+
+# Operating-system and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

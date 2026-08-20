@@ -1,0 +1,32 @@
+{
+  "name": "@tilana/web",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev --host 127.0.0.1 --port 4321",
+    "start": "ASTRO_TELEMETRY_DISABLED=1 astro dev --host 127.0.0.1 --port 4321",
+    "build": "pnpm typecheck && astro build && node scripts/prepare-sites.mjs",
+    "preview": "astro preview",
+    "lint": "eslint \"src/**/*.{astro,js,ts}\" \"scripts/**/*.mjs\" \"worker/**/*.js\" \"*.{js,mjs,ts}\" --max-warnings 0",
+    "lint:fix": "pnpm lint --fix",
+    "typecheck": "astro check",
+    "check": "pnpm lint && pnpm typecheck"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "latest",
+    "@tilana/design-system": "workspace:*",
+    "@tilana/ui-astro": "workspace:*",
+    "astro": "latest"
+  },
+  "devDependencies": {
+    "@astrojs/check": "latest",
+    "@eslint/js": "^10.0.1",
+    "@typescript-eslint/parser": "^8.67.0",
+    "eslint": "^10.8.1",
+    "eslint-plugin-astro": "^3.1.0",
+    "globals": "^17.11.0",
+    "typescript": "^6.0.0",
+    "typescript-eslint": "^8.67.0"
+  }
+}
