@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1787257212741,
+      "tag": "20260820202012_misty_mister_sinister",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787257243942,
+      "tag": "20260820202043_closed_katie_power",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787345068517,
+      "tag": "20260821204428_nostalgic_liz_osborn",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1787346459553,
+      "tag": "20260821210739_profiles_auth_user_fk",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787378005249,
+      "tag": "20260822055325_solid_spectrum",
+      "breakpoints": true
+    }
+  ]
+}

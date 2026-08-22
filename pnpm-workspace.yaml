@@ -8,3 +8,5 @@ allowBuilds:
   vue-demi: true
 onlyBuiltDependencies:
   - esbuild
+overrides:
+  satteri: 0.10.3

@@ -1,0 +1,33 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const confirmed = Astro.url.searchParams.get('status') === 'success';
+---
+
+<BaseLayout
+  title={confirmed ? 'Subscription confirmed' : 'Confirmation link expired'}
+  description="Manage your Tilana van Tonder newsletter subscription."
+  showNewsletter={false}
+  robots="noindex, nofollow"
+>
+  <section class="result-section">
+    <div class="container">
+      <article>
+        <span class="result-mark" aria-hidden="true">{confirmed ? '✓' : '↻'}</span>
+        <p class="eyebrow">Newsletter</p>
+        <h1 class="heading-lg">{confirmed ? 'You’re on the list.' : 'That link is no longer valid.'}</h1>
+        <p>{confirmed
+          ? 'Thank you for confirming. Thoughtful training guidance and programme updates will arrive occasionally.'
+          : 'Confirmation links expire after 48 hours. Please return to the website and subscribe again to receive a new link.'}</p>
+        <a class="button button-primary" href="/">Return home</a>
+      </article>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .result-section { display: grid; min-height: 62vh; place-items: center; padding-block: var(--section-space); background: color-mix(in srgb, var(--cream) 82%, var(--sage)); }
+  article { max-width: 42rem; margin-inline: auto; padding: clamp(2rem, 6vw, 4rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-md); text-align: center; }
+  .result-mark { display: grid; width: 4rem; height: 4rem; margin: 0 auto 1.5rem; place-items: center; border-radius: 50%; color: var(--ink); background: var(--sage); font-size: 1.8rem; }
+  article > p:not(.eyebrow) { max-width: 34rem; margin: 1.2rem auto 2rem; color: var(--chocolate); }
+</style>

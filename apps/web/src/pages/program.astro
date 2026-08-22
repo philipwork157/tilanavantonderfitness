@@ -1,45 +1,50 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PageHero from '@tilana/ui-astro/PageHero.astro';
+import { formatZar, programmeCatalogByKey } from '@tilana/contracts/programs';
 import { programme } from '../data/site';
 
 const supportingPrograms = [
   {
-    name: 'Move',
+    name: programmeCatalogByKey['move-volume-1'].name,
+    volume: `Volume ${programmeCatalogByKey['move-volume-1'].volumeNumber}`,
     title: 'Build a strong foundation.',
     description: 'Beginner-friendly strength education for women and men who want to learn sound movement patterns, build confidence, and create a base for safer progress at home or in the gym.',
     includes: ['Foundational movement patterns', 'Form cues and controlled progressions', 'Home and gym exercise options'],
     interest: 'move',
-    price: 'R400',
+    price: formatZar(programmeCatalogByKey['move-volume-1'].suggestedPriceCents),
   },
   {
-    name: 'Nourish',
+    name: programmeCatalogByKey['nourish-volume-1'].name,
+    volume: `Volume ${programmeCatalogByKey['nourish-volume-1'].volumeNumber}`,
     title: 'Understand what fuels you.',
     description: 'A practical educational system for exploring macro- and micronutrients and learning how to build satisfying everyday meals without restriction, guilt, or food-as-reward thinking.',
     includes: ['Macro- and micronutrient education', 'Practical meal-building principles', 'Flexible habits without rigid rules'],
     interest: 'nourish',
-    price: 'R400',
+    price: formatZar(programmeCatalogByKey['nourish-volume-1'].suggestedPriceCents),
   },
   {
-    name: 'Reconnect',
+    name: programmeCatalogByKey['reconnect-volume-1'].name,
+    volume: `Volume ${programmeCatalogByKey['reconnect-volume-1'].volumeNumber}`,
     title: 'Reconnect with your pelvic floor.',
     description: 'General pelvic-floor awareness and gentle strengthening education for before, during, and after pregnancy, with clear guidance on when to seek support from a qualified pelvic-health professional.',
     includes: ['Pelvic-floor awareness', 'Gentle foundational strengthening', 'Clear professional-care boundaries'],
     interest: 'reconnect',
-    price: 'R400',
+    price: formatZar(programmeCatalogByKey['reconnect-volume-1'].suggestedPriceCents),
   },
 ] as const;
 ---
 <BaseLayout title="Programs & Pricing" description="Explore four experience-led programs from Tilana van Tonder for foundational movement, practical nutrition, pelvic-floor awareness, and advanced strength.">
   <PageHero eyebrow="Programs for real life" title="Four ways to build" script="lasting strength." intro="Choose the area that meets you where you are—from foundational movement, nourishment, and pelvic-floor connection to a focused advanced strength block." />
-  <section class="section advanced-program"><div class="container program-grid"><div class="cover"><span>{programme.duration}</span><strong>{programme.name}</strong><small>Advanced · progressive · focused</small></div><div><p class="eyebrow">Program overview</p><h2 class="heading-lg">A focused eight-week strength block.</h2><p class="lede">Four structured sessions each week, clear progression targets, and practical exercise alternatives for women and men with an established training base.</p><ul>{programme.includes.map((item) => <li><span>✓</span>{item}</li>)}</ul><div class="program-price"><span>Once-off</span><strong>R{programme.price}</strong></div><a class="button button-primary" href="/contact?interest=program">Ask about Strong</a></div></div><div class="container training-blocks"><p class="eyebrow">Training blocks</p><h2 class="heading-lg">Three focused phases.</h2><div class="phase-grid"><article><span>Weeks 1–2</span><h3>Establish</h3><p>Refine technique, confirm suitable starting loads, and establish performance baselines.</p></article><article><span>Weeks 3–5</span><h3>Progress</h3><p>Build training volume or resistance through clear targets and controlled execution.</p></article><article><span>Weeks 6–8</span><h3>Perform</h3><p>Consolidate your progress, complete final benchmarks, and plan the next training block.</p></article></div></div></section>
-  <section class="section collection"><div class="container"><p class="eyebrow">More ways to begin</p><h2 class="heading-lg">Move. Nourish. Reconnect.</h2><p class="lede collection-intro">Three focused programs for building knowledge, confidence, and healthy foundations at your own pace.</p><div class="offering-grid">{supportingPrograms.map((program) => <article class:list={['card', 'offering-card', `offering-${program.interest}`]}><span class="badge">{program.name}</span><h3 class="heading-md">{program.title}</h3><p>{program.description}</p><ul>{program.includes.map((item) => <li><span>✓</span>{item}</li>)}</ul><div class="program-price"><span>Pricing</span><strong>{program.price}</strong></div><a class="button button-secondary" href={`/contact?interest=${program.interest}`}>Ask about {program.name}</a></article>)}</div></div></section>
+  <section class="section advanced-program"><div class="container program-grid"><div class="cover"><div class="cover-meta"><span>{programme.duration}</span><span>{programme.volume}</span></div><strong>{programme.name}</strong><small>Advanced · progressive · focused</small></div><div><p class="eyebrow">Program overview · {programme.volume}</p><h2 class="heading-lg">A focused eight-week strength block.</h2><p class="lede">Four structured sessions each week, clear progression targets, and practical exercise alternatives for women and men with an established training base.</p><ul>{programme.includes.map((item) => <li><span>✓</span>{item}</li>)}</ul><div class="program-price"><span>Once-off</span><strong>R{programme.price}</strong></div><a class="button button-primary" href="/contact?interest=program">Ask about Strong · {programme.volume}</a></div></div><div class="container training-blocks"><p class="eyebrow">Training blocks</p><h2 class="heading-lg">Three focused phases.</h2><div class="phase-grid"><article><span>Weeks 1–2</span><h3>Establish</h3><p>Refine technique, confirm suitable starting loads, and establish performance baselines.</p></article><article><span>Weeks 3–5</span><h3>Progress</h3><p>Build training volume or resistance through clear targets and controlled execution.</p></article><article><span>Weeks 6–8</span><h3>Perform</h3><p>Consolidate your progress, complete final benchmarks, and plan the next training block.</p></article></div></div></section>
+  <section class="section collection"><div class="container"><p class="eyebrow">More ways to begin</p><h2 class="heading-lg">Move. Nourish. Reconnect.</h2><p class="lede collection-intro">Three focused programs for building knowledge, confidence, and healthy foundations at your own pace.</p><div class="offering-grid">{supportingPrograms.map((program) => <article class:list={['card', 'offering-card', `offering-${program.interest}`]}><span class="badge">{program.name} · {program.volume}</span><h3 class="heading-md">{program.title}</h3><p>{program.description}</p><ul>{program.includes.map((item) => <li><span>✓</span>{item}</li>)}</ul><div class="program-price"><span>Pricing</span><strong>{program.price}</strong></div><a class="button button-secondary" href={`/contact?interest=${program.interest}`}>Ask about {program.name} · {program.volume}</a></article>)}</div></div></section>
   <section class="safety"><div class="container"><strong>Important:</strong> All programs provide general education based on personal experience and are not a substitute for medical, physiotherapy, dietetic, or other qualified professional care. Seek appropriate clearance before beginning, particularly during pregnancy, after birth, or when managing an injury or health condition. Stop and consult an appropriately qualified healthcare professional if movement causes pain, dizziness, unusual shortness of breath, pelvic-floor symptoms, or other concerns. Strong is designed for experienced exercisers and is not a beginner program.</div></section>
 </BaseLayout>
 <style>
   .program-grid { display: grid; align-items: center; gap: clamp(3rem, 8vw, 7rem); grid-template-columns: 0.9fr 1.1fr; }
   .cover { display: flex; min-height: 33rem; flex-direction: column; justify-content: space-between; padding: 2.2rem; border-radius: var(--radius-lg); color: var(--color-on-primary); background: var(--terracotta); box-shadow: var(--shadow-md); }
   .cover span, .cover small { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+  .cover-meta { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
   .cover strong { font-family: var(--font-heading); font-size: clamp(3rem, 7vw, 5.5rem); font-weight: 600; line-height: 0.95; }
   .program-grid h2 { margin-bottom: 1.2rem; }
   ul { display: grid; gap: 0.8rem; margin: 2rem 0; padding: 0; list-style: none; }

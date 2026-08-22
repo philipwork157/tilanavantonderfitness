@@ -13,8 +13,13 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "@tilana/design-system": "workspace:*",
+    "@supabase/ssr": "^0.12.4",
+    "@supabase/supabase-js": "^2.112.3",
+    "@tilana/contracts": "workspace:*",
+    "@tilana/db": "workspace:*",
+    "@tilana/email": "workspace:*",
     "@tilana/ui-nuxt": "workspace:*",
+    "drizzle-orm": "^0.45.2",
     "nuxt": "latest"
   },
   "devDependencies": {

@@ -17,6 +17,10 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "check": "turbo run lint typecheck",
+    "db:generate": "pnpm --filter @tilana/db db:generate",
+    "db:migrate": "pnpm --filter @tilana/db db:migrate",
+    "db:apply": "pnpm --filter @tilana/db db:apply",
+    "db:check": "pnpm --filter @tilana/db db:check",
     "site:build": "pnpm --filter @tilana/web build && node scripts/prepare-site-dist.mjs"
   },
   "devDependencies": {

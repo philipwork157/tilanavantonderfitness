@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@astrojs/sitemap": "latest",
+    "@tilana/contracts": "workspace:*",
     "@tilana/design-system": "workspace:*",
     "@tilana/ui-astro": "workspace:*",
     "astro": "latest"

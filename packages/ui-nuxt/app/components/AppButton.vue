@@ -3,12 +3,14 @@ interface Props {
   label?: string;
   type?: 'button' | 'submit';
   block?: boolean;
+  loading?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
   label: undefined,
   type: 'button',
   block: false,
+  loading: false,
 });
 </script>
 
@@ -18,6 +20,7 @@ withDefaults(defineProps<Props>(), {
     color="primary"
     size="xl"
     trailing-icon="i-lucide-arrow-right"
+    :loading="loading"
     :class="['app-button', { 'w-full justify-center': block }]"
   >
     <slot>{{ label }}</slot>

@@ -1,17 +1,29 @@
 <script setup lang="ts">
 const email = ref('');
 const password = ref('');
-const rememberMe = ref(true);
 const showPassword = ref(false);
 const formMessage = ref('');
+const submitting = ref(false);
+const adminUser = useAdminUser();
 
-definePageMeta({
-  colorMode: 'dark',
-});
+async function handleSubmit() {
+  formMessage.value = '';
+  submitting.value = true;
 
-const handleSubmit = () => {
-  formMessage.value = 'The login screen is ready. Secure authentication will be connected next.';
-};
+  try {
+    const session = await $fetch('/api/auth/login', {
+      method: 'POST',
+      body: { email: email.value, password: password.value },
+    });
+    adminUser.value = session.user;
+    await navigateTo('/dashboard');
+  } catch (error) {
+    const response = error as { data?: { statusMessage?: string; message?: string } };
+    formMessage.value = response.data?.statusMessage || response.data?.message || 'Sign in failed. Please try again.';
+  } finally {
+    submitting.value = false;
+  }
+}
 
 useSeoMeta({
   title: 'Sign in | Tilana Admin',
@@ -86,17 +98,13 @@ useSeoMeta({
             </UInput>
           </UFormField>
 
-          <div class="form-options">
-            <UCheckbox v-model="rememberMe" label="Remember me" />
-          </div>
-
-          <AppButton label="Sign in" type="submit" block />
+          <AppButton label="Sign in" type="submit" :loading="submitting" block />
 
           <UAlert
             v-if="formMessage"
-            color="primary"
+            color="error"
             variant="soft"
-            icon="i-lucide-info"
+            icon="i-lucide-circle-alert"
             :description="formMessage"
           />
         </form>

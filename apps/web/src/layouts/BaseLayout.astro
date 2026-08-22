@@ -1,6 +1,8 @@
 ---
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import WhatsAppLink from '../components/WhatsAppLink.astro';
+import NewsletterSignup from '../components/NewsletterSignup.astro';
 import '../styles/global.css';
 import { site } from '../data/site';
 
@@ -12,6 +14,8 @@ interface Props {
   pageType?: 'website' | 'article';
   publishedAt?: Date;
   structuredData?: Record<string, unknown> | Record<string, unknown>[];
+  showNewsletter?: boolean;
+  robots?: string;
 }
 
 const {
@@ -22,10 +26,13 @@ const {
   pageType = 'website',
   publishedAt,
   structuredData,
+  showNewsletter = true,
+  robots = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
 } = Astro.props;
 const pageTitle = title === site.name ? title : `${title} | ${site.name}`;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const socialImage = image ? new URL(image, Astro.site) : null;
+const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 const websiteId = new URL('/#website', Astro.site).href;
 const personId = new URL('/#person', Astro.site).href;
 const pageId = `${canonical.href}#webpage`;
@@ -93,7 +100,7 @@ const schema = {
     <meta name="generator" content={Astro.generator} />
     <meta name="author" content={site.name} />
     <meta name="description" content={description} />
-    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="robots" content={robots} />
     <meta name="theme-color" content="#F6E4D9" />
     <link rel="canonical" href={canonical} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -125,7 +132,12 @@ const schema = {
     <main id="main">
       <slot />
     </main>
+    {showNewsletter && <NewsletterSignup />}
     <Footer />
+    <WhatsAppLink />
+    {turnstileSiteKey && (
+      <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    )}
     <script is:inline>
       (() => {
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;

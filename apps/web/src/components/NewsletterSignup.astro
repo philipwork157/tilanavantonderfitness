@@ -1,0 +1,123 @@
+---
+const newsletterApiUrl =
+  import.meta.env.PUBLIC_NEWSLETTER_API_URL ?? 'http://127.0.0.1:3001/api/newsletter/subscribe';
+const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
+---
+
+<section class="newsletter" aria-labelledby="newsletter-title">
+  <div class="container newsletter-inner">
+    <div class="newsletter-copy">
+      <p class="eyebrow">A thoughtful note, occasionally</p>
+      <h2 id="newsletter-title">Stronger, <span class="script">one step at a time.</span></h2>
+      <p>Practical training guidance, programme updates, and realistic healthy habits—sent without the noise.</p>
+    </div>
+
+    <form data-newsletter-form data-api-url={newsletterApiUrl} novalidate>
+      <div class="honeypot" aria-hidden="true">
+        <label>Leave this field empty <input name="website" tabindex="-1" autocomplete="off" /></label>
+      </div>
+      <div class="email-row" data-field="email">
+        <label class="visually-hidden" for="newsletter-email">Email address</label>
+        <input id="newsletter-email" type="email" name="email" autocomplete="email" maxlength="254" placeholder="Your email address" aria-describedby="newsletter-email-error" />
+        <button type="submit"><span>Join the newsletter</span><span aria-hidden="true">→</span></button>
+      </div>
+      <p id="newsletter-email-error" class="field-error" data-error-for="email" aria-live="polite"></p>
+      <label class="consent" data-field="consent">
+        <input type="checkbox" name="consent" aria-describedby="newsletter-consent-error" />
+        <span>I agree to receive occasional emails from Tilana. I can unsubscribe at any time. <a href="/privacy">Privacy policy</a>.</span>
+      </label>
+      <p id="newsletter-consent-error" class="field-error" data-error-for="consent" aria-live="polite"></p>
+      {turnstileSiteKey && (
+        <div class="security" data-field="turnstileToken">
+          <div class="cf-turnstile" data-sitekey={turnstileSiteKey} data-action="newsletter" data-theme="auto"></div>
+          <p class="field-error" data-error-for="turnstileToken" aria-live="polite"></p>
+        </div>
+      )}
+      <p class="form-status" data-newsletter-status role="status" aria-live="polite"></p>
+    </form>
+  </div>
+</section>
+
+<script>
+  import { newsletterSubscribeRequestSchema, newsletterValidationMessages, type NewsletterFormField } from '@tilana/contracts/newsletter';
+
+  const form = document.querySelector<HTMLFormElement>('[data-newsletter-form]');
+  const status = form?.querySelector<HTMLElement>('[data-newsletter-status]');
+  const button = form?.querySelector<HTMLButtonElement>('button[type="submit"]');
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!form || !status || !button) return;
+
+    const data = new FormData(form);
+    const payload = {
+      email: data.get('email'),
+      consent: data.get('consent') === 'on',
+      source: 'website-footer',
+      website: data.get('website'),
+      turnstileToken: String(data.get('cf-turnstile-response') ?? ''),
+    };
+    form.querySelectorAll<HTMLElement>('[data-error-for]').forEach((item) => { item.textContent = ''; });
+    form.querySelectorAll<HTMLElement>('[aria-invalid="true"]').forEach((item) => item.removeAttribute('aria-invalid'));
+
+    const parsed = newsletterSubscribeRequestSchema.safeParse(payload);
+    const missingTurnstile = Boolean(form.querySelector('.cf-turnstile')) && !payload.turnstileToken;
+    if (!parsed.success || missingTurnstile) {
+      const fields = new Set<NewsletterFormField>();
+      parsed.error?.issues.forEach((issue) => fields.add(issue.path[0] as NewsletterFormField));
+      if (missingTurnstile) fields.add('turnstileToken');
+      fields.forEach((field) => {
+        const error = form.querySelector<HTMLElement>(`[data-error-for="${field}"]`);
+        const control = form.elements.namedItem(field);
+        if (error) error.textContent = newsletterValidationMessages[field];
+        if (control instanceof HTMLElement) control.setAttribute('aria-invalid', 'true');
+      });
+      return;
+    }
+
+    button.disabled = true;
+    status.textContent = 'Joining…';
+    try {
+      const response = await fetch(form.dataset.apiUrl ?? '', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parsed.data),
+      });
+      if (!response.ok) throw new Error('Subscription failed');
+      form.reset();
+      status.textContent = 'Check your inbox to confirm your subscription.';
+      status.classList.add('is-success');
+    } catch {
+      status.textContent = 'We could not start your subscription. Please try again shortly.';
+      status.classList.remove('is-success');
+    } finally {
+      button.disabled = false;
+      const turnstile = (window as Window & { turnstile?: { reset: () => void } }).turnstile;
+      turnstile?.reset();
+    }
+  });
+</script>
+
+<style>
+  .newsletter { padding-block: clamp(3.5rem, 6vw, 5rem); border-top: 1px solid var(--color-border); background: color-mix(in srgb, var(--sage) 72%, var(--cream)); }
+  .newsletter-inner { display: grid; align-items: center; gap: clamp(2rem, 6vw, 5rem); grid-template-columns: minmax(0, 0.9fr) minmax(20rem, 1.1fr); }
+  .newsletter-copy h2 { max-width: 34rem; margin: 0; color: var(--ink); font-family: var(--font-heading); font-size: clamp(2rem, 4vw, 3.4rem); line-height: 1.08; }
+  .newsletter-copy > p:last-child { max-width: 36rem; margin: 1rem 0 0; color: var(--chocolate); }
+  form { position: relative; padding: clamp(1.25rem, 3vw, 1.8rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--white) 82%, var(--cream)); box-shadow: var(--shadow-sm); }
+  .email-row { display: flex; gap: 0.65rem; }
+  input[type='email'] { width: 100%; min-width: 0; min-height: 3.25rem; padding: 0.8rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-pill); color: var(--ink); background: var(--white); }
+  input[type='email']:focus { border-color: var(--caramel); outline: 2px solid color-mix(in srgb, var(--caramel) 24%, transparent); }
+  button { display: inline-flex; min-height: 3.25rem; flex: 0 0 auto; align-items: center; gap: 0.55rem; padding: 0.8rem 1.25rem; border: 0; border-radius: var(--radius-pill); color: var(--color-on-primary); background: var(--terracotta); font-weight: 700; cursor: pointer; transition: background-color var(--motion-fast) ease, transform var(--motion-fast) ease; }
+  button:hover { background: var(--caramel); transform: translateY(-2px); }
+  button:disabled { cursor: wait; opacity: 0.65; transform: none; }
+  .consent { display: flex; align-items: flex-start; gap: 0.65rem; margin-top: 1rem; color: var(--chocolate); font-size: 0.72rem; line-height: 1.55; }
+  .consent input { margin-top: 0.2rem; accent-color: var(--caramel); }
+  .consent a { font-weight: 700; text-decoration: underline; text-underline-offset: 0.15em; }
+  .field-error, .form-status { min-height: 1.2rem; margin: 0.35rem 0 0; color: #a23a32; font-size: 0.7rem; }
+  .form-status.is-success { color: var(--chocolate); font-weight: 650; }
+  .security { margin-top: 0.8rem; }
+  .honeypot, .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  @media (max-width: 52rem) { .newsletter-inner { grid-template-columns: 1fr; } }
+  @media (max-width: 34rem) { .email-row { flex-direction: column; } button { justify-content: center; width: 100%; } }
+  @media (prefers-reduced-motion: reduce) { button { transition: none; } }
+</style>

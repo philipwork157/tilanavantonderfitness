@@ -3,8 +3,38 @@ export default defineNuxtConfig({
   modules: ['@nuxt/eslint'],
   compatibilityDate: '2026-08-19',
   telemetry: false,
+  runtimeConfig: {
+    databaseUrl: '',
+    supabaseUrl: '',
+    supabasePublishableKey: '',
+    supabaseServiceRoleKey: '',
+    contactAllowedOrigins:
+      'http://127.0.0.1:4321,http://localhost:4321,https://tilanavantonder.co.za,https://www.tilanavantonder.co.za',
+    turnstileSecretKey: '',
+    contactIpHashSecret: '',
+    contactTurnstileRequired: process.env.NODE_ENV === 'production',
+    awsSesRegion: process.env.AWS_REGION ?? '',
+    emailFromAddress: '',
+    emailFromName: 'Tilana van Tonder website',
+    contactNotificationEnabled: false,
+    contactNotificationTo: 'tilanavantonder@gmail.com',
+    newsletterFromEmail: '',
+    newsletterDevelopmentRecipient: 'tilanavantonder@gmail.com',
+    newsletterApiBaseUrl: 'http://127.0.0.1:3001',
+    newsletterSiteUrl: 'http://127.0.0.1:4321',
+  },
   devtools: {
     enabled: false,
+  },
+  colorMode: {
+    preference: 'light',
+    fallback: 'light',
+  },
+  routeRules: {
+    '/dashboard/**': { headers: { 'cache-control': 'private, no-store' } },
+    '/contacts/**': { headers: { 'cache-control': 'private, no-store' } },
+    '/api/auth/**': { headers: { 'cache-control': 'private, no-store' } },
+    '/api/admin/**': { headers: { 'cache-control': 'private, no-store' } },
   },
   app: {
     head: {
