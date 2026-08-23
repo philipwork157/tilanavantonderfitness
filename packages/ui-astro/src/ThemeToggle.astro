@@ -15,7 +15,6 @@
     const storageKey = 'tilana-theme';
     const root = document.documentElement;
     const buttons = [...document.querySelectorAll('[data-theme-toggle]')];
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
     const getStoredTheme = () => {
       try {
@@ -61,13 +60,9 @@
         button.classList.add('is-switching');
       });
 
-      if (document.startViewTransition && !reducedMotion.matches) {
-        root.classList.add('theme-changing');
-        const transition = document.startViewTransition(() => applyTheme(theme));
-        transition.finished.finally(() => root.classList.remove('theme-changing'));
-        return;
-      }
-
+      // Always use the gentle CSS colour cross-fade. The View Transitions API
+      // snapshots the whole page and plays a full-viewport wipe, which reads as
+      // a page "refresh"/flash on mobile, so we skip it here.
       root.classList.add('theme-fallback');
       applyTheme(theme);
       window.setTimeout(() => root.classList.remove('theme-fallback'), 450);

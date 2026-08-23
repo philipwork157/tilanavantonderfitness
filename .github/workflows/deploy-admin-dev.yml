@@ -1,0 +1,63 @@
+name: Deploy admin (dev)
+
+# Auto-deploys the Nuxt admin backend to Fly.io (app: tilanavantonder-admin-dev)
+# on every push to `dev` that touches the admin or shared packages. Can also be
+# run manually. Fly builds the Docker image on its remote builders (--remote-only),
+# so the runner only needs flyctl.
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - "apps/admin/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "package.json"
+      - "Dockerfile"
+      - "fly.toml"
+      - ".github/workflows/deploy-admin-dev.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-admin-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy admin (dev)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup flyctl
+        # SHA-pinned to the node24 master commit (the tagged 1.5 release still
+        # targets the deprecated node20). A third-party action with a deploy
+        # token in scope is a supply-chain risk, so we pin the exact commit.
+        uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # master 2026-07, node24
+
+      - name: Deploy to Fly.io
+        run: flyctl deploy --config fly.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Summary (success)
+        if: success()
+        run: |
+          {
+            echo "## Deploy Results"
+            echo "| App | Result |"
+            echo "|-----|--------|"
+            echo "| Admin (dev) | Deployed successfully |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Summary (failure)
+        if: failure()
+        run: |
+          {
+            echo "## Deploy Results"
+            echo "| App | Result |"
+            echo "|-----|--------|"
+            echo "| Admin (dev) | Deploy failed |"
+          } >> "$GITHUB_STEP_SUMMARY"
