@@ -1,0 +1,32 @@
+# VCS / tooling
+.git
+.gitignore
+.github
+*.md
+.DS_Store
+
+# dependencies & package-manager state (reinstalled in the image)
+node_modules
+**/node_modules
+.pnpm-store
+
+# build outputs & caches (rebuilt in the image)
+**/.output
+**/.nuxt
+**/.nitro
+**/dist
+**/.astro
+**/.turbo
+**/.cache
+**/.vite
+*.tsbuildinfo
+
+# local env & scratch
+**/.env
+**/.env.*
+!**/.env.example
+.dev.vars
+.dev.vars.*
+.wrangler
+/output
+/tmp

@@ -46,7 +46,7 @@ const defaultInterestOption = contactInterestOptions[0];
     <div class="form-field field" data-field="interest">
       <span id="interest-label">What are you interested in?</span>
       <div class="select-wrap" data-interest-select>
-        <input type="hidden" name="interest" value="strong" />
+        <input type="hidden" name="interest" value={defaultInterestOption.value} />
         <button
           class="select-trigger"
           type="button"

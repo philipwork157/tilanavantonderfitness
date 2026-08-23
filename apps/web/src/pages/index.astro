@@ -1,16 +1,15 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { programme } from '../data/site';
+import { marketingPrograms } from '../data/programs';
 ---
 <BaseLayout title="Strength, Movement & Healthy Habits">
   <section class="hero"><div class="container hero-grid"><div class="hero-copy"><p class="eyebrow">Realistic strength for every body</p><h1 class="display"><span class="hero-line">Move better.</span><span class="hero-line">Feel stronger.</span><span class="hero-line script">Live healthier.</span></h1><p class="lede">Whether you are a woman or a man, lasting strength is built through purposeful movement and maintainable systems that work in real life. There is no perfection to chase and no quick fix to sell—only practical habits, steady progress, and a lifelong investment in moving well, feeling capable, and living with greater confidence.</p><div class="actions"><a class="button button-primary" href="/program">Explore the program</a><a class="button button-secondary" href="/about">Meet Tilana</a></div></div><div class="hero-visual"><img src="/tilana-home.jpg" alt="Tilana van Tonder smiling with her arms crossed" width="1023" height="1261" loading="eager" decoding="async" fetchpriority="high" /></div></div></section>
-  <section class="section approach"><div class="container" data-reveal><p class="eyebrow">A gentler approach</p><h2 class="heading-xl">Built for real life.</h2><div class="approach-grid"><article class="card card-move"><span class="badge">Move · Volume 1</span><h3 class="heading-md">Everyday strength</h3><p>Beginner-friendly strength training that helps you learn sound form, build a solid foundation, and progress safely at home or in the gym.</p></article><article class="card card-nourish"><span class="badge">Nourish · Volume 1</span><h3 class="heading-md">Nutrition that makes sense</h3><p>A practical educational system for understanding macro- and micronutrients and building satisfying meals that meet your needs—without restriction, guilt, or using food as a reward.</p></article><article class="card card-reconnect"><span class="badge">Reconnect · Volume 1</span><h3 class="heading-md">Pelvic-floor connection</h3><p>Educational pelvic-floor awareness and gentle strengthening for before, during, and after pregnancy—supporting confidence and a gradual return to movement, with clinical concerns referred to a pelvic-health professional.</p></article></div></div></section>
-  <section class="section program-preview"><div class="container split" data-reveal><div class="program-card"><span>{programme.duration} · {programme.volume}</span><strong>{programme.name}</strong><small>Advanced · progressive · focused</small></div><div><p class="eyebrow">Advanced strength program · {programme.volume}</p><h2 class="heading-xl">Strong,<br /><span class="script">your way.</span></h2><p class="lede">{programme.description}</p><a class="button button-dark" href="/program">View the program</a></div></div></section>
+  <section class="section approach"><div class="container" data-reveal><p class="eyebrow">Programs for real life</p><h2 class="heading-xl">Choose your next step.</h2><div class="approach-grid">{marketingPrograms.map((program) => <article class:list={['card', 'program-tile', `card-${program.accent}`]}><div class="tile-top"><span class="badge">{program.label}</span>{program.status && <span class="status">{program.status}</span>}</div><h3 class="heading-md">{program.name}</h3><h4>{program.title}</h4><p>{program.description}</p></article>)}</div><a class="button button-dark approach-cta" href="/program">Explore all programs</a></div></section>
   <section class="simple-cta"><div class="container" data-reveal><h2 class="heading-xl">Want to train one-on-one?</h2><p class="cta-copy">Please contact me to discuss private training.</p><a class="button button-dark" href="/contact?interest=one-on-one">Get in touch</a></div></section>
 </BaseLayout>
 <style>
   .hero { display: grid; min-height: calc(100svh - 5.5rem); align-items: center; overflow: hidden; padding-block: clamp(2rem, 5vh, 4.5rem); }
-  .hero-grid, .split { display: grid; align-items: center; gap: clamp(2.5rem, 5vw, 5rem); grid-template-columns: minmax(0, 1.08fr) minmax(19rem, 0.92fr); }
+  .hero-grid { display: grid; align-items: center; gap: clamp(2.5rem, 5vw, 5rem); grid-template-columns: minmax(0, 1.08fr) minmax(19rem, 0.92fr); }
   .hero-copy { max-width: 41rem; }
   .hero .display { font-size: clamp(3.7rem, 5.8vw, 5.75rem); }
   .hero-line { display: block; white-space: nowrap; }
@@ -27,19 +26,30 @@ import { programme } from '../data/site';
   .approach-grid {
     display: grid;
     gap: 1.25rem;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    max-width: 60rem;
+    grid-auto-flow: column;
+    grid-template-columns: repeat(5, minmax(13.5rem, 1fr));
     margin-inline: auto;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    padding: 0.4rem 0 1.2rem;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
   }
+  .program-tile { min-height: 31rem; scroll-snap-align: start; }
+  .tile-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+  .status { padding: 0.4rem 0.55rem; border-radius: 999px; color: var(--ink); background: var(--cream); font-size: 0.58rem; font-weight: 750; letter-spacing: 0.07em; text-transform: uppercase; }
   .card .heading-md { margin: 2rem 0 0.8rem; }
+  /* Keep program names on one line: no mid-word breaking, sized to fit the card. */
+  .program-tile .heading-md { overflow-wrap: normal; word-break: keep-all; hyphens: none; font-size: 1.25rem; line-height: 1.25; }
+  .card h4 { min-height: 3rem; margin: 0 0 0.85rem; color: var(--caramel); font-size: 0.78rem; line-height: 1.45; }
   .card p { margin: 0; font-size: 0.88rem; }
-  .card-move { --card-accent: var(--terracotta); }
-  .card-nourish { --card-accent: var(--sage); }
+  .card-beginner { --card-accent: var(--terracotta); }
+  .card-intermediate { --card-accent: var(--sage); }
+  .card-advanced { --card-accent: var(--caramel); }
   .card-reconnect { --card-accent: var(--caramel); }
-  .program-card { display: flex; min-height: 30rem; flex-direction: column; justify-content: space-between; padding: 2.2rem; border-radius: var(--radius-lg); color: var(--color-on-primary); background: var(--terracotta); box-shadow: var(--shadow-md); }
-  .program-card span, .program-card small { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
-  .program-card strong { font-family: var(--font-heading); font-size: clamp(3rem, 7vw, 5.5rem); font-weight: 600; line-height: 0.95; }
-  .program-preview .lede { margin: 1.4rem 0 2rem; }
+  .card-nourish { --card-accent: var(--sage); }
+  .approach-cta { display: flex; width: fit-content; margin: 2rem auto 0; }
   .simple-cta { padding-block: var(--section-space); text-align: center; background: var(--terracotta); }
   .simple-cta :is(.heading-xl, .cta-copy) { color: var(--color-on-primary); }
   .simple-cta .heading-xl { margin-bottom: 0.75rem; }
@@ -47,29 +57,16 @@ import { programme } from '../data/site';
   @keyframes hero-in { from { opacity: 0; transform: translateY(1.8rem); } }
   @keyframes visual-in { from { opacity: 0; transform: translateX(2rem) scale(0.96); } }
   @media (max-width: 68rem) {
-    .approach-grid {
-      grid-auto-columns: minmax(18rem, 42vw);
-      grid-auto-flow: column;
-      grid-template-columns: none;
-      overflow-x: auto;
-      overscroll-behavior-inline: contain;
-      padding: 0.25rem 0 1rem;
-      scroll-snap-type: x proximity;
-      scrollbar-width: thin;
-      -webkit-overflow-scrolling: touch;
-    }
-    .approach-grid .card { scroll-snap-align: start; }
+    .approach-grid { grid-auto-columns: minmax(18rem, 42vw); grid-template-columns: none; }
   }
   @media (max-width: 48rem) {
     .hero { min-height: auto; padding-block: 3.5rem 4.5rem; }
-    .hero-grid, .split { grid-template-columns: 1fr; }
+    .hero-grid { grid-template-columns: 1fr; }
     .approach-grid { grid-auto-columns: minmax(17rem, 84vw); }
     .hero-line { white-space: normal; }
-    .program-card { min-height: 24rem; }
   }
   @media (max-width: 30rem) {
     .actions .button { width: 100%; }
     .hero-visual { width: 100%; }
-    .program-card { min-height: 20rem; padding: 1.6rem; }
   }
 </style>

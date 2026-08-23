@@ -1,0 +1,63 @@
+name: Deploy web (prod)
+
+# PRODUCTION deploys are manual only. Trigger from the Actions tab:
+# Actions -> "Deploy web (prod)" -> Run workflow. Choose the branch/tag to
+# deploy from (use `main`), then type `deploy` in the confirmation box.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy" to confirm a production release'
+        required: true
+        default: ""
+
+# Only one prod deploy at a time; do NOT cancel an in-progress release.
+concurrency:
+  group: deploy-web-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ inputs.confirm == 'deploy' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    env:
+      # Public, build-time values. Set these as repository Variables (Settings
+      # -> Secrets and variables -> Actions -> Variables). Use the *_PROD values.
+      PUBLIC_CONTACT_API_URL: ${{ vars.PUBLIC_CONTACT_API_URL_PROD }}
+      PUBLIC_NEWSLETTER_API_URL: ${{ vars.PUBLIC_NEWSLETTER_API_URL_PROD }}
+      PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY_PROD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web
+        run: pnpm build:web
+
+      - name: Deploy to Cloudflare Pages (prod)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          packageManager: pnpm
+          # Deploys to the prod project's production deployment. If your prod
+          # Pages project's "production branch" is not `main`, change --branch.
+          command: >-
+            pages deploy apps/web/dist/client
+            --project-name=tilanavantonder-website-prod
+            --branch=main

@@ -2,77 +2,68 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PageHero from '@tilana/ui-astro/PageHero.astro';
 import { formatZar, programmeCatalogByKey } from '@tilana/contracts/programs';
-import { programme } from '../data/site';
+import { marketingPrograms } from '../data/programs';
 
-const supportingPrograms = [
-  {
-    name: programmeCatalogByKey['move-volume-1'].name,
-    volume: `Volume ${programmeCatalogByKey['move-volume-1'].volumeNumber}`,
-    title: 'Build a strong foundation.',
-    description: 'Beginner-friendly strength education for women and men who want to learn sound movement patterns, build confidence, and create a base for safer progress at home or in the gym.',
-    includes: ['Foundational movement patterns', 'Form cues and controlled progressions', 'Home and gym exercise options'],
-    interest: 'move',
-    price: formatZar(programmeCatalogByKey['move-volume-1'].suggestedPriceCents),
-  },
-  {
-    name: programmeCatalogByKey['nourish-volume-1'].name,
-    volume: `Volume ${programmeCatalogByKey['nourish-volume-1'].volumeNumber}`,
-    title: 'Understand what fuels you.',
-    description: 'A practical educational system for exploring macro- and micronutrients and learning how to build satisfying everyday meals without restriction, guilt, or food-as-reward thinking.',
-    includes: ['Macro- and micronutrient education', 'Practical meal-building principles', 'Flexible habits without rigid rules'],
-    interest: 'nourish',
-    price: formatZar(programmeCatalogByKey['nourish-volume-1'].suggestedPriceCents),
-  },
-  {
-    name: programmeCatalogByKey['reconnect-volume-1'].name,
-    volume: `Volume ${programmeCatalogByKey['reconnect-volume-1'].volumeNumber}`,
-    title: 'Reconnect with your pelvic floor.',
-    description: 'General pelvic-floor awareness and gentle strengthening education for before, during, and after pregnancy, with clear guidance on when to seek support from a qualified pelvic-health professional.',
-    includes: ['Pelvic-floor awareness', 'Gentle foundational strengthening', 'Clear professional-care boundaries'],
-    interest: 'reconnect',
-    price: formatZar(programmeCatalogByKey['reconnect-volume-1'].suggestedPriceCents),
-  },
-] as const;
+const programs = marketingPrograms.map((program) => ({
+  ...program,
+  price:
+    program.catalogueKey && !program.status
+      ? formatZar(programmeCatalogByKey[program.catalogueKey].suggestedPriceCents)
+      : null,
+}));
 ---
-<BaseLayout title="Programs & Pricing" description="Explore four experience-led programs from Tilana van Tonder for foundational movement, practical nutrition, pelvic-floor awareness, and advanced strength.">
-  <PageHero eyebrow="Programs for real life" title="Four ways to build" script="lasting strength." intro="Choose the area that meets you where you are—from foundational movement, nourishment, and pelvic-floor connection to a focused advanced strength block." />
-  <section class="section advanced-program"><div class="container program-grid"><div class="cover"><div class="cover-meta"><span>{programme.duration}</span><span>{programme.volume}</span></div><strong>{programme.name}</strong><small>Advanced · progressive · focused</small></div><div><p class="eyebrow">Program overview · {programme.volume}</p><h2 class="heading-lg">A focused eight-week strength block.</h2><p class="lede">Four structured sessions each week, clear progression targets, and practical exercise alternatives for women and men with an established training base.</p><ul>{programme.includes.map((item) => <li><span>✓</span>{item}</li>)}</ul><div class="program-price"><span>Once-off</span><strong>R{programme.price}</strong></div><a class="button button-primary" href="/contact?interest=program">Ask about Strong · {programme.volume}</a></div></div><div class="container training-blocks"><p class="eyebrow">Training blocks</p><h2 class="heading-lg">Three focused phases.</h2><div class="phase-grid"><article><span>Weeks 1–2</span><h3>Establish</h3><p>Refine technique, confirm suitable starting loads, and establish performance baselines.</p></article><article><span>Weeks 3–5</span><h3>Progress</h3><p>Build training volume or resistance through clear targets and controlled execution.</p></article><article><span>Weeks 6–8</span><h3>Perform</h3><p>Consolidate your progress, complete final benchmarks, and plan the next training block.</p></article></div></div></section>
-  <section class="section collection"><div class="container"><p class="eyebrow">More ways to begin</p><h2 class="heading-lg">Move. Nourish. Reconnect.</h2><p class="lede collection-intro">Three focused programs for building knowledge, confidence, and healthy foundations at your own pace.</p><div class="offering-grid">{supportingPrograms.map((program) => <article class:list={['card', 'offering-card', `offering-${program.interest}`]}><span class="badge">{program.name} · {program.volume}</span><h3 class="heading-md">{program.title}</h3><p>{program.description}</p><ul>{program.includes.map((item) => <li><span>✓</span>{item}</li>)}</ul><div class="program-price"><span>Pricing</span><strong>{program.price}</strong></div><a class="button button-secondary" href={`/contact?interest=${program.interest}`}>Ask about {program.name} · {program.volume}</a></article>)}</div></div></section>
-  <section class="safety"><div class="container"><strong>Important:</strong> All programs provide general education based on personal experience and are not a substitute for medical, physiotherapy, dietetic, or other qualified professional care. Seek appropriate clearance before beginning, particularly during pregnancy, after birth, or when managing an injury or health condition. Stop and consult an appropriately qualified healthcare professional if movement causes pain, dizziness, unusual shortness of breath, pelvic-floor symptoms, or other concerns. Strong is designed for experienced exercisers and is not a beginner program.</div></section>
+
+<BaseLayout title="Programs & Pricing" description="Explore Beginner, Reconnect and Nourish programs from Tilana van Tonder, with Intermediate and Advanced strength programs coming soon.">
+  <PageHero eyebrow="Programs for real life" title="Find your" script="next step." intro="Start where you are and choose the support that suits you—from foundational movement and nourishment to pelvic-floor connection and progressive strength." />
+  <section class="section program-collection">
+    <div class="container">
+      <div class="program-grid">
+        {programs.map((program) => (
+          <article class:list={['card', 'program-tile', `program-${program.accent}`]}>
+            <div class="tile-top">
+              <span class="badge">{program.label}</span>
+              {'status' in program && <span class="status">{program.status}</span>}
+            </div>
+            <div class="program-copy">
+              <p class="program-level">{program.name}</p>
+              <h2>{program.title}</h2>
+              <p>{program.description}</p>
+            </div>
+            {program.price && program.interest && (
+              <div class="program-footer">
+                <div class="program-price"><span>Once-off</span><strong>{program.price}</strong></div>
+                <a class="button button-secondary" href={`/contact?interest=${program.interest}`}>Ask about {program.name}</a>
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+  <section class="safety"><div class="container"><strong>Important:</strong> All programs provide general education based on personal experience and are not a substitute for medical, physiotherapy, dietetic, or other qualified professional care. Seek appropriate clearance before beginning, particularly during pregnancy, after birth, or when managing an injury or health condition. Stop and consult an appropriately qualified healthcare professional if movement causes pain, dizziness, unusual shortness of breath, pelvic-floor symptoms, or other concerns.</div></section>
 </BaseLayout>
+
 <style>
-  .program-grid { display: grid; align-items: center; gap: clamp(3rem, 8vw, 7rem); grid-template-columns: 0.9fr 1.1fr; }
-  .cover { display: flex; min-height: 33rem; flex-direction: column; justify-content: space-between; padding: 2.2rem; border-radius: var(--radius-lg); color: var(--color-on-primary); background: var(--terracotta); box-shadow: var(--shadow-md); }
-  .cover span, .cover small { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
-  .cover-meta { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-  .cover strong { font-family: var(--font-heading); font-size: clamp(3rem, 7vw, 5.5rem); font-weight: 600; line-height: 0.95; }
-  .program-grid h2 { margin-bottom: 1.2rem; }
-  ul { display: grid; gap: 0.8rem; margin: 2rem 0; padding: 0; list-style: none; }
-  li { display: flex; align-items: flex-start; gap: 0.7rem; font-size: 0.88rem; }
-  li span { color: var(--caramel); font-weight: 700; }
-  .program-price { display: flex; align-items: baseline; gap: 0.35rem 0.8rem; flex-wrap: wrap; margin: 0 0 1.75rem; padding-top: 0.5rem; color: var(--ink); }
-  .program-price span { color: var(--caramel); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
-  .program-price strong { display: block; font-family: var(--font-heading); font-size: clamp(1.55rem, 3vw, 2.2rem); line-height: 1.1; }
-  .advanced-program { padding-bottom: 0; }
-  .training-blocks { margin-top: clamp(4rem, 7vw, 6rem); padding-block: clamp(3rem, 5vw, 4.5rem); border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: color-mix(in srgb, var(--sand) 58%, var(--cream)); }
-  .training-blocks .heading-lg { margin-bottom: 2.5rem; }
-  .collection { background: var(--cream); }
-  .collection-intro { margin: 1rem 0 2.5rem; }
-  .offering-grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .offering-card { display: flex; min-height: 100%; flex-direction: column; }
-  .offering-card .heading-md { margin: 1.8rem 0 0.9rem; }
-  .offering-card > p { margin: 0; font-size: 0.84rem; }
-  .offering-card ul { margin: 1.5rem 0 2rem; }
-  .offering-card .button { margin-top: auto; }
-  .offering-move { --card-accent: var(--terracotta); }
-  .offering-nourish { --card-accent: var(--sage); }
-  .offering-reconnect { --card-accent: var(--caramel); }
-  .phase-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, 1fr); }
-  .phase-grid article { padding: 2rem; border-radius: var(--radius-lg); background: var(--cream); }
-  .phase-grid span { color: var(--caramel); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
-  .phase-grid h3 { margin: 3rem 0 0.8rem; color: var(--ink); font-family: var(--font-heading); font-size: 1.7rem; }
-  .phase-grid p { margin: 0; font-size: 0.84rem; }
+  .program-collection { background: var(--cream); }
+  .program-grid { display: grid; gap: 1rem; grid-auto-flow: column; grid-template-columns: repeat(5, minmax(13.5rem, 1fr)); overflow-x: auto; overscroll-behavior-inline: contain; padding: 0.4rem 0 1.2rem; scroll-snap-type: x proximity; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+  .program-tile { display: flex; min-height: 36rem; flex-direction: column; padding: 1.5rem; scroll-snap-align: start; }
+  .tile-top { display: flex; min-height: 4.5rem; align-items: flex-start; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+  .status { padding: 0.45rem 0.65rem; border-radius: 999px; color: var(--ink); background: color-mix(in srgb, var(--cream) 70%, transparent); font-size: 0.62rem; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; }
+  .program-copy { margin-top: 1.5rem; }
+  .program-level { margin: 0 0 0.65rem; color: var(--caramel); font-size: 0.68rem; font-weight: 750; letter-spacing: 0.12em; text-transform: uppercase; }
+  .program-tile h2 { margin: 0 0 1rem; color: var(--ink); font-family: var(--font-heading); font-size: clamp(1.6rem, 2vw, 2.15rem); line-height: 1.05; }
+  .program-copy > p:last-child { margin: 0; font-size: 0.8rem; }
+  .program-footer { margin-top: auto; padding-top: 2rem; }
+  .program-price { display: grid; gap: 0.2rem; margin-bottom: 1.1rem; }
+  .program-price span { color: var(--caramel); font-size: 0.64rem; font-weight: 750; letter-spacing: 0.1em; text-transform: uppercase; }
+  .program-price strong { color: var(--ink); font-family: var(--font-heading); font-size: 2rem; line-height: 1; }
+  .program-tile .button { width: 100%; padding-inline: 0.8rem; }
+  .program-beginner { --card-accent: var(--terracotta); }
+  .program-intermediate { --card-accent: var(--sage); }
+  .program-advanced { --card-accent: var(--caramel); }
+  .program-reconnect { --card-accent: var(--terracotta); }
+  .program-nourish { --card-accent: var(--sage); }
   .safety { padding-block: 2rem; color: var(--ink); background: var(--sage); font-size: 0.8rem; line-height: 1.6; }
-  @media (max-width: 48rem) { .program-grid, .offering-grid, .phase-grid { grid-template-columns: 1fr; } .cover { min-height: 25rem; } }
-  @media (max-width: 30rem) { .cover { min-height: 20rem; padding: 1.6rem; } .offering-card .button, .program-grid .button { width: 100%; } .training-blocks { padding-inline: 1rem; } }
+  @media (max-width: 72rem) { .program-grid { grid-auto-columns: minmax(17rem, 34vw); grid-template-columns: none; } }
+  @media (max-width: 48rem) { .program-grid { grid-auto-columns: minmax(17rem, 84vw); } .program-tile { min-height: 34rem; } }
 </style>

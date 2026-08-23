@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { programmeCatalogByKey } from './programs';
 
 export const contactInterestValues = [
-  'strong',
   'move',
+  'strong',
   'nourish',
   'reconnect',
   'one-on-one',
@@ -16,7 +16,7 @@ export type ContactInterest = z.infer<typeof contactInterestSchema>;
 
 /** Shared display labels used by the public form, admin portal, and notifications. */
 export const contactInterestLabels = {
-  strong: programmeCatalogByKey['strong-volume-1'].volumeName,
+  strong: `${programmeCatalogByKey['strong-volume-1'].volumeName} · Coming soon`,
   move: programmeCatalogByKey['move-volume-1'].volumeName,
   nourish: programmeCatalogByKey['nourish-volume-1'].volumeName,
   reconnect: programmeCatalogByKey['reconnect-volume-1'].volumeName,

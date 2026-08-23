@@ -1,0 +1,69 @@
+name: Deploy web (dev)
+
+# Auto-deploys the public Astro site to the DEV Cloudflare Pages project
+# on every push to the `dev` branch. You can also run it by hand from the
+# Actions tab (workflow_dispatch).
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - "apps/web/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "package.json"
+      - "turbo.json"
+      - ".github/workflows/deploy-web-dev.yml"
+  workflow_dispatch:
+
+# Never let two dev deploys run at once; cancel the older one.
+concurrency:
+  group: deploy-web-dev
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    env:
+      # Public, build-time values baked into the static site. Set these as
+      # repository Variables (Settings -> Secrets and variables -> Actions ->
+      # Variables). Use the *_DEV values for the dev site. Safe to expose.
+      PUBLIC_CONTACT_API_URL: ${{ vars.PUBLIC_CONTACT_API_URL_DEV }}
+      PUBLIC_NEWSLETTER_API_URL: ${{ vars.PUBLIC_NEWSLETTER_API_URL_DEV }}
+      PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY_DEV }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web
+        run: pnpm build:web
+
+      - name: Deploy to Cloudflare Pages (dev)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          packageManager: pnpm
+          # Deploys the built static site to the dev project's production
+          # deployment (so its custom domain updates). If your dev Pages
+          # project's "production branch" is not `main`, change --branch below.
+          command: >-
+            pages deploy apps/web/dist/client
+            --project-name=tilanavantonder-website-dev
+            --branch=main

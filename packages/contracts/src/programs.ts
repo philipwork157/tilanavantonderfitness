@@ -2,17 +2,17 @@ export const programmeCatalog = [
   {
     key: 'strong-volume-1',
     slug: 'strong',
-    name: 'Strong',
+    name: 'Advanced',
     volumeNumber: 1,
-    volumeName: 'Strong · Volume 1',
+    volumeName: 'Advanced · Volume 1',
     suggestedPriceCents: 69_000,
   },
   {
     key: 'move-volume-1',
     slug: 'move',
-    name: 'Move',
+    name: 'Beginner',
     volumeNumber: 1,
-    volumeName: 'Move · Volume 1',
+    volumeName: 'Beginner · Volume 1',
     suggestedPriceCents: 40_000,
   },
   {
