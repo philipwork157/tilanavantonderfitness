@@ -13,7 +13,6 @@ export default defineNuxtConfig({
     turnstileSecretKey: '',
     contactIpHashSecret: '',
     contactTurnstileRequired: process.env.NODE_ENV === 'production',
-    awsSesRegion: process.env.AWS_REGION ?? '',
     emailFromAddress: '',
     emailFromName: 'Tilana van Tonder website',
     contactNotificationEnabled: false,

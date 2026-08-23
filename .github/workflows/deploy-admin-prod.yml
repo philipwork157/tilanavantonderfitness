@@ -1,0 +1,58 @@
+name: Deploy admin (prod)
+
+# PRODUCTION admin deploy — manual only. Actions -> "Deploy admin (prod)" ->
+# Run workflow, then type `deploy` in the confirm box. Uses fly.prod.toml
+# (app: tilanavantonder-admin-prod, region lhr). Fly builds the image on its
+# remote builders, so the runner only needs flyctl.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy" to confirm a production release'
+        required: true
+        default: ""
+
+concurrency:
+  group: deploy-admin-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy admin (prod)
+    if: ${{ inputs.confirm == 'deploy' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup flyctl
+        # SHA-pinned to the node24 master commit (the tagged 1.5 release still
+        # targets the deprecated node20). Pinning a third-party action that holds
+        # a deploy token is a supply-chain safeguard.
+        uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # master 2026-07, node24
+
+      - name: Deploy to Fly.io (prod)
+        run: flyctl deploy --config fly.prod.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Summary (success)
+        if: success()
+        run: |
+          {
+            echo "## Deploy Results"
+            echo "| App | Result |"
+            echo "|-----|--------|"
+            echo "| Admin (prod) | Deployed successfully |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Summary (failure)
+        if: failure()
+        run: |
+          {
+            echo "## Deploy Results"
+            echo "| App | Result |"
+            echo "|-----|--------|"
+            echo "| Admin (prod) | Deploy failed |"
+          } >> "$GITHUB_STEP_SUMMARY"
