@@ -1,28 +1,41 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-
-const confirmed = Astro.url.searchParams.get('status') === 'success';
 ---
 
 <BaseLayout
-  title={confirmed ? 'Subscription confirmed' : 'Confirmation link expired'}
+  title="Newsletter subscription"
   description="Manage your Tilana van Tonder newsletter subscription."
   showNewsletter={false}
   robots="noindex, nofollow"
 >
   <section class="result-section">
     <div class="container">
-      <article>
-        <span class="result-mark" aria-hidden="true">{confirmed ? '✓' : '↻'}</span>
+      <article data-newsletter-result>
+        <span class="result-mark" aria-hidden="true" data-nl-mark>↻</span>
         <p class="eyebrow">Newsletter</p>
-        <h1 class="heading-lg">{confirmed ? 'You’re on the list.' : 'That link is no longer valid.'}</h1>
-        <p>{confirmed
-          ? 'Thank you for confirming. Thoughtful training guidance and programme updates will arrive occasionally.'
-          : 'Confirmation links expire after 48 hours. Please return to the website and subscribe again to receive a new link.'}</p>
+        <h1 class="heading-lg" data-nl-title>Confirming your subscription…</h1>
+        <p data-nl-body>One moment while we check your confirmation link.</p>
         <a class="button button-primary" href="/">Return home</a>
       </article>
     </div>
   </section>
+
+  <script is:inline>
+    (() => {
+      const ok = new URLSearchParams(window.location.search).get('status') === 'success';
+      const mark = document.querySelector('[data-nl-mark]');
+      const title = document.querySelector('[data-nl-title]');
+      const body = document.querySelector('[data-nl-body]');
+      if (mark) mark.textContent = ok ? '✓' : '↻';
+      if (title) title.textContent = ok ? 'You’re on the list.' : 'That link is no longer valid.';
+      if (body) {
+        body.textContent = ok
+          ? 'Thank you for confirming. Thoughtful training guidance and programme updates will arrive occasionally.'
+          : 'Confirmation links expire after 48 hours. Please return to the website and subscribe again to receive a new link.';
+      }
+      document.title = (ok ? 'Subscription confirmed' : 'Confirmation link expired') + ' | Tilana van Tonder';
+    })();
+  </script>
 </BaseLayout>
 
 <style>
