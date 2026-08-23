@@ -48,9 +48,13 @@ jobs:
         run: pnpm build:web
 
       - name: Deploy to Cloudflare Pages (prod)
-        # If this project's Pages "production branch" is not `main`, change --branch.
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy apps/web/dist/client --project-name=tilanavantonder-website-prod --branch=main
+        # Run wrangler via pnpm dlx (isolated temp dir) so it never tries to
+        # install into the workspace root. If this project's Pages "production
+        # branch" is not `main`, change --branch below.
+        run: >-
+          pnpm dlx wrangler@4 pages deploy apps/web/dist/client
+          --project-name=tilanavantonder-website-prod
+          --branch=main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
