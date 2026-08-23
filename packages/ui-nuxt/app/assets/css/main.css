@@ -50,3 +50,17 @@ body {
   color: var(--ink);
   background: var(--terracotta);
 }
+
+/* Select dropdowns: size to the longest option and never clip the label. */
+[role='listbox'] {
+  width: max-content;
+  min-width: var(--reka-select-trigger-width);
+  max-width: min(90vw, 26rem);
+}
+
+[role='listbox'] [role='option'],
+[role='listbox'] [role='option'] * {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}

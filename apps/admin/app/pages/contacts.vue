@@ -15,6 +15,15 @@ const statusOptions = [
   { label: 'Archived', value: 'archived' },
 ];
 
+const columns = [
+  { accessorKey: 'fullName', header: 'Enquiry' },
+  { id: 'message', header: 'Message' },
+  { accessorKey: 'interest', header: 'Interest' },
+  { accessorKey: 'status', header: 'Status' },
+  { accessorKey: 'createdAt', header: 'Received' },
+  { id: 'actions', header: '' },
+];
+
 const filteredSubmissions = computed(() => {
   const query = search.value.trim().toLowerCase();
   return (data.value?.submissions ?? []).filter((submission) => {
@@ -80,9 +89,7 @@ useSeoMeta({ title: 'Contact enquiries | Tilana Admin', robots: 'noindex, nofoll
       />
     </section>
 
-    <div v-if="status === 'pending'" class="contact-list">
-      <USkeleton v-for="item in 4" :key="item" class="h-52 rounded-3xl" />
-    </div>
+    <USkeleton v-if="status === 'pending'" class="h-80 rounded-3xl" />
 
     <UAlert
       v-else-if="error"
@@ -99,50 +106,48 @@ useSeoMeta({ title: 'Contact enquiries | Tilana Admin', robots: 'noindex, nofoll
       <p>Change the search or status filter to see more results.</p>
     </div>
 
-    <section v-else class="contact-list" aria-label="Contact submissions">
-      <UCard
-        v-for="submission in filteredSubmissions"
-        :key="submission.id"
-        class="contact-card"
-        :ui="{ body: 'p-5 sm:p-6' }"
-      >
-        <div class="card-topline">
-          <div class="contact-identity">
-            <span class="contact-avatar">{{ submission.fullName.slice(0, 1).toUpperCase() }}</span>
+    <UCard v-else class="enquiries-table-card" :ui="{ body: 'p-0 sm:p-0' }">
+      <UTable :data="filteredSubmissions" :columns="columns" class="enquiries-table">
+        <template #fullName-cell="{ row }">
+          <div class="enquiry-identity">
+            <span class="enquiry-avatar">{{ row.original.fullName.slice(0, 1).toUpperCase() }}</span>
             <div>
-              <h2>{{ submission.fullName }}</h2>
-              <a :href="`mailto:${submission.email}`">{{ submission.email }}</a>
+              <strong>{{ row.original.fullName }}</strong>
+              <a :href="`mailto:${row.original.email}`">{{ row.original.email }}</a>
             </div>
           </div>
-          <div class="card-badges">
-            <UBadge color="neutral" variant="soft">{{ contactInterestLabels[submission.interest] ?? submission.interest }}</UBadge>
-            <UBadge :color="statusColor(submission.status)" variant="subtle">{{ submission.status }}</UBadge>
-          </div>
-        </div>
-
-        <p class="contact-message">{{ submission.message }}</p>
-
-        <div class="card-footer">
-          <span><UIcon name="i-lucide-clock-3" />{{ formatDate(submission.createdAt) }}</span>
-          <div class="card-actions">
+        </template>
+        <template #message-cell="{ row }">
+          <p class="enquiry-message">{{ row.original.message }}</p>
+        </template>
+        <template #interest-cell="{ row }">
+          <UBadge color="neutral" variant="soft">{{ contactInterestLabels[row.original.interest] ?? row.original.interest }}</UBadge>
+        </template>
+        <template #status-cell="{ row }">
+          <UBadge :color="statusColor(row.original.status)" variant="subtle">{{ row.original.status }}</UBadge>
+        </template>
+        <template #createdAt-cell="{ row }">
+          <span class="cell-muted">{{ formatDate(row.original.createdAt) }}</span>
+        </template>
+        <template #actions-cell="{ row }">
+          <div class="enquiry-actions">
             <UButton
-              :to="`/clients?enquiry=${encodeURIComponent(submission.id)}`"
-              label="Add as client"
+              :to="`/clients?enquiry=${encodeURIComponent(row.original.id)}`"
               icon="i-lucide-user-plus"
               color="neutral"
               variant="soft"
+              aria-label="Add as client"
             />
             <UButton
-              :to="`mailto:${submission.email}?subject=${encodeURIComponent(`Your ${contactInterestLabels[submission.interest] ?? submission.interest} enquiry`)}`"
-              label="Reply by email"
+              :to="`mailto:${row.original.email}?subject=${encodeURIComponent(`Your ${contactInterestLabels[row.original.interest] ?? row.original.interest} enquiry`)}`"
               icon="i-lucide-send"
-              trailing
               variant="soft"
+              aria-label="Reply by email"
             />
           </div>
-        </div>
-      </UCard>
-    </section>
+        </template>
+      </UTable>
+    </UCard>
   </div>
 </template>
 
@@ -166,9 +171,7 @@ useSeoMeta({ title: 'Contact enquiries | Tilana Admin', robots: 'noindex, nofoll
   box-shadow: var(--shadow-sm);
 }
 
-.contacts-heading > div {
-  max-width: 49rem;
-}
+.contacts-heading > div { max-width: 49rem; }
 
 .eyebrow {
   margin: 0 0 0.45rem;
@@ -208,18 +211,8 @@ h1 {
   box-shadow: var(--shadow-sm);
 }
 
-.enquiry-total strong {
-  font-family: var(--font-heading);
-  font-size: 2rem;
-  line-height: 1;
-}
-
-.enquiry-total small {
-  margin-top: 0.2rem;
-  font-size: 0.62rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
+.enquiry-total strong { font-family: var(--font-heading); font-size: 2rem; line-height: 1; }
+.enquiry-total small { margin-top: 0.2rem; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; }
 
 .contact-tools {
   display: flex;
@@ -234,107 +227,45 @@ h1 {
 .search-input { flex: 1; }
 .status-select { width: 12rem; }
 
-.contact-list {
+.enquiries-table-card { overflow: hidden; border-radius: 1.8rem; box-shadow: var(--shadow-md); }
+
+.enquiry-identity { display: flex; min-width: 0; align-items: center; gap: 0.75rem; }
+.enquiry-avatar {
   display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.contact-card {
-  min-width: 0;
-  overflow: hidden;
-  border-radius: 1.65rem;
-  box-shadow: var(--shadow-sm);
-  transition: transform var(--motion-base) var(--ease-out), box-shadow var(--motion-base) var(--ease-out);
-  animation: card-in 500ms var(--ease-out) both;
-}
-
-.contact-card:hover {
-  box-shadow: var(--shadow-hover);
-  transform: translateY(-0.25rem);
-}
-
-.card-topline,
-.card-footer,
-.contact-identity,
-.card-badges,
-.card-actions {
-  display: flex;
-  align-items: center;
-}
-
-.card-topline,
-.card-footer {
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.contact-identity { min-width: 0; gap: 0.75rem; }
-.card-badges { flex-wrap: wrap; justify-content: end; gap: 0.45rem; }
-.card-actions { flex-wrap: wrap; justify-content: end; gap: 0.5rem; }
-
-.contact-avatar {
-  display: grid;
-  width: 2.85rem;
+  width: 2.6rem;
   aspect-ratio: 1;
   flex: none;
   place-items: center;
-  border-radius: 1rem;
+  border-radius: 0.9rem;
   color: var(--ink);
   background: linear-gradient(145deg, var(--terracotta), var(--sage));
   font-family: var(--font-heading);
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 700;
 }
+.enquiry-identity div { min-width: 0; display: grid; }
+.enquiry-identity strong { overflow: hidden; color: var(--ink); font-size: 0.8rem; text-overflow: ellipsis; white-space: nowrap; }
+.enquiry-identity a { overflow: hidden; color: var(--caramel); font-size: 0.66rem; text-overflow: ellipsis; white-space: nowrap; }
 
-.contact-identity h2 {
+.enquiry-message {
+  display: -webkit-box;
+  max-width: 34rem;
   margin: 0;
   overflow: hidden;
-  color: var(--ink);
-  font-family: var(--font-heading);
-  font-size: 1.15rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.contact-identity a {
-  display: block;
-  margin-top: 0.2rem;
-  overflow: hidden;
-  color: var(--caramel);
-  font-size: 0.66rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.contact-message {
-  min-height: 6rem;
-  margin: 1.3rem 0;
-  padding: 1rem;
-  border-radius: 1rem;
   color: var(--chocolate);
-  background: color-mix(in srgb, var(--sand) 36%, transparent);
-  font-size: 0.74rem;
-  line-height: 1.7;
-  white-space: pre-wrap;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
-.card-footer {
-  padding-top: 0.9rem;
-  border-top: 1px solid var(--color-border);
-}
+.cell-muted { color: var(--ui-text-muted); font-size: 0.68rem; white-space: nowrap; }
 
-.card-footer > span {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: var(--ui-text-muted);
-  font-size: 0.62rem;
-}
+.enquiry-actions { display: flex; align-items: center; justify-content: end; gap: 0.35rem; }
 
 .empty-results {
   display: grid;
-  min-height: 22rem;
+  min-height: 20rem;
   place-items: center;
   align-content: center;
   padding: 2rem;
@@ -357,31 +288,11 @@ h1 {
 .empty-results h2 { margin: 1rem 0 0; color: var(--ink); font-family: var(--font-heading); }
 .empty-results p { margin: 0.4rem 0 0; font-size: 0.75rem; }
 
-@keyframes card-in {
-  from { opacity: 0; transform: translateY(0.8rem); }
-}
-
-@media (max-width: 68rem) {
-  .contact-list { grid-template-columns: minmax(0, 1fr); }
-}
-
 @media (max-width: 42rem) {
   .contacts-heading { align-items: center; }
   .enquiry-total { min-width: 5rem; }
   .contact-tools { flex-wrap: wrap; }
   .search-input { min-width: 100%; }
   .status-select { flex: 1; width: auto; }
-  .card-topline { align-items: flex-start; }
-  .card-badges { display: none; }
-}
-
-@media (max-width: 30rem) {
-  .enquiry-total { display: none; }
-  .card-footer { align-items: stretch; flex-direction: column; }
-  .card-actions { align-items: stretch; flex-direction: column; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .contact-card { animation: none; transition: none; }
 }
 </style>

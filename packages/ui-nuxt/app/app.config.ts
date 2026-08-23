@@ -15,5 +15,10 @@ export default defineAppConfig({
         base: 'rounded-2xl bg-white/80 dark:bg-stone-900/70',
       },
     },
+    select: {
+      slots: {
+        base: 'rounded-2xl bg-white/80 dark:bg-stone-900/70',
+      },
+    },
   },
 });

@@ -1,4 +1,4 @@
-import { clients, contactSubmissions, invoices, orders } from '@tilana/db/schema';
+import { clients, contactSubmissions, invoices, newsletterSubscribers, orders } from '@tilana/db/schema';
 import { count, desc, eq } from 'drizzle-orm';
 import { getDatabase } from '../utils/database';
 
@@ -52,4 +52,21 @@ export async function listContactSubmissions() {
     .from(contactSubmissions)
     .orderBy(desc(contactSubmissions.createdAt))
     .limit(100);
+}
+
+export async function listNewsletterSubscribers() {
+  return getDatabase()
+    .select({
+      id: newsletterSubscribers.id,
+      email: newsletterSubscribers.email,
+      status: newsletterSubscribers.status,
+      source: newsletterSubscribers.source,
+      consentedAt: newsletterSubscribers.consentedAt,
+      confirmedAt: newsletterSubscribers.confirmedAt,
+      unsubscribedAt: newsletterSubscribers.unsubscribedAt,
+      createdAt: newsletterSubscribers.createdAt,
+    })
+    .from(newsletterSubscribers)
+    .orderBy(desc(newsletterSubscribers.createdAt))
+    .limit(200);
 }

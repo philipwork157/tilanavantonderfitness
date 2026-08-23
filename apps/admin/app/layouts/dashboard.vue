@@ -7,6 +7,7 @@ const navigation = [
   { label: 'Dashboard', icon: 'i-lucide-layout-dashboard', to: '/dashboard' },
   { label: 'Enquiries', icon: 'i-lucide-inbox', to: '/contacts' },
   { label: 'Clients', icon: 'i-lucide-users', to: '/clients' },
+  { label: 'Newsletter', icon: 'i-lucide-mail', to: '/newsletter' },
   { label: 'Programs', icon: 'i-lucide-dumbbell', disabled: true },
   { label: 'Invoices', icon: 'i-lucide-receipt-text', disabled: true },
 ];
@@ -14,6 +15,7 @@ const navigation = [
 const pageTitle = computed(() => {
   if (route.path === '/contacts') return 'Contact enquiries';
   if (route.path === '/clients') return 'Clients';
+  if (route.path === '/newsletter') return 'Newsletter signups';
   return 'Dashboard';
 });
 const initials = computed(() => {
@@ -46,6 +48,11 @@ const userMenuItems = computed(() => [
       label: 'Clients',
       icon: 'i-lucide-users',
       to: '/clients',
+    },
+    {
+      label: 'Newsletter',
+      icon: 'i-lucide-mail',
+      to: '/newsletter',
     },
   ],
   [
