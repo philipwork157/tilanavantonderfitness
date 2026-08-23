@@ -6,7 +6,7 @@ let emailSenderRegion: string | undefined;
 /** Returns the shared server email transport and a verified sender identity. */
 export function getServerEmail(senderOverride?: EmailAddress) {
   const config = useRuntimeConfig();
-  const region = String(config.awsSesRegion || '').trim();
+  const region = String(process.env.AWS_REGION || '').trim();
   const fromEmail = senderOverride?.email.trim() || String(config.emailFromAddress || '').trim();
   const fromName = senderOverride?.name?.trim() || String(config.emailFromName || '').trim();
 
