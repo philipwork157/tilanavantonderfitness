@@ -29,9 +29,9 @@ jobs:
     env:
       # Public, build-time values baked into the static site. Set as repository
       # Variables (Settings -> Secrets and variables -> Actions -> Variables).
-      PUBLIC_CONTACT_API_URL: ${{ vars.PUBLIC_CONTACT_API_URL_DEV }}
-      PUBLIC_NEWSLETTER_API_URL: ${{ vars.PUBLIC_NEWSLETTER_API_URL_DEV }}
-      PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY_DEV }}
+      PUBLIC_CONTACT_API_URL: ${{ secrets.PUBLIC_CONTACT_API_URL_DEV }}
+      PUBLIC_NEWSLETTER_API_URL: ${{ secrets.PUBLIC_NEWSLETTER_API_URL_DEV }}
+      PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.PUBLIC_TURNSTILE_SITE_KEY_DEV }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
