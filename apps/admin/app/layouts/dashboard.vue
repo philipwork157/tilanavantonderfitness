@@ -156,6 +156,9 @@ async function signOut() {
             <UDashboardSidebarCollapse class="hidden lg:inline-flex" />
             <span class="navbar-title">{{ pageTitle }}</span>
           </template>
+          <template #right>
+            <UColorModeButton class="theme-toggle" />
+          </template>
         </UDashboardNavbar>
       </template>
 

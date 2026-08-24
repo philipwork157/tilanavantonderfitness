@@ -1,10 +1,12 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { marketingPrograms } from '../data/programs';
+import { Image } from 'astro:assets';
+import heroImage from '../assets/tilana-home.jpg';
 ---
 <BaseLayout title="Strength, Movement & Healthy Habits">
-  <section class="hero"><div class="container hero-grid"><div class="hero-copy"><p class="eyebrow">Realistic strength for every body</p><h1 class="display"><span class="hero-line">Move better.</span><span class="hero-line">Feel stronger.</span><span class="hero-line script">Live healthier.</span></h1><p class="lede">Whether you are a woman or a man, lasting strength is built through purposeful movement and maintainable systems that work in real life. There is no perfection to chase and no quick fix to sell—only practical habits, steady progress, and a lifelong investment in moving well, feeling capable, and living with greater confidence.</p><div class="actions"><a class="button button-primary" href="/program">Explore the program</a><a class="button button-secondary" href="/about">Meet Tilana</a></div></div><div class="hero-visual"><img src="/tilana-home.jpg" alt="Tilana van Tonder smiling with her arms crossed" width="1023" height="1261" loading="eager" decoding="async" fetchpriority="high" /></div></div></section>
-  <section class="section approach"><div class="container" data-reveal><p class="eyebrow">Programs for real life</p><h2 class="heading-xl">Choose your next step.</h2><div class="approach-grid">{marketingPrograms.map((program) => <article class:list={['card', 'program-tile', `card-${program.accent}`]}><div class="tile-top"><span class="badge">{program.label}</span>{program.status && <span class="status">{program.status}</span>}</div><h3 class="heading-md">{program.name}</h3><h4>{program.title}</h4><p>{program.description}</p></article>)}</div><a class="button button-dark approach-cta" href="/program">Explore all programs</a></div></section>
+  <section class="hero"><div class="container hero-grid"><div class="hero-copy"><p class="eyebrow">Realistic strength for every body</p><h1 class="display"><span class="hero-line">Move better.</span><span class="hero-line">Feel stronger.</span><span class="hero-line script">Live healthier.</span></h1><p class="lede">Whether you are a woman or a man, lasting strength is built through purposeful movement and maintainable systems that work in real life. There is no perfection to chase and no quick fix to sell—only practical habits, steady progress, and a lifelong investment in moving well, feeling capable, and living with greater confidence.</p><div class="actions"><a class="button button-primary" href="/program">Explore the program</a><a class="button button-secondary" href="/about">Meet Tilana</a></div></div><div class="hero-visual"><Image src={heroImage} alt="Tilana van Tonder smiling with her arms crossed" widths={[432, 768, 1023]} sizes="(max-width: 48rem) 92vw, 27rem" loading="eager" fetchpriority="high" /></div></div></section>
+  <section class="section approach"><div class="container" data-reveal><p class="eyebrow">Programs for real life</p><div class="approach-head"><h2 class="heading-xl">Choose your next step.</h2><div class="rail-nav"><button type="button" class="rail-btn" data-rail-prev aria-label="Previous programs" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg></button><button type="button" class="rail-btn" data-rail-next aria-label="Next programs"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></div></div><div class="approach-grid" data-rail>{marketingPrograms.map((program) => <article class:list={['card', 'program-tile', `card-${program.accent}`]}><div class="tile-top"><span class="badge">{program.label}</span>{program.status && <span class="status">{program.status}</span>}</div><h3 class="heading-md">{program.name}</h3><h4>{program.title}</h4><p>{program.description}</p></article>)}</div><a class="button button-dark approach-cta" href="/program">Explore all programs</a></div></section>
   <section class="simple-cta"><div class="container" data-reveal><h2 class="heading-xl">Want to train one-on-one?</h2><p class="cta-copy">Please contact me to discuss private training.</p><a class="button button-dark" href="/contact?interest=one-on-one">Get in touch</a></div></section>
 </BaseLayout>
 <style>
@@ -22,25 +24,34 @@ import { marketingPrograms } from '../data/programs';
   .hero-visual img { display: block; width: 100%; height: auto; }
   .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
   .approach { background: color-mix(in srgb, var(--sand) 60%, var(--cream)); }
-  .approach .heading-xl { margin-bottom: 2.8rem; }
+  .approach .heading-xl { margin-bottom: 0; }
+  .approach-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1.5rem; margin-bottom: 2.4rem; }
+  .rail-nav { display: flex; gap: 0.6rem; flex: none; }
+  .rail-btn { display: grid; place-items: center; width: 3rem; height: 3rem; padding: 0; border: 1px solid var(--color-border); border-radius: 50%; color: var(--ink); background: color-mix(in srgb, var(--white) 82%, var(--cream)); cursor: pointer; transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease, transform var(--motion-fast) ease, opacity var(--motion-fast) ease; }
+  .rail-btn svg { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-width: 2.25; stroke-linecap: round; stroke-linejoin: round; }
+  .rail-btn:hover:not(:disabled) { border-color: var(--caramel); background: var(--caramel); color: var(--color-on-primary); transform: translateY(-2px); }
+  .rail-btn:disabled { opacity: 0.35; cursor: default; }
   .approach-grid {
     display: grid;
     gap: 1.25rem;
     grid-auto-flow: column;
-    grid-template-columns: repeat(5, minmax(13.5rem, 1fr));
+    grid-auto-columns: clamp(17rem, 20vw, 20rem);
     margin-inline: auto;
     overflow-x: auto;
     overscroll-behavior-inline: contain;
     padding: 0.4rem 0 1.2rem;
     scroll-snap-type: x proximity;
-    scrollbar-width: thin;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
     -webkit-overflow-scrolling: touch;
   }
+  .approach-grid::-webkit-scrollbar { display: none; }
   .program-tile { min-height: 31rem; scroll-snap-align: start; }
   .tile-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
   .status { padding: 0.4rem 0.55rem; border-radius: 999px; color: var(--ink); background: var(--cream); font-size: 0.58rem; font-weight: 750; letter-spacing: 0.07em; text-transform: uppercase; }
   .card .heading-md { margin: 2rem 0 0.8rem; }
   /* Keep program names on one line: no mid-word breaking, sized to fit the card. */
+  .program-tile .badge { flex: none; white-space: nowrap; }
   .program-tile .heading-md { overflow-wrap: normal; word-break: keep-all; hyphens: none; font-size: 1.25rem; line-height: 1.25; }
   .card h4 { min-height: 3rem; margin: 0 0 0.85rem; color: var(--caramel); font-size: 0.78rem; line-height: 1.45; }
   .card p { margin: 0; font-size: 0.88rem; }
@@ -61,6 +72,8 @@ import { marketingPrograms } from '../data/programs';
   }
   @media (max-width: 48rem) {
     .hero { min-height: auto; padding-block: 3.5rem 4.5rem; }
+    .approach-head { gap: 1rem; align-items: center; }
+    .rail-btn { width: 2.6rem; height: 2.6rem; }
     .hero-grid { grid-template-columns: 1fr; }
     .approach-grid { grid-auto-columns: minmax(17rem, 84vw); }
     .hero-line { white-space: normal; }
@@ -70,3 +83,29 @@ import { marketingPrograms } from '../data/programs';
     .hero-visual { width: 100%; }
   }
 </style>
+
+<script>
+  const rail = document.querySelector<HTMLElement>('[data-rail]');
+  const prev = document.querySelector<HTMLButtonElement>('[data-rail-prev]');
+  const next = document.querySelector<HTMLButtonElement>('[data-rail-next]');
+
+  if (rail && prev && next) {
+    const step = () => {
+      const card = rail.querySelector<HTMLElement>('.program-tile');
+      const gap = parseFloat(getComputedStyle(rail).columnGap || '20') || 20;
+      return card ? card.offsetWidth + gap : rail.clientWidth * 0.8;
+    };
+
+    const sync = () => {
+      const maxScroll = rail.scrollWidth - rail.clientWidth - 1;
+      prev.disabled = rail.scrollLeft <= 0;
+      next.disabled = rail.scrollLeft >= maxScroll;
+    };
+
+    prev.addEventListener('click', () => rail.scrollBy({ left: -step(), behavior: 'smooth' }));
+    next.addEventListener('click', () => rail.scrollBy({ left: step(), behavior: 'smooth' }));
+    rail.addEventListener('scroll', sync, { passive: true });
+    window.addEventListener('resize', sync);
+    sync();
+  }
+</script>

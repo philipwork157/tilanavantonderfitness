@@ -26,7 +26,7 @@ export default defineNuxtConfig({
     enabled: false,
   },
   colorMode: {
-    preference: 'light',
+    preference: 'system',
     fallback: 'light',
   },
   routeRules: {
@@ -38,6 +38,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       title: 'Tilana Admin',
+      link: [{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
       meta: [
         {
           name: 'description',

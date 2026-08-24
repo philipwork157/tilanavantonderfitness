@@ -3,7 +3,7 @@ import { contactInterestLabels } from '@tilana/contracts/contact';
 
 definePageMeta({ layout: 'dashboard' });
 
-const { data, status, error, refresh } = await useFetch('/api/admin/dashboard');
+const { data, status, error, refresh } = await useFetch('/api/admin/dashboard', { lazy: true });
 
 const recentColumns = [
   { accessorKey: 'fullName', header: 'Contact' },

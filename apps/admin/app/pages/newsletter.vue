@@ -3,7 +3,7 @@ definePageMeta({ layout: 'dashboard' });
 
 const search = ref('');
 const statusFilter = ref('all');
-const { data, status, error, refresh } = await useFetch('/api/admin/newsletter');
+const { data, status, error, refresh } = await useFetch('/api/admin/newsletter', { lazy: true });
 
 const statusOptions = [
   { label: 'All statuses', value: 'all' },
