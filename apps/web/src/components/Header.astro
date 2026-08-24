@@ -23,15 +23,25 @@ const isCurrentPage = (href: string) =>
     <div class="nav-actions">
       <ThemeToggle />
       <a class="nav-cta" href="/contact">Get in touch</a>
-      <details class="mobile-nav">
-        <summary aria-label="Open navigation"><span></span><span></span><span></span></summary>
+      <details class="mobile-nav" data-mobile-nav>
+        <summary aria-label="Open navigation" data-mobile-nav-toggle><span></span><span></span><span></span></summary>
         <nav aria-label="Mobile navigation">
           {site.navigation.map((item) => (
-            <a href={item.href} aria-current={isCurrentPage(item.href) ? 'page' : undefined}>
+            <a
+              class:list={{ active: isCurrentPage(item.href) }}
+              href={item.href}
+              aria-current={isCurrentPage(item.href) ? 'page' : undefined}
+            >
               {item.label}
             </a>
           ))}
-          <a class="mobile-cta" href="/contact">Get in touch</a>
+          <a
+            class:list={{ 'mobile-cta': true, active: isCurrentPage('/contact') }}
+            href="/contact"
+            aria-current={isCurrentPage('/contact') ? 'page' : undefined}
+          >
+            Get in touch
+          </a>
         </nav>
       </details>
     </div>
@@ -61,8 +71,13 @@ const isCurrentPage = (href: string) =>
     .mobile-nav[open] summary span:nth-child(2) { opacity: 0; }
     .mobile-nav[open] summary span:last-child { transform: translateY(-6px) rotate(-45deg); }
     .mobile-nav nav { position: absolute; top: 5rem; right: var(--page-pad); left: var(--page-pad); display: flex; flex-direction: column; padding: 1rem; border: 1px solid var(--sand); border-radius: var(--radius-md); background: var(--cream); box-shadow: var(--shadow-md); animation: menu-in 240ms cubic-bezier(0.22, 1, 0.36, 1); }
-    .mobile-nav nav a { padding: 0.8rem 0.5rem; color: var(--ink); font-weight: 550; }
+    .mobile-nav nav a { position: relative; padding: 0.8rem 0.75rem; border-radius: calc(var(--radius-md) * 0.65); color: var(--ink); font-weight: 550; transition: color 180ms ease, background 180ms ease, transform 180ms ease; }
+    .mobile-nav nav a:not(.mobile-cta)::before { position: absolute; top: 50%; left: 0.15rem; width: 0.2rem; height: 1.25rem; border-radius: var(--radius-pill); background: var(--terracotta); content: ''; opacity: 0; transform: translateY(-50%) scaleY(0.35); transition: opacity 180ms ease, transform 220ms cubic-bezier(0.22, 1, 0.36, 1); }
+    .mobile-nav nav a:not(.mobile-cta):hover { color: var(--caramel); background: color-mix(in srgb, var(--terracotta) 12%, transparent); transform: translateX(0.2rem); }
+    .mobile-nav nav a:not(.mobile-cta)[aria-current='page'] { padding-left: 1rem; color: var(--ink); background: color-mix(in srgb, var(--sage) 72%, var(--cream)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--caramel) 24%, transparent); font-weight: 700; transform: translateX(0.2rem); }
+    .mobile-nav nav a:not(.mobile-cta):hover::before, .mobile-nav nav a:not(.mobile-cta)[aria-current='page']::before { opacity: 1; transform: translateY(-50%) scaleY(1); }
     .mobile-nav .mobile-cta { margin-top: 0.5rem; border-radius: var(--radius-pill); color: var(--color-on-primary); background: var(--terracotta); text-align: center; }
+    .mobile-nav .mobile-cta:hover, .mobile-nav .mobile-cta[aria-current='page'] { background: var(--caramel); box-shadow: 0 8px 20px rgb(97 70 53 / 16%); transform: translateY(-1px); }
   }
   @media (max-width: 30rem) {
     .nav-shell { min-height: 4.75rem; gap: 0.35rem; }
@@ -73,3 +88,38 @@ const isCurrentPage = (href: string) =>
   }
   @keyframes menu-in { from { opacity: 0; transform: translateY(-0.6rem) scale(0.98); } }
 </style>
+
+<script>
+  const mobileNavigation = document.querySelector<HTMLDetailsElement>('[data-mobile-nav]');
+  const mobileNavigationToggle = mobileNavigation?.querySelector<HTMLElement>('[data-mobile-nav-toggle]');
+
+  const closeMobileNavigation = (restoreFocus = false) => {
+    if (!mobileNavigation?.open) return;
+    mobileNavigation.removeAttribute('open');
+    if (restoreFocus) mobileNavigationToggle?.focus();
+  };
+
+  mobileNavigation?.addEventListener('toggle', () => {
+    mobileNavigationToggle?.setAttribute(
+      'aria-label',
+      mobileNavigation.open ? 'Close navigation' : 'Open navigation',
+    );
+  });
+
+  document.addEventListener('pointerdown', (event) => {
+    if (!(event.target instanceof Node) || mobileNavigation?.contains(event.target)) return;
+    closeMobileNavigation();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeMobileNavigation(true);
+  });
+
+  mobileNavigation?.querySelectorAll('a').forEach((link) => {
+    link.addEventListener('click', () => closeMobileNavigation());
+  });
+
+  window.matchMedia('(min-width: 58.01rem)').addEventListener('change', (event) => {
+    if (event.matches) closeMobileNavigation();
+  });
+</script>
