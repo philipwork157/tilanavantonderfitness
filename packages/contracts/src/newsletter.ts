@@ -1,12 +1,6 @@
 import { z } from 'zod';
 
-export const newsletterValidationMessages = {
-  email: 'Please enter a valid email address.',
-  consent: 'Please agree to receive the newsletter.',
-  turnstileToken: 'Please complete the security check.',
-} as const;
-
-export type NewsletterFormField = keyof typeof newsletterValidationMessages;
+export { newsletterValidationMessages, type NewsletterFormField } from './newsletter.messages';
 
 export const newsletterSubscribeRequestSchema = z.object({
   email: z.string().trim().email().max(254),

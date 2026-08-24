@@ -1,0 +1,30 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+<BaseLayout
+  title="Page not found"
+  description="The page you were looking for could not be found."
+  robots="noindex, follow"
+  showNewsletter={false}
+>
+  <section class="notfound">
+    <div class="container notfound-inner">
+      <p class="eyebrow">Error 404</p>
+      <h1 class="display">This page took a <span class="script">rest day.</span></h1>
+      <p class="lede">The page you were looking for isn't here — it may have moved or never existed. Let's get you back on track.</p>
+      <div class="actions">
+        <a class="button button-primary" href="/">Back to home</a>
+        <a class="button button-secondary" href="/program">Explore the program</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .notfound { display: grid; min-height: calc(100svh - 5.5rem); align-items: center; padding-block: clamp(3rem, 8vh, 6rem); }
+  .notfound-inner { max-width: 46rem; }
+  .notfound .display { margin: 0.5rem 0 0; font-size: clamp(3rem, 6vw, 5rem); }
+  .notfound .lede { margin: 1.4rem 0 2rem; max-width: 34rem; color: var(--chocolate); font-size: 1.05rem; line-height: 1.7; }
+  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+  @media (max-width: 30rem) { .actions .button { width: 100%; } }
+</style>

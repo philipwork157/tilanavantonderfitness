@@ -33,8 +33,8 @@ const successMessage = ref('');
 const editingClientId = ref<string | null>(null);
 const selectedEnquiryId = ref('manual');
 const route = useRoute();
-const { data, status, error, refresh } = await useFetch('/api/admin/clients');
-const { data: enquiriesData } = await useFetch('/api/admin/contacts');
+const { data, status, error, refresh } = await useFetch('/api/admin/clients', { lazy: true });
+const { data: enquiriesData } = await useFetch('/api/admin/contacts', { lazy: true });
 type ClientRecord = NonNullable<typeof data.value>['clients'][number];
 
 const form = reactive({
@@ -491,14 +491,27 @@ useSeoMeta({ title: 'Clients | Tilana Admin', robots: 'noindex, nofollow' });
           </template>
           <template #actions-cell="{ row }">
             <div class="client-actions">
-              <UButton
-                icon="i-lucide-pencil"
-                color="neutral"
-                variant="soft"
-                aria-label="Edit client"
-                @click="openEditForm(row.original)"
-              />
-              <UButton :to="`mailto:${row.original.email}`" icon="i-lucide-mail" color="neutral" variant="ghost" aria-label="Email client" />
+              <UTooltip text="Open check-ins">
+                <UButton
+                  :to="`/clients/${row.original.id}`"
+                  icon="i-lucide-arrow-up-right"
+                  color="primary"
+                  variant="soft"
+                  aria-label="Open client check-ins"
+                />
+              </UTooltip>
+              <UTooltip text="Edit client">
+                <UButton
+                  icon="i-lucide-pencil"
+                  color="neutral"
+                  variant="soft"
+                  aria-label="Edit client"
+                  @click="openEditForm(row.original)"
+                />
+              </UTooltip>
+              <UTooltip text="Email client">
+                <UButton :to="`mailto:${row.original.email}`" icon="i-lucide-mail" color="neutral" variant="ghost" aria-label="Email client" />
+              </UTooltip>
             </div>
           </template>
         </UTable>

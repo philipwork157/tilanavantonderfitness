@@ -54,12 +54,12 @@ const isCurrentPage = (href: string) =>
     .desktop-nav, .nav-cta { display: none; }
     .nav-actions { gap: 0.6rem; }
     .mobile-nav { display: block; }
-    summary { display: grid; width: 2.75rem; height: 2.75rem; place-content: center; gap: 4px; border: 1px solid var(--sand); border-radius: 50%; cursor: pointer; list-style: none; }
+    summary { display: grid; width: 2.75rem; height: 2.75rem; place-content: center; justify-items: center; gap: 4px; border: 1px solid var(--sand); border-radius: 50%; cursor: pointer; list-style: none; }
     summary::-webkit-details-marker { display: none; }
-    summary span { width: 1.1rem; height: 1.5px; background: var(--ink); transition: opacity 180ms ease, transform 220ms ease; }
-    .mobile-nav[open] summary span:first-child { transform: translateY(5.5px) rotate(45deg); }
+    summary span { width: 1.15rem; height: 2px; border-radius: 1px; background: var(--ink); transition: opacity 180ms ease, transform 220ms ease; }
+    .mobile-nav[open] summary span:first-child { transform: translateY(6px) rotate(45deg); }
     .mobile-nav[open] summary span:nth-child(2) { opacity: 0; }
-    .mobile-nav[open] summary span:last-child { transform: translateY(-5.5px) rotate(-45deg); }
+    .mobile-nav[open] summary span:last-child { transform: translateY(-6px) rotate(-45deg); }
     .mobile-nav nav { position: absolute; top: 5rem; right: var(--page-pad); left: var(--page-pad); display: flex; flex-direction: column; padding: 1rem; border: 1px solid var(--sand); border-radius: var(--radius-md); background: var(--cream); box-shadow: var(--shadow-md); animation: menu-in 240ms cubic-bezier(0.22, 1, 0.36, 1); }
     .mobile-nav nav a { padding: 0.8rem 0.5rem; color: var(--ink); font-weight: 550; }
     .mobile-nav .mobile-cta { margin-top: 0.5rem; border-radius: var(--radius-pill); color: var(--color-on-primary); background: var(--terracotta); text-align: center; }

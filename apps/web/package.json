@@ -18,7 +18,8 @@
     "@tilana/contracts": "workspace:*",
     "@tilana/design-system": "workspace:*",
     "@tilana/ui-astro": "workspace:*",
-    "astro": "latest"
+    "astro": "latest",
+    "sharp": "^0.35.0"
   },
   "devDependencies": {
     "@astrojs/check": "latest",

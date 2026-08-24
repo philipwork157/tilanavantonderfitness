@@ -5,7 +5,7 @@ definePageMeta({ layout: 'dashboard' });
 
 const search = ref('');
 const statusFilter = ref('all');
-const { data, status, error, refresh } = await useFetch('/api/admin/contacts');
+const { data, status, error, refresh } = await useFetch('/api/admin/contacts', { lazy: true });
 
 const statusOptions = [
   { label: 'All statuses', value: 'all' },
@@ -131,19 +131,23 @@ useSeoMeta({ title: 'Contact enquiries | Tilana Admin', robots: 'noindex, nofoll
         </template>
         <template #actions-cell="{ row }">
           <div class="enquiry-actions">
-            <UButton
-              :to="`/clients?enquiry=${encodeURIComponent(row.original.id)}`"
-              icon="i-lucide-user-plus"
-              color="neutral"
-              variant="soft"
-              aria-label="Add as client"
-            />
-            <UButton
-              :to="`mailto:${row.original.email}?subject=${encodeURIComponent(`Your ${contactInterestLabels[row.original.interest] ?? row.original.interest} enquiry`)}`"
-              icon="i-lucide-send"
-              variant="soft"
-              aria-label="Reply by email"
-            />
+            <UTooltip text="Add as client">
+              <UButton
+                :to="`/clients?enquiry=${encodeURIComponent(row.original.id)}`"
+                icon="i-lucide-user-plus"
+                color="neutral"
+                variant="soft"
+                aria-label="Add as client"
+              />
+            </UTooltip>
+            <UTooltip text="Reply by email">
+              <UButton
+                :to="`mailto:${row.original.email}?subject=${encodeURIComponent(`Your ${contactInterestLabels[row.original.interest] ?? row.original.interest} enquiry`)}`"
+                icon="i-lucide-send"
+                variant="soft"
+                aria-label="Reply by email"
+              />
+            </UTooltip>
           </div>
         </template>
       </UTable>

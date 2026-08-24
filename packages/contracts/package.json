@@ -6,8 +6,10 @@
   "exports": {
     "./auth": "./src/auth.ts",
     "./clients": "./src/clients.ts",
+    "./coaching": "./src/coaching.ts",
     "./contact": "./src/contact.ts",
     "./newsletter": "./src/newsletter.ts",
+    "./newsletter.messages": "./src/newsletter.messages.ts",
     "./programs": "./src/programs.ts"
   },
   "scripts": {
