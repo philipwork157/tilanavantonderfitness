@@ -11,6 +11,9 @@ interface Props {
   description?: string;
   image?: string | null;
   imageAlt?: string;
+  imageWidth?: number;
+  imageHeight?: number;
+  imageType?: string;
   pageType?: 'website' | 'article';
   publishedAt?: Date;
   structuredData?: Record<string, unknown> | Record<string, unknown>[];
@@ -23,6 +26,9 @@ const {
   description = site.description,
   image = '/og.png',
   imageAlt = 'Tilana van Tonder - strength, movement, and sustainable healthy habits',
+  imageWidth = 1731,
+  imageHeight = 909,
+  imageType = 'image/png',
   pageType = 'website',
   publishedAt,
   structuredData,
@@ -114,9 +120,9 @@ const schema = {
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     {socialImage && <meta property="og:image" content={socialImage} />}
-    {socialImage && <meta property="og:image:width" content="1731" />}
-    {socialImage && <meta property="og:image:height" content="909" />}
-    {socialImage && <meta property="og:image:type" content="image/png" />}
+    {socialImage && <meta property="og:image:width" content={String(imageWidth)} />}
+    {socialImage && <meta property="og:image:height" content={String(imageHeight)} />}
+    {socialImage && <meta property="og:image:type" content={imageType} />}
     {socialImage && <meta property="og:image:alt" content={imageAlt} />}
     {pageType === 'article' && publishedAt && <meta property="article:published_time" content={publishedAt.toISOString()} />}
     {pageType === 'article' && <meta property="article:author" content={site.name} />}

@@ -13,7 +13,7 @@ export const programmeCatalog = [
     name: 'Beginner',
     volumeNumber: 1,
     volumeName: 'Beginner · Volume 1',
-    suggestedPriceCents: 40_000,
+    suggestedPriceCents: 39_900,
   },
   {
     key: 'nourish-volume-1',
@@ -21,7 +21,7 @@ export const programmeCatalog = [
     name: 'Nourish',
     volumeNumber: 1,
     volumeName: 'Nourish · Volume 1',
-    suggestedPriceCents: 40_000,
+    suggestedPriceCents: 39_900,
   },
   {
     key: 'reconnect-volume-1',
@@ -29,7 +29,7 @@ export const programmeCatalog = [
     name: 'Reconnect',
     volumeNumber: 1,
     volumeName: 'Reconnect · Volume 1',
-    suggestedPriceCents: 40_000,
+    suggestedPriceCents: 39_900,
   },
 ] as const;
 

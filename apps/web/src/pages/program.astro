@@ -17,7 +17,14 @@ const programs = marketingPrograms.map((program) => ({
   <PageHero eyebrow="Programs for real life" title="Find your" script="next step." intro="Start where you are and choose the support that suits you—from foundational movement and nourishment to pelvic-floor connection and progressive strength." />
   <section class="section program-collection">
     <div class="container">
-      <div class="program-grid">
+      <div class="program-toolbar">
+        <div><p class="eyebrow">The program collection</p><h2 class="heading-lg">Explore at your own pace.</h2></div>
+        <div class="rail-nav" aria-label="Program carousel controls">
+          <button type="button" class="rail-btn" data-program-prev aria-label="Previous programs" aria-controls="program-rail" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg></button>
+          <button type="button" class="rail-btn" data-program-next aria-label="Next programs" aria-controls="program-rail"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+      </div>
+      <div id="program-rail" class="program-grid" data-program-rail tabindex="0" aria-label="Programs">
         {programs.map((program) => (
           <article class:list={['card', 'program-tile', `program-${program.accent}`]}>
             <div class="tile-top">
@@ -45,14 +52,22 @@ const programs = marketingPrograms.map((program) => ({
 
 <style>
   .program-collection { background: var(--cream); }
-  .program-grid { display: grid; gap: 1rem; grid-auto-flow: column; grid-template-columns: repeat(5, minmax(13.5rem, 1fr)); overflow-x: auto; overscroll-behavior-inline: contain; padding: 0.4rem 0 1.2rem; scroll-snap-type: x proximity; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
-  .program-tile { display: flex; min-height: 36rem; flex-direction: column; padding: 1.5rem; scroll-snap-align: start; }
+  .program-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 2rem; margin-bottom: 2.5rem; }
+  .program-toolbar .heading-lg { font-size: clamp(2rem, 4vw, 3.5rem); }
+  .rail-nav { display: flex; gap: 0.65rem; flex: none; }
+  .rail-btn { display: grid; width: 3.25rem; height: 3.25rem; place-items: center; padding: 0; border: 1px solid var(--color-border); border-radius: 50%; color: var(--ink); background: color-mix(in srgb, var(--white) 82%, var(--cream)); cursor: pointer; transition: color var(--motion-fast) ease, background-color var(--motion-fast) ease, border-color var(--motion-fast) ease, box-shadow var(--motion-fast) ease, transform var(--motion-fast) ease, opacity var(--motion-fast) ease; }
+  .rail-btn svg { width: 1.3rem; height: 1.3rem; fill: none; stroke: currentColor; stroke-width: 2.25; stroke-linecap: round; stroke-linejoin: round; }
+  .rail-btn:hover:not(:disabled) { border-color: var(--caramel); color: var(--color-on-primary); background: var(--caramel); box-shadow: var(--shadow-sm); transform: translateY(-2px); }
+  .rail-btn:disabled { opacity: 0.32; cursor: default; }
+  .program-grid { display: grid; gap: 1.25rem; grid-auto-columns: clamp(20rem, 26vw, 24rem); grid-auto-flow: column; overflow-x: auto; overscroll-behavior-inline: contain; padding: 0.4rem 0 1.25rem; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; }
+  .program-grid::-webkit-scrollbar { display: none; }
+  .program-tile { display: flex; min-height: 38rem; flex-direction: column; padding: clamp(1.7rem, 2.5vw, 2.15rem); scroll-snap-align: start; }
   .tile-top { display: flex; min-height: 4.5rem; align-items: flex-start; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
   .status { padding: 0.45rem 0.65rem; border-radius: 999px; color: var(--ink); background: color-mix(in srgb, var(--cream) 70%, transparent); font-size: 0.62rem; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; }
   .program-copy { margin-top: 1.5rem; }
   .program-level { margin: 0 0 0.65rem; color: var(--caramel); font-size: 0.68rem; font-weight: 750; letter-spacing: 0.12em; text-transform: uppercase; }
-  .program-tile h2 { margin: 0 0 1rem; color: var(--ink); font-family: var(--font-heading); font-size: clamp(1.6rem, 2vw, 2.15rem); line-height: 1.05; }
-  .program-copy > p:last-child { margin: 0; font-size: 0.8rem; }
+  .program-tile h2 { margin: 0 0 1.2rem; color: var(--ink); font-family: var(--font-heading); font-size: clamp(2rem, 3vw, 2.65rem); line-height: 1.04; }
+  .program-copy > p:last-child { margin: 0; font-size: 0.92rem; line-height: 1.75; }
   .program-footer { margin-top: auto; padding-top: 2rem; }
   .program-price { display: grid; gap: 0.2rem; margin-bottom: 1.1rem; }
   .program-price span { color: var(--caramel); font-size: 0.64rem; font-weight: 750; letter-spacing: 0.1em; text-transform: uppercase; }
@@ -64,6 +79,34 @@ const programs = marketingPrograms.map((program) => ({
   .program-reconnect { --card-accent: var(--terracotta); }
   .program-nourish { --card-accent: var(--sage); }
   .safety { padding-block: 2rem; color: var(--ink); background: var(--sage); font-size: 0.8rem; line-height: 1.6; }
-  @media (max-width: 72rem) { .program-grid { grid-auto-columns: minmax(17rem, 34vw); grid-template-columns: none; } }
-  @media (max-width: 48rem) { .program-grid { grid-auto-columns: minmax(17rem, 84vw); } .program-tile { min-height: 34rem; } }
+  @media (max-width: 72rem) { .program-grid { grid-auto-columns: minmax(19rem, 42vw); } }
+  @media (max-width: 48rem) { .program-toolbar { align-items: center; gap: 1rem; } .program-toolbar .heading-lg { font-size: clamp(1.8rem, 8vw, 2.6rem); } .rail-btn { width: 2.75rem; height: 2.75rem; } .program-grid { grid-auto-columns: minmax(18rem, 86vw); } .program-tile { min-height: 36rem; } }
+  @media (max-width: 30rem) { .program-toolbar .eyebrow { display: none; } }
 </style>
+
+<script>
+  const programRail = document.querySelector<HTMLElement>('[data-program-rail]');
+  const programPrev = document.querySelector<HTMLButtonElement>('[data-program-prev]');
+  const programNext = document.querySelector<HTMLButtonElement>('[data-program-next]');
+
+  if (programRail && programPrev && programNext) {
+    const scrollStep = () => {
+      const card = programRail.querySelector<HTMLElement>('.program-tile');
+      const gap = Number.parseFloat(getComputedStyle(programRail).columnGap || '20') || 20;
+      return card ? card.offsetWidth + gap : programRail.clientWidth * 0.85;
+    };
+
+    const syncControls = () => {
+      const maxScroll = Math.max(0, programRail.scrollWidth - programRail.clientWidth - 1);
+      programPrev.disabled = programRail.scrollLeft <= 1;
+      programNext.disabled = programRail.scrollLeft >= maxScroll;
+    };
+
+    const scrollBehavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+    programPrev.addEventListener('click', () => programRail.scrollBy({ left: -scrollStep(), behavior: scrollBehavior }));
+    programNext.addEventListener('click', () => programRail.scrollBy({ left: scrollStep(), behavior: scrollBehavior }));
+    programRail.addEventListener('scroll', syncControls, { passive: true });
+    window.addEventListener('resize', syncControls);
+    syncControls();
+  }
+</script>

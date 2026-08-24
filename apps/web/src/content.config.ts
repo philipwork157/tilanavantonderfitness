@@ -10,6 +10,8 @@ const blog = defineCollection({
     publishedAt: z.coerce.date(),
     category: z.enum(['Movement', 'Strength', 'Nourishment', 'Motherhood']),
     readingTime: z.string(),
+    image: z.string().optional(),
+    imageAlt: z.string().optional(),
     draft: z.boolean().default(false),
   }),
 });
