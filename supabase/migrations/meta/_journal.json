@@ -50,6 +50,20 @@
       "when": 1787558399767,
       "tag": "20260824075959_brave_blink",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787861954863,
+      "tag": "20260827201914_closed_rage",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787862630324,
+      "tag": "20260827203030_long_fallen_one",
+      "breakpoints": true
     }
   ]
 }

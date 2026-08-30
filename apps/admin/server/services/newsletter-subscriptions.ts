@@ -4,7 +4,7 @@ import { and, eq, gt, isNull } from 'drizzle-orm';
 import { getDatabase } from '../utils/database';
 
 const CONFIRMATION_TTL_MS = 48 * 60 * 60 * 1000;
-const UNSUBSCRIBE_TTL_MS = 365 * 24 * 60 * 60 * 1000;
+const UNSUBSCRIBE_TTL_MS = 10 * 365 * 24 * 60 * 60 * 1000;
 export const NEWSLETTER_PRIVACY_VERSION = '2026-08-24';
 
 function createToken(): string {
