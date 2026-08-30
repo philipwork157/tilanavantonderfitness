@@ -1,0 +1,70 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const newsletterApiUrl = (import.meta.env.PUBLIC_NEWSLETTER_API_URL || 'http://127.0.0.1:3001/api/newsletter').replace(/\/$/, '');
+---
+
+<BaseLayout
+  title="Unsubscribe from the newsletter"
+  description="Manage your Tilana van Tonder newsletter subscription."
+  showNewsletter={false}
+  robots="noindex, nofollow"
+>
+  <section class="unsubscribe-section" data-unsubscribe-page data-api-url={newsletterApiUrl}>
+    <article>
+      <span class="result-mark" aria-hidden="true" data-mark>♡</span>
+      <p class="eyebrow">Newsletter preferences</p>
+      <h1 class="heading-lg" data-title>Would you like to unsubscribe?</h1>
+      <p data-body>You will no longer receive Tilana’s occasional training guidance and blog updates.</p>
+      <div class="actions" data-actions>
+        <button class="button button-primary" type="button" data-unsubscribe>Yes, unsubscribe me</button>
+        <a class="button button-secondary" href="/">Keep me subscribed</a>
+      </div>
+    </article>
+  </section>
+
+  <script is:inline>
+    (() => {
+      const page = document.querySelector('[data-unsubscribe-page]');
+      const button = document.querySelector('[data-unsubscribe]');
+      const title = document.querySelector('[data-title]');
+      const body = document.querySelector('[data-body]');
+      const mark = document.querySelector('[data-mark]');
+      const actions = document.querySelector('[data-actions]');
+      const token = new URLSearchParams(window.location.search).get('token');
+      if (!page || !button || !token) {
+        if (title) title.textContent = 'This link is not valid.';
+        if (body) body.textContent = 'Please use the unsubscribe link from your most recent newsletter.';
+        if (actions) actions.innerHTML = '<a class="button button-primary" href="/">Return home</a>';
+        return;
+      }
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        button.textContent = 'Updating…';
+        try {
+          const response = await fetch(`${page.dataset.apiUrl}/unsubscribe`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
+          });
+          if (!response.ok) throw new Error('Invalid link');
+          if (mark) mark.textContent = '✓';
+          if (title) title.textContent = 'You have been unsubscribed.';
+          if (body) body.textContent = 'Your preference has been saved. Thank you for being part of the journey.';
+          if (actions) actions.innerHTML = '<a class="button button-primary" href="/">Return home</a>';
+        } catch {
+          button.disabled = false;
+          button.textContent = 'Try again';
+          if (body) body.textContent = 'That link may have expired. Please try the link from your latest newsletter.';
+        }
+      });
+    })();
+  </script>
+</BaseLayout>
+
+<style>
+  .unsubscribe-section { display: grid; min-height: 62vh; place-items: center; padding: var(--section-space) var(--container-gutter); background: color-mix(in srgb, var(--cream) 82%, var(--sage)); }
+  article { max-width: 44rem; padding: clamp(2rem, 6vw, 4rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-md); text-align: center; }
+  .result-mark { display: grid; width: 4rem; height: 4rem; margin: 0 auto 1.5rem; place-items: center; border-radius: 50%; background: var(--sage); font-size: 1.8rem; }
+  article > p:not(.eyebrow) { max-width: 34rem; margin: 1.2rem auto 2rem; color: var(--chocolate); }
+  .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.8rem; }
+  button:disabled { cursor: wait; opacity: 0.65; }
+</style>

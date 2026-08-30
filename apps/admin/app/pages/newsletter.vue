@@ -1,9 +1,41 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'dashboard' });
 
+interface Campaign {
+  id: string;
+  subject: string;
+  previewText: string | null;
+  blogTitle: string;
+  introduction: string;
+  blogUrl: string;
+  status: string;
+  recipientCount: number;
+  sentCount: number;
+  failedCount: number;
+  testSentCount: number;
+  lastTestSentAt: string | Date | null;
+  createdAt: string | Date;
+  sentAt: string | Date | null;
+}
+
 const search = ref('');
 const statusFilter = ref('all');
 const { data, status, error, refresh } = await useFetch('/api/admin/newsletter', { lazy: true });
+const {
+  data: campaignData,
+  status: campaignStatus,
+  error: campaignLoadError,
+  refresh: refreshCampaigns,
+} = await useFetch<{ campaigns: Campaign[] }>('/api/admin/newsletter/campaigns', { lazy: true });
+const campaignForm = reactive({ subject: '', previewText: '', blogTitle: '', introduction: '', blogUrl: '' });
+const campaignId = ref<string | null>(null);
+const campaignNotice = ref('');
+const campaignError = ref('');
+const savingCampaign = ref(false);
+const testingCampaign = ref(false);
+const sendingCampaign = ref(false);
+const showSendConfirmation = ref(false);
+const campaigns = computed(() => campaignData.value?.campaigns ?? []);
 
 const statusOptions = [
   { label: 'All statuses', value: 'all' },
@@ -68,6 +100,113 @@ function statusColor(value: string): 'success' | 'warning' | 'neutral' | 'error'
   return 'neutral';
 }
 
+function campaignStatusColor(value: string): 'success' | 'warning' | 'neutral' | 'error' {
+  if (value === 'sent') return 'success';
+  if (value === 'sending' || value === 'draft') return 'warning';
+  if (value === 'failed' || value === 'partially_failed') return 'error';
+  return 'neutral';
+}
+
+function readableError(value: unknown, fallback: string) {
+  if (value && typeof value === 'object') {
+    const error = value as { data?: { statusMessage?: string }; statusMessage?: string; message?: string };
+    return error.data?.statusMessage || error.statusMessage || error.message || fallback;
+  }
+  return fallback;
+}
+
+function campaignPayload() {
+  return { ...campaignForm };
+}
+
+async function saveCampaign() {
+  campaignError.value = '';
+  campaignNotice.value = '';
+  savingCampaign.value = true;
+  try {
+    const response = campaignId.value
+      ? await $fetch<{ campaign: Campaign }>(`/api/admin/newsletter/campaigns/${campaignId.value}`, { method: 'PATCH', body: campaignPayload() })
+      : await $fetch<{ campaign: Campaign }>('/api/admin/newsletter/campaigns', { method: 'POST', body: campaignPayload() });
+    campaignId.value = response.campaign.id;
+    campaignNotice.value = 'Draft saved. You can now send a test or review the final delivery.';
+    await refreshCampaigns();
+    return response.campaign.id;
+  } catch (value) {
+    campaignError.value = readableError(value, 'The campaign could not be saved.');
+    return null;
+  } finally {
+    savingCampaign.value = false;
+  }
+}
+
+async function sendTest() {
+  testingCampaign.value = true;
+  campaignNotice.value = '';
+  campaignError.value = '';
+  try {
+    const id = await saveCampaign();
+    if (!id) return;
+    await $fetch(`/api/admin/newsletter/campaigns/${id}/test`, { method: 'POST' });
+    campaignNotice.value = 'Test email sent to Tilana. Check the inbox before sending to subscribers.';
+  } catch (value) {
+    campaignError.value = readableError(value, 'The test email could not be sent.');
+  } finally {
+    testingCampaign.value = false;
+  }
+}
+
+async function sendCampaign() {
+  showSendConfirmation.value = false;
+  sendingCampaign.value = true;
+  campaignNotice.value = '';
+  campaignError.value = '';
+  try {
+    const id = await saveCampaign();
+    if (!id) return;
+    const result = await $fetch<{ mode: 'live' | 'preview'; sentCount: number; failedCount: number }>(`/api/admin/newsletter/campaigns/${id}/send`, { method: 'POST' });
+    campaignNotice.value = result.mode === 'preview'
+      ? 'Development preview sent only to Tilana. No subscriber delivery was recorded.'
+      : `Campaign complete: ${result.sentCount} sent${result.failedCount ? `, ${result.failedCount} failed` : ''}.`;
+    await refreshCampaigns();
+  } catch (value) {
+    campaignError.value = readableError(value, 'The campaign could not be sent.');
+  } finally {
+    sendingCampaign.value = false;
+  }
+}
+
+function newCampaign() {
+  campaignId.value = null;
+  Object.assign(campaignForm, { subject: '', previewText: '', blogTitle: '', introduction: '', blogUrl: '' });
+  campaignNotice.value = '';
+  campaignError.value = '';
+}
+
+function populateCampaignForm(campaign: Campaign) {
+  Object.assign(campaignForm, {
+    subject: campaign.subject,
+    previewText: campaign.previewText ?? '',
+    blogTitle: campaign.blogTitle,
+    introduction: campaign.introduction,
+    blogUrl: campaign.blogUrl,
+  });
+  campaignError.value = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function editCampaign(campaign: Campaign) {
+  if (campaign.status !== 'draft') return;
+  campaignId.value = campaign.id;
+  populateCampaignForm(campaign);
+  campaignNotice.value = 'Draft loaded. Make your changes, then save or send a test.';
+}
+
+function duplicateCampaign(campaign: Campaign) {
+  campaignId.value = null;
+  populateCampaignForm(campaign);
+  campaignNotice.value = 'Campaign copied into a new draft. Review it before sending again.';
+}
+
 function exportSubscribedCsv() {
   const rows = subscribers.value.filter((item) => item.status === 'subscribed');
   const header = 'email,status,source,confirmed_at\n';
@@ -98,6 +237,86 @@ useSeoMeta({ title: 'Newsletter | Tilana Admin', robots: 'noindex, nofollow' });
         <strong>{{ counts.subscribed }}</strong>
         <small>Subscribed</small>
       </span>
+    </section>
+
+    <section class="campaign-workspace">
+      <div class="campaign-editor">
+        <div class="section-title">
+          <div><p class="eyebrow">New email</p><h2>Share a new blog</h2></div>
+          <UButton v-if="campaignId" label="New campaign" icon="i-lucide-plus" color="neutral" variant="soft" @click="newCampaign" />
+        </div>
+        <p class="section-copy">Paste the published blog link, add a warm introduction, then send yourself a test before sharing it with confirmed subscribers.</p>
+        <UAlert v-if="campaignNotice" color="success" variant="soft" icon="i-lucide-circle-check" :title="campaignNotice" />
+        <UAlert v-if="campaignError" color="error" variant="soft" icon="i-lucide-circle-alert" :title="campaignError" />
+        <div class="campaign-fields">
+          <UFormField label="Email subject" required><UInput v-model="campaignForm.subject" placeholder="A new note from Tilana" class="w-full" /></UFormField>
+          <UFormField label="Preview text" help="The short line shown beside the subject in an inbox."><UInput v-model="campaignForm.previewText" placeholder="A thoughtful note for your week" class="w-full" /></UFormField>
+          <UFormField label="Blog title" required><UInput v-model="campaignForm.blogTitle" placeholder="Welcome — a little about me" class="w-full" /></UFormField>
+          <UFormField label="Published blog link" required><UInput v-model="campaignForm.blogUrl" type="url" placeholder="https://tilanavantonder.co.za/blog/..." class="w-full" /></UFormField>
+          <UFormField label="Personal introduction" required class="full-field"><UTextarea v-model="campaignForm.introduction" :rows="5" placeholder="Write a short, personal reason to read this post…" class="w-full" /></UFormField>
+        </div>
+        <div class="campaign-actions">
+          <UButton label="Save draft" icon="i-lucide-save" color="neutral" variant="soft" :loading="savingCampaign" @click="saveCampaign" />
+          <UButton label="Send test to Tilana" icon="i-lucide-send" color="neutral" variant="outline" :loading="testingCampaign" @click="sendTest" />
+          <UButton label="Send to subscribers" icon="i-lucide-mail-check" :loading="sendingCampaign" @click="showSendConfirmation = true" />
+        </div>
+      </div>
+
+      <aside class="campaign-preview" aria-label="Newsletter preview">
+        <p class="eyebrow">Live preview</p>
+        <div class="preview-card">
+          <div class="preview-head"><small>A thoughtful note from Tilana</small><h3>{{ campaignForm.blogTitle || 'Your blog title' }}</h3></div>
+          <div class="preview-body"><p>{{ campaignForm.introduction || 'Your personal introduction will appear here, followed by a clear link to the new blog.' }}</p><span>Read the blog →</span><small>You are receiving this because you confirmed your subscription.</small></div>
+        </div>
+      </aside>
+    </section>
+
+    <USkeleton v-if="campaignStatus === 'pending'" class="h-48 rounded-3xl" />
+
+    <UAlert
+      v-else-if="campaignLoadError"
+      color="error"
+      variant="soft"
+      icon="i-lucide-database-zap"
+      title="Campaign history could not be loaded"
+      description="Apply the latest database migration, then refresh this page. Your saved campaigns have not been deleted."
+    />
+
+    <section v-else class="campaign-history">
+      <div class="section-title"><div><p class="eyebrow">Campaign history</p><h2>Previous sends</h2></div></div>
+      <div v-if="campaigns.length" class="history-grid">
+        <article v-for="campaign in campaigns" :key="campaign.id">
+          <div><h3>{{ campaign.subject }}</h3><p>{{ campaign.blogTitle }}</p></div>
+          <UBadge :color="campaignStatusColor(campaign.status)" variant="subtle">{{ campaign.status.replace('_', ' ') }}</UBadge>
+          <dl>
+            <div><dt>Delivery</dt><dd>{{ campaign.status === 'draft' ? 'Not sent' : `${campaign.sentCount}/${campaign.recipientCount} sent` }}</dd></div>
+            <div><dt>Tests</dt><dd>{{ campaign.testSentCount }} sent<span v-if="campaign.lastTestSentAt"> · {{ formatDate(campaign.lastTestSentAt) }}</span></dd></div>
+            <div><dt>Created</dt><dd>{{ formatDate(campaign.createdAt) }}</dd></div>
+          </dl>
+          <UButton
+            v-if="campaign.status === 'draft'"
+            label="Edit draft"
+            icon="i-lucide-pencil"
+            color="neutral"
+            variant="soft"
+            size="sm"
+            @click="editCampaign(campaign)"
+          />
+          <UButton
+            v-else
+            label="Send again"
+            icon="i-lucide-copy-plus"
+            color="neutral"
+            variant="soft"
+            size="sm"
+            @click="duplicateCampaign(campaign)"
+          />
+        </article>
+      </div>
+      <div v-else class="campaign-empty">
+        <span><UIcon name="i-lucide-file-pen-line" /></span>
+        <div><h3>No campaigns yet</h3><p>Your saved drafts and completed sends will appear here.</p></div>
+      </div>
     </section>
 
     <section class="newsletter-stats" aria-label="Newsletter overview">
@@ -185,11 +404,60 @@ useSeoMeta({ title: 'Newsletter | Tilana Admin', robots: 'noindex, nofollow' });
         </template>
       </UTable>
     </UCard>
+
+    <UModal v-model:open="showSendConfirmation" title="Send this newsletter?">
+      <template #body>
+        <div class="send-confirmation">
+          <span><UIcon name="i-lucide-mail-check" /></span>
+          <h3>Ready to share “{{ campaignForm.blogTitle || 'this blog' }}”?</h3>
+          <p>This will email all {{ counts.subscribed }} confirmed subscribers individually. Anyone who has unsubscribed will be skipped.</p>
+          <div><UButton label="Go back" color="neutral" variant="ghost" @click="showSendConfirmation = false" /><UButton label="Yes, send newsletter" icon="i-lucide-send" @click="sendCampaign" /></div>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
 
 <style scoped>
 .newsletter-page { display: grid; gap: 1.5rem; }
+
+.campaign-workspace { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(19rem, 0.85fr); overflow: hidden; border: 1px solid var(--color-border); border-radius: 2rem; background: color-mix(in srgb, var(--white) 84%, var(--cream)); box-shadow: var(--shadow-md); }
+.campaign-editor, .campaign-preview { padding: clamp(1.4rem, 3vw, 2.4rem); }
+.campaign-preview { background: color-mix(in srgb, var(--sage) 70%, var(--cream)); }
+.section-title { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.section-title h2 { margin: 0; color: var(--ink); font-family: var(--font-heading); font-size: clamp(2rem, 4vw, 3rem); line-height: 1; }
+.section-copy { max-width: 44rem; margin: 0.8rem 0 1.4rem; font-size: 0.76rem; line-height: 1.7; }
+.campaign-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1.2rem; }
+.full-field { grid-column: 1 / -1; }
+.campaign-actions { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1.4rem; }
+.preview-card { overflow: hidden; margin-top: 1rem; border: 1px solid var(--color-border); border-radius: 1.6rem; background: #fffaf7; box-shadow: var(--shadow-sm); }
+.preview-head { padding: 2rem; background: #c9d2b3; }
+.preview-head small { color: #795744; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.preview-head h3 { margin: 0.6rem 0 0; color: #0f0e13; font-family: Georgia, serif; font-size: 1.75rem; line-height: 1.15; }
+.preview-body { padding: 2rem; color: #614635; }
+.preview-body p { min-height: 5rem; margin: 0 0 1.3rem; font-size: 0.78rem; line-height: 1.7; white-space: pre-line; }
+.preview-body > span { display: inline-block; padding: 0.8rem 1.1rem; border-radius: 999px; color: #0f0e13; background: #d5a27f; font-size: 0.7rem; font-weight: 700; }
+.preview-body > small { display: block; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #ead3c5; font-size: 0.58rem; }
+.campaign-history { padding: clamp(1.4rem, 3vw, 2.2rem); border: 1px solid var(--color-border); border-radius: 2rem; background: color-mix(in srgb, var(--white) 75%, transparent); }
+.history-grid { display: grid; gap: 0.7rem; margin-top: 1.2rem; }
+.history-grid article { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 1rem; padding: 1rem 1.2rem; border: 1px solid var(--color-border); border-radius: 1.2rem; background: color-mix(in srgb, var(--white) 82%, var(--cream)); }
+.history-grid h3, .history-grid p { margin: 0; }
+.history-grid h3 { color: var(--ink); font-size: 0.78rem; }
+.history-grid p { margin-top: 0.2rem; font-size: 0.65rem; }
+.history-grid dl { display: flex; gap: 1.5rem; margin: 0; }
+.history-grid dl div { display: grid; }
+.history-grid dt { color: var(--ui-text-muted); font-size: 0.55rem; text-transform: uppercase; }
+.history-grid dd { margin: 0.15rem 0 0; color: var(--ink); font-size: 0.68rem; font-weight: 700; }
+.campaign-empty { display: flex; align-items: center; gap: 1rem; margin-top: 1.2rem; padding: 1.2rem; border: 1px dashed var(--color-border); border-radius: 1.2rem; }
+.campaign-empty > span { display: grid; width: 2.8rem; aspect-ratio: 1; flex: none; place-items: center; border-radius: 0.9rem; color: var(--ink); background: var(--sage); }
+.campaign-empty h3, .campaign-empty p { margin: 0; }
+.campaign-empty h3 { color: var(--ink); font-family: var(--font-heading); font-size: 1.2rem; }
+.campaign-empty p { margin-top: 0.2rem; font-size: 0.68rem; }
+.send-confirmation { display: grid; justify-items: center; padding: 1rem; text-align: center; }
+.send-confirmation > span { display: grid; width: 4rem; aspect-ratio: 1; place-items: center; border-radius: 1.2rem; background: var(--sage); font-size: 1.4rem; }
+.send-confirmation h3 { margin: 1rem 0 0; color: var(--ink); font-family: var(--font-heading); font-size: 1.6rem; }
+.send-confirmation p { max-width: 30rem; margin: 0.6rem 0 1.4rem; font-size: 0.75rem; line-height: 1.7; }
+.send-confirmation > div { display: flex; gap: 0.7rem; }
 
 .newsletter-heading {
   display: flex;
@@ -338,6 +606,7 @@ h1 {
 
 @media (max-width: 68rem) {
   .newsletter-stats { grid-template-columns: 1fr; }
+  .campaign-workspace { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 42rem) {
@@ -346,5 +615,11 @@ h1 {
   .newsletter-tools { flex-wrap: wrap; }
   .search-input { min-width: 100%; }
   .status-select { flex: 1; width: auto; }
+  .campaign-fields { grid-template-columns: 1fr; }
+  .full-field { grid-column: auto; }
+  .campaign-actions > * { width: 100%; justify-content: center; }
+  .history-grid article { grid-template-columns: 1fr auto; }
+  .history-grid dl { grid-column: 1 / -1; }
+  .history-grid article > :last-child { grid-column: 1 / -1; justify-self: start; }
 }
 </style>

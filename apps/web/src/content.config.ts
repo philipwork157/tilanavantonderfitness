@@ -12,6 +12,8 @@ const blog = defineCollection({
     readingTime: z.string(),
     image: z.string().optional(),
     imageAlt: z.string().optional(),
+    imageWidth: z.number().int().positive().optional(),
+    imageHeight: z.number().int().positive().optional(),
     draft: z.boolean().default(false),
   }),
 });

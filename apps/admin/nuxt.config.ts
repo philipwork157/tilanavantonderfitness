@@ -18,7 +18,7 @@ export default defineNuxtConfig({
     contactNotificationEnabled: false,
     contactNotificationTo: 'tilanavantonder@gmail.com',
     newsletterFromEmail: '',
-    newsletterDevelopmentRecipient: 'tilanavantonder@gmail.com',
+    newsletterDevelopmentRecipient: '',
     newsletterApiBaseUrl: 'http://127.0.0.1:3001',
     newsletterSiteUrl: 'http://127.0.0.1:4321',
   },
