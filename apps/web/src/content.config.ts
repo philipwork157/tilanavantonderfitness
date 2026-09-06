@@ -8,7 +8,7 @@ const blog = defineCollection({
     title: z.string(),
     description: z.string(),
     publishedAt: z.coerce.date(),
-    category: z.enum(['Movement', 'Strength', 'Nourishment', 'Motherhood']),
+    category: z.enum(['Movement', 'Strength', 'Nourishment', 'Nurturance', 'Motherhood']),
     readingTime: z.string(),
     image: z.string().optional(),
     imageAlt: z.string().optional(),
