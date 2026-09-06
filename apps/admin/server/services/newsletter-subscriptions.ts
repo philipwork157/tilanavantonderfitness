@@ -17,7 +17,7 @@ async function hashToken(token: string): Promise<string> {
   return Buffer.from(digest).toString('hex');
 }
 
-async function insertToken(subscriberId: string, purpose: NewsletterTokenPurpose) {
+async function insertToken(subscriberId: number, purpose: NewsletterTokenPurpose) {
   const token = createToken();
   const ttl = purpose === 'confirmation' ? CONFIRMATION_TTL_MS : UNSUBSCRIBE_TTL_MS;
   await getDatabase().insert(newsletterTokens).values({
@@ -98,7 +98,7 @@ export async function confirmNewsletterSubscription(token: string): Promise<bool
   return true;
 }
 
-export async function createNewsletterUnsubscribeToken(subscriberId: string) {
+export async function createNewsletterUnsubscribeToken(subscriberId: number) {
   return insertToken(subscriberId, 'unsubscribe');
 }
 

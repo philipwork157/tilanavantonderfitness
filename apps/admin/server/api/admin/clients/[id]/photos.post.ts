@@ -5,9 +5,9 @@ import {
   getCheckinForClient,
 } from '../../../../services/coaching';
 import { requireAdmin } from '../../../../utils/admin-auth';
+import { parseDatabaseId } from '../../../../utils/database-id';
 import { createSignedPhotoUrl, uploadClientPhoto } from '../../../../utils/supabase-storage';
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
 const EXTENSION: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -18,8 +18,8 @@ const EXTENSION: Record<string, string> = {
 
 export default defineEventHandler(async (event) => {
   await requireAdmin(event);
-  const clientId = getRouterParam(event, 'id');
-  if (!clientId || !UUID.test(clientId)) {
+  const clientId = parseDatabaseId(getRouterParam(event, 'id'));
+  if (clientId === null) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid client identifier.' });
   }
 
@@ -27,13 +27,15 @@ export default defineEventHandler(async (event) => {
   if (!form) throw createError({ statusCode: 400, statusMessage: 'No photo was uploaded.' });
 
   const filePart = form.find((part) => part.name === 'file' && part.filename);
-  const checkinId = form.find((part) => part.name === 'checkinId')?.data.toString('utf8').trim();
+  const checkinId = parseDatabaseId(
+    form.find((part) => part.name === 'checkinId')?.data.toString('utf8').trim(),
+  );
   const caption = form.find((part) => part.name === 'caption')?.data.toString('utf8').trim() ?? '';
 
   if (!filePart || !filePart.data?.length) {
     throw createError({ statusCode: 400, statusMessage: 'No photo was uploaded.' });
   }
-  if (!checkinId || !UUID.test(checkinId)) {
+  if (checkinId === null) {
     throw createError({ statusCode: 400, statusMessage: 'A valid check-in is required.' });
   }
   if (filePart.data.length > MAX_BYTES) {

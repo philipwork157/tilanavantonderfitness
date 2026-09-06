@@ -1,6 +1,6 @@
-import { check, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { check, index, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { profiles } from './identity';
+import { users } from './identity';
 
 export const newsletterSubscriberStatusValues = [
   'pending',
@@ -14,7 +14,7 @@ export type NewsletterSubscriberStatus = (typeof newsletterSubscriberStatusValue
 export const newsletterSubscribers = pgTable(
   'newsletter_subscribers',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
     email: text('email').notNull(),
     status: text('status').$type<NewsletterSubscriberStatus>().notNull().default('pending'),
     source: text('source').notNull().default('website-footer'),
@@ -40,8 +40,8 @@ export type NewsletterTokenPurpose = (typeof newsletterTokenPurposeValues)[numbe
 export const newsletterTokens = pgTable(
   'newsletter_tokens',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    subscriberId: uuid('subscriber_id').notNull().references(() => newsletterSubscribers.id, { onDelete: 'cascade' }),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    subscriberId: integer('subscriber_id').notNull().references(() => newsletterSubscribers.id, { onDelete: 'cascade' }),
     tokenHash: text('token_hash').notNull(),
     purpose: text('purpose').$type<NewsletterTokenPurpose>().notNull(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
@@ -62,14 +62,14 @@ export type NewsletterCampaignStatus = (typeof newsletterCampaignStatusValues)[n
 export const newsletterCampaigns = pgTable(
   'newsletter_campaigns',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
     subject: text('subject').notNull(),
     previewText: text('preview_text'),
     blogTitle: text('blog_title').notNull(),
     introduction: text('introduction').notNull(),
     blogUrl: text('blog_url').notNull(),
     status: text('status').$type<NewsletterCampaignStatus>().notNull().default('draft'),
-    createdByUserId: uuid('created_by_user_id').references(() => profiles.userId, { onDelete: 'set null' }),
+    createdByUserId: integer('created_by_user_id').references(() => users.id, { onDelete: 'set null' }),
     recipientCount: integer('recipient_count').notNull().default(0),
     sentCount: integer('sent_count').notNull().default(0),
     failedCount: integer('failed_count').notNull().default(0),
@@ -94,9 +94,9 @@ export type NewsletterDeliveryStatus = (typeof newsletterDeliveryStatusValues)[n
 export const newsletterCampaignDeliveries = pgTable(
   'newsletter_campaign_deliveries',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    campaignId: uuid('campaign_id').notNull().references(() => newsletterCampaigns.id, { onDelete: 'cascade' }),
-    subscriberId: uuid('subscriber_id').notNull().references(() => newsletterSubscribers.id, { onDelete: 'restrict' }),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    campaignId: integer('campaign_id').notNull().references(() => newsletterCampaigns.id, { onDelete: 'cascade' }),
+    subscriberId: integer('subscriber_id').notNull().references(() => newsletterSubscribers.id, { onDelete: 'restrict' }),
     emailSnapshot: text('email_snapshot').notNull(),
     status: text('status').$type<NewsletterDeliveryStatus>().notNull().default('queued'),
     sesMessageId: text('ses_message_id'),
@@ -122,8 +122,8 @@ export type NewsletterCampaignTestStatus = (typeof newsletterCampaignTestStatusV
 export const newsletterCampaignTestDeliveries = pgTable(
   'newsletter_campaign_test_deliveries',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    campaignId: uuid('campaign_id').notNull().references(() => newsletterCampaigns.id, { onDelete: 'cascade' }),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    campaignId: integer('campaign_id').notNull().references(() => newsletterCampaigns.id, { onDelete: 'cascade' }),
     recipientSnapshot: text('recipient_snapshot').notNull(),
     status: text('status').$type<NewsletterCampaignTestStatus>().notNull(),
     sesMessageId: text('ses_message_id'),

@@ -5,11 +5,18 @@ The application separates authentication, customer records, purchases, billing, 
 ## Identity and permissions
 
 - Supabase `auth.users` owns passwords, sessions, and authentication.
-- `profiles` stores application profile fields for an authenticated user. `profiles.user_id` must match `auth.users.id`.
+- `users` stores application profile fields. Its auto-incrementing integer `id`
+  is used by application relationships, while `users.supabase_id` uniquely
+  references the UUID in `auth.users.id`.
 - `user_roles` stores `admin`, `staff`, or `customer` roles separately from editable profile fields.
 - `clients` is the business record used by orders and invoices. A client can be created before they have a login, then linked through nullable `clients.user_id` after accepting an invitation.
 
-Tilana will have a normal Supabase Auth user, a `profiles` row, and an `admin` row in `user_roles`. Public signup and profile update routes must never grant administrative roles.
+Tilana will have a normal Supabase Auth user, a `users` row, and an `admin` row in `user_roles`. Public signup and profile update routes must never grant administrative roles.
+
+Every application-owned table uses an auto-incrementing integer `id`. Foreign
+keys such as `clients.user_id`, `orders.client_id`, and
+`order_items.order_id` always reference these internal integer IDs. Supabase's
+UUID is never used as an application foreign key outside `users.supabase_id`.
 
 ## Programs and private files
 
@@ -50,12 +57,14 @@ To answer “what did they actually pay?”, use successful `payments` and compa
 
 ## Migration note
 
-Drizzle owns application schemas, while Supabase owns the `auth` schema. After generating the first migration containing `profiles`, review it and add this constraint to that migration before applying it:
+Drizzle owns application schemas, while Supabase owns the `auth` schema. Because
+Drizzle does not manage cross-schema Supabase Auth relationships, migrations
+must retain this constraint:
 
 ```sql
-ALTER TABLE "profiles"
-  ADD CONSTRAINT "profiles_user_id_auth_users_id_fk"
-  FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id")
+ALTER TABLE "users"
+  ADD CONSTRAINT "users_supabase_id_auth_users_id_fk"
+  FOREIGN KEY ("supabase_id") REFERENCES "auth"."users"("id")
   ON DELETE CASCADE;
 ```
 

@@ -7,7 +7,7 @@ export type ContactNotificationTemplateInput = Pick<
   ContactFormRequest,
   'name' | 'email' | 'interest' | 'message'
 > & {
-  submissionId: string;
+  submissionId: number;
   submittedAt: Date;
 };
 
@@ -131,7 +131,7 @@ export function renderContactNotificationEmail(input: ContactNotificationTemplat
                   </tr>
                 </table>
 
-                <p style="margin:0;text-align:center;color:#a87e63;font-size:11px;line-height:1.6;">Enquiry reference: ${escapeHtml(input.submissionId)}</p>
+                <p style="margin:0;text-align:center;color:#a87e63;font-size:11px;line-height:1.6;">Enquiry reference: ${escapeHtml(String(input.submissionId))}</p>
               </td>
             </tr>
             <tr>

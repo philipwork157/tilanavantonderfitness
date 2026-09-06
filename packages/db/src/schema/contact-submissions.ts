@@ -1,5 +1,5 @@
 import type { ContactInterest } from '@tilana/contracts/contact';
-import { check, index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { check, index, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 export const contactStatusValues = ['new', 'read', 'replied', 'archived'] as const;
@@ -9,7 +9,7 @@ export type ContactStatus = (typeof contactStatusValues)[number];
 export const contactSubmissions = pgTable(
   'contact_submissions',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
     fullName: text('full_name').notNull(),
     email: text('email').notNull(),
     interest: text('interest').$type<ContactInterest>().notNull(),

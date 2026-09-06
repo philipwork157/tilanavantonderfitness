@@ -5,7 +5,7 @@ import type {
   orderItems,
   orders,
   payments,
-  profiles,
+  users,
   programAccess,
   programFiles,
   programs,
@@ -13,8 +13,8 @@ import type {
   userRoles,
 } from '../schema';
 
-export type Profile = typeof profiles.$inferSelect;
-export type NewProfile = typeof profiles.$inferInsert;
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
 export type UserRoleRecord = typeof userRoles.$inferSelect;
 export type NewUserRoleRecord = typeof userRoles.$inferInsert;
 export type Client = typeof clients.$inferSelect;

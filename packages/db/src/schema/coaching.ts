@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
-import { check, date, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
-import { clients, profiles } from './identity';
+import { check, date, index, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { clients, users } from './identity';
 
 // Biological sex is required for the BMR calculation and is kept separate from
 // the identity `gender` field on `clients`.
@@ -23,7 +23,8 @@ export type NutritionMethod = (typeof nutritionMethodValues)[number];
 export const clientHealthProfiles = pgTable(
   'client_health_profiles',
   {
-    clientId: uuid('client_id').primaryKey().references(() => clients.id, { onDelete: 'cascade' }),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    clientId: integer('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
     dateOfBirth: date('date_of_birth').notNull(),
     biologicalSex: text('biological_sex').$type<BiologicalSex>().notNull(),
     heightCm: integer('height_cm').notNull(),
@@ -33,11 +34,12 @@ export const clientHealthProfiles = pgTable(
     weeklyRateGrams: integer('weekly_rate_grams'),
     dietaryNotes: text('dietary_notes'),
     medicalNotes: text('medical_notes'),
-    createdByUserId: uuid('created_by_user_id').references(() => profiles.userId, { onDelete: 'set null' }),
+    createdByUserId: integer('created_by_user_id').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    uniqueIndex('client_health_profiles_client_unique').on(table.clientId),
     check('client_health_profiles_sex_value', sql`${table.biologicalSex} in ('female', 'male')`),
     check('client_health_profiles_height_range', sql`${table.heightCm} between 50 and 300`),
     check('client_health_profiles_activity_value', sql`${table.activityLevel} in ('sedentary', 'light', 'moderate', 'active', 'very_active')`),
@@ -54,8 +56,8 @@ export const clientHealthProfiles = pgTable(
 export const clientCheckins = pgTable(
   'client_checkins',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    clientId: uuid('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    clientId: integer('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
     checkinDate: date('checkin_date').notNull(),
     weightGrams: integer('weight_grams').notNull(),
     waistMm: integer('waist_mm'),
@@ -70,7 +72,7 @@ export const clientCheckins = pgTable(
     rightCalfMm: integer('right_calf_mm'),
     bodyFatPctTenths: integer('body_fat_pct_tenths'),
     notes: text('notes'),
-    createdByUserId: uuid('created_by_user_id').references(() => profiles.userId, { onDelete: 'set null' }),
+    createdByUserId: integer('created_by_user_id').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -97,8 +99,8 @@ export const clientCheckins = pgTable(
 export const clientCheckinPhotos = pgTable(
   'client_checkin_photos',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    checkinId: uuid('checkin_id').notNull().references(() => clientCheckins.id, { onDelete: 'cascade' }),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    checkinId: integer('checkin_id').notNull().references(() => clientCheckins.id, { onDelete: 'cascade' }),
     storagePath: text('storage_path').notNull(),
     caption: text('caption'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -113,9 +115,9 @@ export const clientCheckinPhotos = pgTable(
 export const clientNutritionTargets = pgTable(
   'client_nutrition_targets',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    clientId: uuid('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
-    checkinId: uuid('checkin_id').references(() => clientCheckins.id, { onDelete: 'set null' }),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    clientId: integer('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+    checkinId: integer('checkin_id').references(() => clientCheckins.id, { onDelete: 'set null' }),
     method: text('method').$type<NutritionMethod>().notNull().default('mifflin_st_jeor'),
     effectiveFrom: date('effective_from').notNull(),
     bmrKcal: integer('bmr_kcal').notNull(),
@@ -124,7 +126,7 @@ export const clientNutritionTargets = pgTable(
     proteinG: integer('protein_g').notNull(),
     carbsG: integer('carbs_g').notNull(),
     fatG: integer('fat_g').notNull(),
-    createdByUserId: uuid('created_by_user_id').references(() => profiles.userId, { onDelete: 'set null' }),
+    createdByUserId: integer('created_by_user_id').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

@@ -40,7 +40,7 @@ function isUniqueViolation(error: unknown): boolean {
   return Boolean(error) && typeof error === 'object' && (error as { code?: string }).code === '23505';
 }
 
-export async function assertClientExists(clientId: string): Promise<void> {
+export async function assertClientExists(clientId: number): Promise<void> {
   const [row] = await getDatabase()
     .select({ id: clients.id })
     .from(clients)
@@ -49,7 +49,7 @@ export async function assertClientExists(clientId: string): Promise<void> {
   if (!row) throw new ClientNotFoundError();
 }
 
-export async function getHealthProfile(clientId: string) {
+export async function getHealthProfile(clientId: number) {
   const [profile] = await getDatabase()
     .select()
     .from(clientHealthProfiles)
@@ -58,7 +58,7 @@ export async function getHealthProfile(clientId: string) {
   return profile ?? null;
 }
 
-export async function getLatestCheckin(clientId: string) {
+export async function getLatestCheckin(clientId: number) {
   const [checkin] = await getDatabase()
     .select()
     .from(clientCheckins)
@@ -68,7 +68,7 @@ export async function getLatestCheckin(clientId: string) {
   return checkin ?? null;
 }
 
-export async function getLatestNutritionTarget(clientId: string) {
+export async function getLatestNutritionTarget(clientId: number) {
   const [target] = await getDatabase()
     .select()
     .from(clientNutritionTargets)
@@ -88,7 +88,7 @@ type CheckinRow = NonNullable<Awaited<ReturnType<typeof getLatestCheckin>>>;
 async function persistNutritionTarget(
   profile: HealthProfileRow,
   checkin: CheckinRow,
-  userId: string,
+  userId: number,
 ) {
   const result = calculateNutrition({
     biologicalSex: profile.biologicalSex,
@@ -122,7 +122,7 @@ async function persistNutritionTarget(
 }
 
 /** Recalculate from the current profile + latest check-in (no-op if either is missing). */
-export async function recalculateNutrition(clientId: string, userId: string) {
+export async function recalculateNutrition(clientId: number, userId: number) {
   const [profile, checkin] = await Promise.all([
     getHealthProfile(clientId),
     getLatestCheckin(clientId),
@@ -133,9 +133,9 @@ export async function recalculateNutrition(clientId: string, userId: string) {
 }
 
 export async function upsertHealthProfile(
-  clientId: string,
+  clientId: number,
   data: HealthProfileUpsertRequest,
-  userId: string,
+  userId: number,
 ) {
   await assertClientExists(clientId);
   const db = getDatabase();
@@ -182,9 +182,9 @@ export async function upsertHealthProfile(
 }
 
 export async function createCheckin(
-  clientId: string,
+  clientId: number,
   data: CheckinCreateRequest,
-  userId: string,
+  userId: number,
 ) {
   await assertClientExists(clientId);
   const db = getDatabase();
@@ -227,7 +227,7 @@ export async function createCheckin(
 }
 
 export async function addCheckinPhoto(
-  checkinId: string,
+  checkinId: number,
   storagePath: string,
   caption: string | null,
 ) {
@@ -239,7 +239,7 @@ export async function addCheckinPhoto(
   return photo;
 }
 
-export async function getCheckinForClient(clientId: string, checkinId: string) {
+export async function getCheckinForClient(clientId: number, checkinId: number) {
   const [checkin] = await getDatabase()
     .select()
     .from(clientCheckins)
@@ -249,7 +249,7 @@ export async function getCheckinForClient(clientId: string, checkinId: string) {
 }
 
 /** Everything the client detail page needs in one call. */
-export async function getClientCoachingOverview(clientId: string) {
+export async function getClientCoachingOverview(clientId: number) {
   const db = getDatabase();
 
   const [client] = await db
@@ -286,7 +286,7 @@ export async function getClientCoachingOverview(clientId: string) {
         .orderBy(desc(clientCheckinPhotos.createdAt))
     : [];
 
-  const photosByCheckin = new Map<string, Array<{ id: string; url: string | null; caption: string | null }>>();
+  const photosByCheckin = new Map<number, Array<{ id: number; url: string | null; caption: string | null }>>();
   await Promise.all(
     photoRows.map(async (row) => {
       const url = await createSignedPhotoUrl(row.storagePath);

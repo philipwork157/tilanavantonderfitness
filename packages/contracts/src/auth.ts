@@ -8,7 +8,7 @@ export const adminLoginRequestSchema = z.object({
 export const adminSessionResponseSchema = z.object({
   authenticated: z.literal(true),
   user: z.object({
-    id: z.string().uuid(),
+    id: z.number().int().positive(),
     email: z.string().email(),
     firstName: z.string(),
     lastName: z.string(),

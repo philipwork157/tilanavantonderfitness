@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
-import { check, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { check, index, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { programVolumes } from './catalog';
-import { clients, profiles } from './identity';
+import { clients, users } from './identity';
 
 export const orderStatusValues = ['draft', 'pending', 'paid', 'cancelled', 'refunded'] as const;
 export type OrderStatus = (typeof orderStatusValues)[number];
@@ -12,9 +12,9 @@ export type PaymentStatus = (typeof paymentStatusValues)[number];
 export const orders = pgTable(
   'orders',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
     orderNumber: text('order_number').notNull(),
-    clientId: uuid('client_id').notNull().references(() => clients.id, { onDelete: 'restrict' }),
+    clientId: integer('client_id').notNull().references(() => clients.id, { onDelete: 'restrict' }),
     status: text('status').$type<OrderStatus>().notNull().default('draft'),
     currency: text('currency').notNull().default('ZAR'),
     subtotalCents: integer('subtotal_cents').notNull().default(0),
@@ -22,7 +22,7 @@ export const orders = pgTable(
     taxCents: integer('tax_cents').notNull().default(0),
     totalCents: integer('total_cents').notNull().default(0),
     notes: text('notes'),
-    createdByUserId: uuid('created_by_user_id').references(() => profiles.userId, { onDelete: 'set null' }),
+    createdByUserId: integer('created_by_user_id').references(() => users.id, { onDelete: 'set null' }),
     paidAt: timestamp('paid_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -48,9 +48,9 @@ export const orders = pgTable(
 export const orderItems = pgTable(
   'order_items',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
-    programVolumeId: uuid('program_volume_id').references(() => programVolumes.id, { onDelete: 'set null' }),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    orderId: integer('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+    programVolumeId: integer('program_volume_id').references(() => programVolumes.id, { onDelete: 'set null' }),
     description: text('description').notNull(),
     quantity: integer('quantity').notNull().default(1),
     unitPriceCents: integer('unit_price_cents').notNull(),
@@ -70,8 +70,8 @@ export const orderItems = pgTable(
 export const payments = pgTable(
   'payments',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'restrict' }),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    orderId: integer('order_id').notNull().references(() => orders.id, { onDelete: 'restrict' }),
     status: text('status').$type<PaymentStatus>().notNull().default('pending'),
     provider: text('provider').notNull().default('manual'),
     providerReference: text('provider_reference'),

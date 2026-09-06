@@ -1,6 +1,6 @@
 import { adminLoginRequestSchema } from '@tilana/contracts/auth';
 import { clearLoginRateLimit, enforceLoginRateLimit, enforceSameOrigin } from '../../utils/auth-security';
-import { findAdminProfile } from '../../utils/admin-auth';
+import { findAdminUser } from '../../utils/admin-auth';
 import { createSupabaseAuthClient } from '../../utils/supabase-auth';
 
 export default defineEventHandler(async (event) => {
@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'The email address or password is incorrect.' });
   }
 
-  const admin = await findAdminProfile(data.user.id);
+  const admin = await findAdminUser(data.user.id);
   if (!admin) {
     await supabase.auth.signOut();
     throw createError({ statusCode: 403, statusMessage: 'This account does not have administrator access.' });
@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
   return {
     authenticated: true as const,
     user: {
-      id: admin.userId,
+      id: admin.id,
       email: admin.email,
       firstName: admin.firstName,
       lastName: admin.lastName,

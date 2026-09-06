@@ -2,7 +2,7 @@
 definePageMeta({ layout: 'dashboard' });
 
 interface Campaign {
-  id: string;
+  id: number;
   subject: string;
   previewText: string | null;
   blogTitle: string;
@@ -28,7 +28,7 @@ const {
   refresh: refreshCampaigns,
 } = await useFetch<{ campaigns: Campaign[] }>('/api/admin/newsletter/campaigns', { lazy: true });
 const campaignForm = reactive({ subject: '', previewText: '', blogTitle: '', introduction: '', blogUrl: '' });
-const campaignId = ref<string | null>(null);
+const campaignId = ref<number | null>(null);
 const campaignNotice = ref('');
 const campaignError = ref('');
 const savingCampaign = ref(false);

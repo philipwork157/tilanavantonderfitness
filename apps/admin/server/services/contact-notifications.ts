@@ -6,7 +6,7 @@ type ContactNotificationInput = Pick<
   ContactFormRequest,
   'name' | 'email' | 'interest' | 'message'
 > & {
-  submissionId: string;
+  submissionId: number;
   submittedAt: Date;
 };
 

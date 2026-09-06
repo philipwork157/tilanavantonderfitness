@@ -21,7 +21,7 @@ export const newsletterCampaignInputSchema = z.object({
   blogUrl: z.string().trim().url().max(500),
 });
 
-export const newsletterCampaignIdSchema = z.string().uuid();
+export const newsletterCampaignIdSchema = z.coerce.number().int().positive();
 
 export type NewsletterSubscribeRequest = z.infer<typeof newsletterSubscribeRequestSchema>;
 export type NewsletterSubscribeResponse = z.infer<typeof newsletterSubscribeResponseSchema>;

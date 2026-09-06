@@ -18,7 +18,7 @@ export async function listNewsletterCampaigns() {
   const database = getDatabase();
   const campaigns = await database.select().from(newsletterCampaigns)
     .orderBy(desc(newsletterCampaigns.createdAt)).limit(50);
-  let testSummaries: Array<{ campaignId: string; testSentCount: number; lastTestSentAt: Date | null }> = [];
+  let testSummaries: Array<{ campaignId: number; testSentCount: number; lastTestSentAt: Date | null }> = [];
   try {
     testSummaries = await database.select({
       campaignId: newsletterCampaignTestDeliveries.campaignId,
@@ -38,7 +38,7 @@ export async function listNewsletterCampaigns() {
   }));
 }
 
-export async function saveNewsletterCampaign(input: NewsletterCampaignInput, createdByUserId: string, id?: string) {
+export async function saveNewsletterCampaign(input: NewsletterCampaignInput, createdByUserId: number, id?: number) {
   validateBlogUrl(input.blogUrl);
   const database = getDatabase();
   const values = {
@@ -60,7 +60,7 @@ export async function saveNewsletterCampaign(input: NewsletterCampaignInput, cre
   return campaign;
 }
 
-async function getCampaign(id: string) {
+async function getCampaign(id: number) {
   const [campaign] = await getDatabase().select().from(newsletterCampaigns)
     .where(eq(newsletterCampaigns.id, id)).limit(1);
   if (!campaign) throw new Error('Campaign was not found.');
@@ -77,7 +77,7 @@ function campaignInput(campaign: Awaited<ReturnType<typeof getCampaign>>): Newsl
   };
 }
 
-export async function sendNewsletterCampaignTest(id: string) {
+export async function sendNewsletterCampaignTest(id: number) {
   const campaign = await getCampaign(id);
   const config = useRuntimeConfig();
   const recipient = String(config.newsletterDevelopmentRecipient || '').trim();
@@ -111,7 +111,7 @@ export async function sendNewsletterCampaignTest(id: string) {
   return result;
 }
 
-export async function sendNewsletterCampaign(id: string) {
+export async function sendNewsletterCampaign(id: number) {
   const campaign = await getCampaign(id);
   const config = useRuntimeConfig();
   const siteUrl = String(config.newsletterSiteUrl || 'https://tilanavantonder.co.za').replace(/\/$/, '');

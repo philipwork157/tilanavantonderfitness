@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
-import { check, date, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { check, date, index, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { programVolumes } from './catalog';
-import { clients, profiles } from './identity';
+import { clients, users } from './identity';
 import { orders } from './sales';
 
 export const invoiceStatusValues = ['draft', 'issued', 'paid', 'overdue', 'void'] as const;
@@ -10,10 +10,10 @@ export type InvoiceStatus = (typeof invoiceStatusValues)[number];
 export const invoices = pgTable(
   'invoices',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
     invoiceNumber: text('invoice_number').notNull(),
-    clientId: uuid('client_id').notNull().references(() => clients.id, { onDelete: 'restrict' }),
-    orderId: uuid('order_id').references(() => orders.id, { onDelete: 'set null' }),
+    clientId: integer('client_id').notNull().references(() => clients.id, { onDelete: 'restrict' }),
+    orderId: integer('order_id').references(() => orders.id, { onDelete: 'set null' }),
     status: text('status').$type<InvoiceStatus>().notNull().default('draft'),
     currency: text('currency').notNull().default('ZAR'),
     subtotalCents: integer('subtotal_cents').notNull().default(0),
@@ -34,7 +34,7 @@ export const invoices = pgTable(
     notes: text('notes'),
     pdfR2Bucket: text('pdf_r2_bucket'),
     pdfR2ObjectKey: text('pdf_r2_object_key'),
-    createdByUserId: uuid('created_by_user_id').references(() => profiles.userId, { onDelete: 'set null' }),
+    createdByUserId: integer('created_by_user_id').references(() => users.id, { onDelete: 'set null' }),
     issuedAt: timestamp('issued_at', { withTimezone: true }),
     paidAt: timestamp('paid_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -68,9 +68,9 @@ export const invoices = pgTable(
 export const invoiceItems = pgTable(
   'invoice_items',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    invoiceId: uuid('invoice_id').notNull().references(() => invoices.id, { onDelete: 'cascade' }),
-    programVolumeId: uuid('program_volume_id').references(() => programVolumes.id, { onDelete: 'set null' }),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    invoiceId: integer('invoice_id').notNull().references(() => invoices.id, { onDelete: 'cascade' }),
+    programVolumeId: integer('program_volume_id').references(() => programVolumes.id, { onDelete: 'set null' }),
     description: text('description').notNull(),
     quantity: integer('quantity').notNull().default(1),
     unitPriceCents: integer('unit_price_cents').notNull(),

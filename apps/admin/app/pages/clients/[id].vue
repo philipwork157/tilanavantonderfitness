@@ -11,7 +11,7 @@ import {
   type BiologicalSex,
   type CoachingGoal,
 } from '@tilana/contracts/coaching';
-import { CalendarDate, DateFormatter, getLocalTimeZone, parseDate, today } from '@internationalized/date';
+import { DateFormatter, getLocalTimeZone, parseDate, today, type CalendarDate } from '@internationalized/date';
 
 definePageMeta({ layout: 'dashboard' });
 
@@ -217,9 +217,9 @@ async function recalculate() {
 }
 
 /* ---------- Photo upload ---------- */
-const uploadingFor = ref<string | null>(null);
+const uploadingFor = ref<number | null>(null);
 const photoError = ref('');
-async function uploadPhoto(checkinId: string, fileEvent: Event) {
+async function uploadPhoto(checkinId: number, fileEvent: Event) {
   const input = fileEvent.target as HTMLInputElement;
   const file = input.files?.[0];
   if (!file) return;
@@ -228,7 +228,7 @@ async function uploadPhoto(checkinId: string, fileEvent: Event) {
   try {
     const body = new FormData();
     body.append('file', file);
-    body.append('checkinId', checkinId);
+    body.append('checkinId', String(checkinId));
     await $fetch(`/api/admin/clients/${clientId.value}/photos`, { method: 'POST', body });
     await refresh();
   } catch (requestError) {
@@ -443,11 +443,11 @@ useSeoMeta({ title: () => `${fullName.value} | Tilana Admin`, robots: 'noindex, 
                   rel="noopener"
                   class="photo-thumb"
                 >
-                  <img v-if="photo.url" :src="photo.url" :alt="photo.caption ?? 'Progress photo'" />
+                  <img v-if="photo.url" :src="photo.url" :alt="photo.caption ?? 'Progress photo'">
                 </a>
                 <label class="photo-add" :class="{ busy: uploadingFor === checkin.id }">
                   <UIcon :name="uploadingFor === checkin.id ? 'i-lucide-loader-circle' : 'i-lucide-image-plus'" />
-                  <input type="file" accept="image/*" hidden @change="(event: Event) => uploadPhoto(checkin.id, event)" />
+                  <input type="file" accept="image/*" hidden @change="(event: Event) => uploadPhoto(checkin.id, event)">
                 </label>
               </div>
             </article>

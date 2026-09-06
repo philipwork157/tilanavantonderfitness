@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { boolean, check, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, check, index, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
 export const programStatusValues = ['draft', 'published', 'archived'] as const;
 export type ProgramStatus = (typeof programStatusValues)[number];
@@ -7,7 +7,7 @@ export type ProgramStatus = (typeof programStatusValues)[number];
 export const programs = pgTable(
   'programs',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
     slug: text('slug').notNull(),
     name: text('name').notNull(),
     description: text('description'),
@@ -27,8 +27,8 @@ export const programs = pgTable(
 export const programVolumes = pgTable(
   'program_volumes',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    programId: uuid('program_id').notNull().references(() => programs.id, { onDelete: 'cascade' }),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    programId: integer('program_id').notNull().references(() => programs.id, { onDelete: 'cascade' }),
     volumeNumber: integer('volume_number').notNull(),
     name: text('name').notNull(),
     description: text('description'),
@@ -52,8 +52,8 @@ export const programVolumes = pgTable(
 export const programFiles = pgTable(
   'program_files',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    programVolumeId: uuid('program_volume_id')
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    programVolumeId: integer('program_volume_id')
       .notNull()
       .references(() => programVolumes.id, { onDelete: 'cascade' }),
     displayName: text('display_name').notNull(),

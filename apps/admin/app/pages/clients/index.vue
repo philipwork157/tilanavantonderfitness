@@ -30,7 +30,7 @@ const showForm = ref(false);
 const saving = ref(false);
 const formError = ref('');
 const successMessage = ref('');
-const editingClientId = ref<string | null>(null);
+const editingClientId = ref<number | null>(null);
 const selectedEnquiryId = ref('manual');
 const route = useRoute();
 const { data, status, error, refresh } = await useFetch('/api/admin/clients', { lazy: true });
@@ -87,7 +87,7 @@ const enquiryOptions = computed(() => {
     { label: 'Enter manually', value: 'manual' },
     ...(enquiriesData.value?.submissions ?? []).map((enquiry) => ({
       label: `${enquiry.fullName} · ${enquiry.email}${clientEmails.has(enquiry.email.toLowerCase()) ? ' · already a client' : ''}`,
-      value: enquiry.id,
+      value: String(enquiry.id),
       disabled: clientEmails.has(enquiry.email.toLowerCase()),
     })),
   ];
@@ -128,7 +128,7 @@ function importEnquiry(enquiryId: string) {
   selectedEnquiryId.value = enquiryId;
   if (enquiryId === 'manual') return;
 
-  const enquiry = enquiriesData.value?.submissions.find((item) => item.id === enquiryId);
+  const enquiry = enquiriesData.value?.submissions.find((item) => String(item.id) === enquiryId);
   if (!enquiry) return;
 
   const nameParts = enquiry.fullName.trim().split(/\s+/);
@@ -266,7 +266,7 @@ function statusColor(value: string): 'success' | 'warning' | 'neutral' {
 }
 
 const requestedEnquiryId = typeof route.query.enquiry === 'string' ? route.query.enquiry : '';
-if (requestedEnquiryId && enquiriesData.value?.submissions.some((item) => item.id === requestedEnquiryId)) {
+if (requestedEnquiryId && enquiriesData.value?.submissions.some((item) => String(item.id) === requestedEnquiryId)) {
   showForm.value = true;
   importEnquiry(requestedEnquiryId);
 }

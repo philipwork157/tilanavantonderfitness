@@ -94,9 +94,9 @@ async function ensureProgrammeVolume(
 async function insertManualOrderItems(
   transaction: DatabaseTransaction,
   input: AdminClientCreateRequest,
-  clientId: string,
-  orderId: string,
-  administratorUserId: string,
+  clientId: number,
+  orderId: number,
+  administratorUserId: number,
 ) {
   for (const assignment of input.programmes) {
     const { definition, volumeId } = await ensureProgrammeVolume(
@@ -130,7 +130,7 @@ async function insertManualOrderItems(
 
 async function insertManualPayment(
   transaction: DatabaseTransaction,
-  orderId: string,
+  orderId: number,
   totalCents: number,
   paidAt: Date,
 ) {
@@ -147,7 +147,7 @@ async function insertManualPayment(
 
 export async function createManualClient(
   input: AdminClientCreateRequest,
-  administratorUserId: string,
+  administratorUserId: number,
 ) {
   const database = getDatabase();
   const email = input.email.trim().toLowerCase();
@@ -207,9 +207,9 @@ export async function createManualClient(
 }
 
 export async function updateManualClient(
-  clientId: string,
+  clientId: number,
   input: AdminClientUpdateRequest,
-  administratorUserId: string,
+  administratorUserId: number,
 ) {
   const database = getDatabase();
   const email = input.email.trim().toLowerCase();
@@ -328,8 +328,8 @@ export async function listClientsWithProgrammes() {
     .leftJoin(programs, eq(programs.id, programVolumes.programId))
     .orderBy(desc(clients.createdAt), asc(orderItems.createdAt));
 
-  const clientMap = new Map<string, {
-    id: string;
+  const clientMap = new Map<number, {
+    id: number;
     firstName: string;
     lastName: string;
     email: string;
@@ -338,7 +338,7 @@ export async function listClientsWithProgrammes() {
     notes: string | null;
     createdAt: Date;
     programmes: Array<{
-      orderId: string;
+      orderId: number;
       orderNumber: string;
       name: string;
       priceCents: number;

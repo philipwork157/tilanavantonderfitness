@@ -1,0 +1,148 @@
+name: Build and deploy (production)
+
+# A merge to main verifies both production builds in parallel without deploying.
+# To release, use Run workflow and choose both applications or just one.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: What should be deployed?
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - public
+          - admin
+      confirm:
+        description: 'Type "deploy" to confirm the production release'
+        required: true
+        default: ""
+
+concurrency:
+  group: production-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the main branch and confirmation for deployments
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ "$REF_NAME" != "main" ]; then
+            echo "Production deployments must be run from the main branch."
+            exit 1
+          fi
+          if [ "$CONFIRM" != "deploy" ]; then
+            echo 'Enter "deploy" in the confirmation field.'
+            exit 1
+          fi
+
+  build-public:
+    name: Build public website
+    needs: validate
+    if: github.event_name == 'push' || inputs.target == 'both' || inputs.target == 'public'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      PUBLIC_CONTACT_API_URL: ${{ secrets.PUBLIC_CONTACT_API_URL_PROD }}
+      PUBLIC_NEWSLETTER_API_URL: ${{ secrets.PUBLIC_NEWSLETTER_API_URL_PROD }}
+      PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.PUBLIC_TURNSTILE_SITE_KEY_PROD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build public website
+        run: pnpm build:web
+      - name: Save public website build
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v6
+        with:
+          name: public-website
+          path: apps/web/dist/client
+          if-no-files-found: error
+          retention-days: 1
+
+  build-admin:
+    name: Build admin website
+    needs: validate
+    if: github.event_name == 'push' || inputs.target == 'both' || inputs.target == 'admin'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build admin website
+        run: pnpm build:admin
+
+  deploy-public:
+    name: Deploy public website
+    needs: build-public
+    if: github.event_name == 'workflow_dispatch' && (inputs.target == 'both' || inputs.target == 'public')
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+      - name: Download public website build
+        uses: actions/download-artifact@v7
+        with:
+          name: public-website
+          path: apps/web/dist/client
+      - name: Deploy public website to Cloudflare Pages
+        run: >-
+          pnpm dlx wrangler@4 pages deploy apps/web/dist/client
+          --project-name=tilanavantonder-website-prod
+          --branch=main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  deploy-admin:
+    name: Deploy admin website
+    needs: build-admin
+    if: github.event_name == 'workflow_dispatch' && (inputs.target == 'both' || inputs.target == 'admin')
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # master 2026-07, node24
+      - name: Deploy admin website to Fly.io
+        run: flyctl deploy --config fly.prod.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}

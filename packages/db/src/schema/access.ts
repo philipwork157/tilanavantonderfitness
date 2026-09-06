@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
-import { check, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { check, index, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { programVolumes } from './catalog';
-import { clients, profiles } from './identity';
+import { clients, users } from './identity';
 import { orderItems } from './sales';
 
 export const accessSourceValues = ['purchase', 'manual', 'promotion'] as const;
@@ -14,15 +14,15 @@ export type AccessStatus = (typeof accessStatusValues)[number];
 export const programAccess = pgTable(
   'program_access',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    clientId: uuid('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
-    programVolumeId: uuid('program_volume_id')
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    clientId: integer('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+    programVolumeId: integer('program_volume_id')
       .notNull()
       .references(() => programVolumes.id, { onDelete: 'restrict' }),
-    orderItemId: uuid('order_item_id').references(() => orderItems.id, { onDelete: 'set null' }),
+    orderItemId: integer('order_item_id').references(() => orderItems.id, { onDelete: 'set null' }),
     source: text('source').$type<AccessSource>().notNull(),
     status: text('status').$type<AccessStatus>().notNull().default('active'),
-    grantedByUserId: uuid('granted_by_user_id').references(() => profiles.userId, { onDelete: 'set null' }),
+    grantedByUserId: integer('granted_by_user_id').references(() => users.id, { onDelete: 'set null' }),
     startsAt: timestamp('starts_at', { withTimezone: true }).notNull().defaultNow(),
     expiresAt: timestamp('expires_at', { withTimezone: true }),
     revokedAt: timestamp('revoked_at', { withTimezone: true }),
