@@ -2,12 +2,12 @@
 title: "When You Allow Comparison to Steal Your Worth"
 description: "A personal reflection on comparison, social media, faith, and learning to value the season and life you have been given."
 publishedAt: 2026-09-06
-category: "Motherhood"
+category: "Nurturance"
 readingTime: "9 min read"
-image: "/tilana-home.jpg"
-imageAlt: "Tilana van Tonder smiling with her arms crossed"
-imageWidth: 1023
-imageHeight: 1261
+image: "/tilana-blog-comparison-self-worth-final.png"
+imageAlt: "An empty mirror beside a face-down phone with a reminder that worth is not defined by appearances, social media, or opinions"
+imageWidth: 1122
+imageHeight: 1402
 draft: false
 ---
 
@@ -382,7 +382,7 @@ There is so much more to you than what could ever fit into a photograph on a scr
 So don’t become so distracted by someone else’s life that you forget to live yours.
 
 <div class="article-closing">
-  <p><strong>Be kind to yourself, you are only human.</strong></p>
+  <p><strong>Your worth was never meant to be measured against someone else’s life.</strong></p>
   <div class="article-signature">
     <span>With love,</span>
     <strong>Tilana</strong>
