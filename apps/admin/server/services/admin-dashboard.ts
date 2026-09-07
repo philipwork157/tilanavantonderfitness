@@ -1,9 +1,10 @@
-import { clients, contactSubmissions, newsletterSubscribers, payments } from '@tilana/db/schema';
-import { and, count, desc, eq, gte, inArray } from 'drizzle-orm';
+import type { AdminDashboardPeriod } from '@tilana/contracts/dashboard';
+import { clients, contactSubmissions, newsletterSubscribers, paymentRefunds, payments } from '@tilana/db/schema';
+import { and, count, desc, eq, gte, inArray, lte } from 'drizzle-orm';
 import { getDatabase } from '../utils/database';
 
-const SALES_PERIOD_DAYS = 30;
 const JOHANNESBURG_TIME_ZONE = 'Africa/Johannesburg';
+const STALE_PAYMENT_MINUTES = 30;
 
 type PaystackEnvironment = 'test' | 'live';
 
@@ -19,12 +20,12 @@ function johannesburgDateKey(value: Date) {
   return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
-function createSalesSeries() {
+function createSalesSeries(periodDays: AdminDashboardPeriod) {
   const todayKey = johannesburgDateKey(new Date());
   const [year, month, day] = todayKey.split('-').map(Number);
 
-  return Array.from({ length: SALES_PERIOD_DAYS }, (_, index) => {
-    const daysAgo = SALES_PERIOD_DAYS - index - 1;
+  return Array.from({ length: periodDays }, (_, index) => {
+    const daysAgo = periodDays - index - 1;
     const date = new Date(Date.UTC(year!, month! - 1, day! - daysAgo, 12));
 
     return {
@@ -35,13 +36,26 @@ function createSalesSeries() {
   });
 }
 
-export async function getAdminDashboard(paystackEnvironment: PaystackEnvironment) {
+export async function getAdminDashboard(
+  paystackEnvironment: PaystackEnvironment,
+  periodDays: AdminDashboardPeriod,
+) {
   const database = getDatabase();
-  const salesSeries = createSalesSeries();
+  const salesSeries = createSalesSeries(periodDays);
   const salesByDate = new Map(salesSeries.map(item => [item.date, item]));
-  const salesQueryStart = new Date(Date.now() - (SALES_PERIOD_DAYS + 1) * 24 * 60 * 60 * 1000);
+  const now = Date.now();
+  const salesQueryStart = new Date(now - (periodDays + 1) * 24 * 60 * 60 * 1000);
+  const stalePaymentThreshold = new Date(now - STALE_PAYMENT_MINUTES * 60 * 1000);
 
-  const [newContactsResult, clientsResult, subscribersResult, recentPayments] =
+  const [
+    newContactsResult,
+    clientsResult,
+    subscribersResult,
+    recentPayments,
+    failedPaymentsResult,
+    stalePaymentsResult,
+    refundAlertsResult,
+  ] =
     await Promise.all([
       database.select({ value: count() }).from(contactSubmissions).where(eq(contactSubmissions.status, 'new')),
       database.select({ value: count() }).from(clients),
@@ -64,6 +78,33 @@ export async function getAdminDashboard(paystackEnvironment: PaystackEnvironment
           gte(payments.paidAt, salesQueryStart),
         ))
         .orderBy(desc(payments.paidAt)),
+      database
+        .select({ value: count() })
+        .from(payments)
+        .where(and(
+          eq(payments.provider, 'paystack'),
+          eq(payments.environment, paystackEnvironment),
+          inArray(payments.status, ['failed', 'abandoned', 'reversed']),
+          gte(payments.updatedAt, salesQueryStart),
+        )),
+      database
+        .select({ value: count() })
+        .from(payments)
+        .where(and(
+          eq(payments.provider, 'paystack'),
+          eq(payments.environment, paystackEnvironment),
+          eq(payments.status, 'pending'),
+          gte(payments.createdAt, salesQueryStart),
+          lte(payments.createdAt, stalePaymentThreshold),
+        )),
+      database
+        .select({ value: count() })
+        .from(paymentRefunds)
+        .innerJoin(payments, eq(paymentRefunds.paymentId, payments.id))
+        .where(and(
+          eq(payments.environment, paystackEnvironment),
+          eq(paymentRefunds.status, 'needs-attention'),
+        )),
     ]);
 
   for (const payment of recentPayments) {
@@ -97,8 +138,13 @@ export async function getAdminDashboard(paystackEnvironment: PaystackEnvironment
       ...sales,
       currency: 'ZAR' as const,
       environment: paystackEnvironment,
-      periodDays: SALES_PERIOD_DAYS,
+      periodDays,
       series: salesSeries,
+    },
+    alerts: {
+      failedPayments: failedPaymentsResult[0]?.value ?? 0,
+      stalePayments: stalePaymentsResult[0]?.value ?? 0,
+      refundsNeedingAttention: refundAlertsResult[0]?.value ?? 0,
     },
   };
 }

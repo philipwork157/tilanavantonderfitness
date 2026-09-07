@@ -1,7 +1,23 @@
 <script setup lang="ts">
+import type { AdminDashboardPeriod } from '@tilana/contracts/dashboard';
+
 definePageMeta({ layout: 'dashboard' });
 
-const { data, status, error, refresh } = await useFetch('/api/admin/dashboard', { lazy: true });
+const selectedPeriod = ref<AdminDashboardPeriod>(30);
+const periodOptions: Array<{ label: string; value: AdminDashboardPeriod }> = [
+  { label: 'Last 7 days', value: 7 },
+  { label: 'Last month', value: 30 },
+  { label: 'Last 2 months', value: 60 },
+  { label: 'Last 3 months', value: 90 },
+  { label: 'Last 4 months', value: 120 },
+  { label: 'Last 5 months', value: 150 },
+  { label: 'Last 6 months', value: 180 },
+];
+
+const { data, status, error, refresh } = await useFetch('/api/admin/dashboard', {
+  lazy: true,
+  query: computed(() => ({ periodDays: selectedPeriod.value })),
+});
 
 const stats = computed(() => [
   {
@@ -29,6 +45,27 @@ const stats = computed(() => [
 
 const salesSeries = computed(() => data.value?.sales.series ?? []);
 const salesMode = computed(() => data.value?.sales.environment === 'live' ? 'Live data' : 'Test data');
+const paymentAlerts = computed(() => [
+  {
+    label: 'Failed checkouts',
+    value: data.value?.alerts.failedPayments ?? 0,
+    detail: 'Failed, abandoned or reversed in this period',
+    icon: 'i-lucide-circle-x',
+  },
+  {
+    label: 'Pending too long',
+    value: data.value?.alerts.stalePayments ?? 0,
+    detail: 'Pending for more than 30 minutes',
+    icon: 'i-lucide-clock-alert',
+  },
+  {
+    label: 'Refunds to review',
+    value: data.value?.alerts.refundsNeedingAttention ?? 0,
+    detail: 'Unresolved Paystack refund responses',
+    icon: 'i-lucide-rotate-ccw',
+  },
+]);
+const totalPaymentAlerts = computed(() => paymentAlerts.value.reduce((total, item) => total + item.value, 0));
 
 function formatMoney(cents: number) {
   return new Intl.NumberFormat('en-ZA', {
@@ -43,7 +80,7 @@ useSeoMeta({ title: 'Dashboard | Tilana Admin', robots: 'noindex, nofollow' });
 
 <template>
   <div class="dashboard-page">
-    <template v-if="status === 'pending'">
+    <template v-if="status === 'pending' && !data">
       <div class="stats-grid" aria-label="Loading dashboard">
         <USkeleton v-for="item in 3" :key="item" class="h-36 rounded-3xl" />
       </div>
@@ -81,12 +118,24 @@ useSeoMeta({ title: 'Dashboard | Tilana Admin', robots: 'noindex, nofollow' });
             <p class="eyebrow">Paystack performance</p>
             <h1 id="sales-heading">Recent sales</h1>
           </div>
-          <UBadge color="neutral" variant="soft" size="lg">
-            {{ salesMode }} · Last {{ data?.sales.periodDays ?? 30 }} days
-          </UBadge>
+          <div class="sales-filters">
+            <UBadge color="neutral" variant="soft" size="lg">
+              {{ salesMode }}
+            </UBadge>
+            <USelect
+              v-model="selectedPeriod"
+              :items="periodOptions"
+              value-key="value"
+              icon="i-lucide-calendar-range"
+              size="lg"
+              class="period-select"
+              aria-label="Sales reporting period"
+              :disabled="status === 'pending'"
+            />
+          </div>
         </div>
 
-        <UCard class="sales-card" :ui="{ body: 'p-5 sm:p-7' }">
+        <UCard class="sales-card" :class="{ 'is-refreshing': status === 'pending' }" :ui="{ body: 'p-5 sm:p-7' }">
           <div class="sales-summary">
             <div>
               <span>Net sales</span>
@@ -99,11 +148,48 @@ useSeoMeta({ title: 'Dashboard | Tilana Admin', robots: 'noindex, nofollow' });
           </div>
 
           <ClientOnly>
-            <DashboardSalesChart :series="salesSeries" />
+            <DashboardSalesChart :series="salesSeries" :period-days="data?.sales.periodDays ?? 30" />
             <template #fallback>
               <USkeleton class="chart-fallback rounded-2xl" />
             </template>
           </ClientOnly>
+        </UCard>
+      </section>
+
+      <section class="alerts-section" aria-labelledby="alerts-heading">
+        <UCard class="alerts-card" :class="{ 'has-alerts': totalPaymentAlerts > 0 }" :ui="{ body: 'p-5 sm:p-6' }">
+          <div class="alerts-heading">
+            <span class="alerts-icon" aria-hidden="true">
+              <UIcon :name="totalPaymentAlerts ? 'i-lucide-bell-ring' : 'i-lucide-circle-check'" />
+            </span>
+            <div>
+              <p class="eyebrow">Payment monitoring</p>
+              <h2 id="alerts-heading">
+                {{ totalPaymentAlerts ? `${totalPaymentAlerts} items need attention` : 'Everything looks clear' }}
+              </h2>
+            </div>
+            <UButton
+              v-if="totalPaymentAlerts"
+              label="Review clients"
+              to="/clients"
+              icon="i-lucide-arrow-up-right"
+              trailing
+              color="neutral"
+              variant="soft"
+              class="review-button"
+            />
+          </div>
+
+          <div class="alerts-grid">
+            <article v-for="item in paymentAlerts" :key="item.label" class="alert-item">
+              <span><UIcon :name="item.icon" /></span>
+              <div>
+                <strong>{{ item.value }}</strong>
+                <h3>{{ item.label }}</h3>
+                <p>{{ item.detail }}</p>
+              </div>
+            </article>
+          </div>
         </UCard>
       </section>
     </template>
@@ -188,6 +274,16 @@ useSeoMeta({ title: 'Dashboard | Tilana Admin', robots: 'noindex, nofollow' });
   gap: 1rem;
 }
 
+.sales-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.period-select {
+  width: 11rem;
+}
+
 .eyebrow {
   margin: 0 0 0.4rem;
   color: var(--caramel);
@@ -211,6 +307,11 @@ useSeoMeta({ title: 'Dashboard | Tilana Admin', robots: 'noindex, nofollow' });
   border: 1px solid var(--color-border);
   border-radius: 1.65rem;
   box-shadow: var(--shadow-sm);
+  transition: opacity var(--motion-fast) ease;
+}
+
+.sales-card.is-refreshing {
+  opacity: 0.58;
 }
 
 .sales-summary {
@@ -242,6 +343,92 @@ useSeoMeta({ title: 'Dashboard | Tilana Admin', robots: 'noindex, nofollow' });
   min-height: 25rem;
 }
 
+.alerts-card {
+  border: 1px solid color-mix(in srgb, var(--sage) 68%, var(--color-border));
+  border-radius: 1.65rem;
+  background: color-mix(in srgb, var(--sage) 20%, var(--white));
+  box-shadow: var(--shadow-sm);
+}
+
+.alerts-card.has-alerts {
+  border-color: color-mix(in srgb, var(--terracotta) 70%, var(--color-border));
+  background: color-mix(in srgb, var(--terracotta) 13%, var(--white));
+}
+
+.alerts-heading {
+  display: grid;
+  align-items: center;
+  gap: 0.9rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.alerts-heading .eyebrow {
+  margin-bottom: 0.25rem;
+}
+
+.alerts-heading h2 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-heading);
+  font-size: clamp(1.35rem, 2.5vw, 1.8rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+
+.alerts-icon {
+  display: grid;
+  width: 3rem;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 1rem;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--white) 70%, transparent);
+  font-size: 1.2rem;
+}
+
+.alerts-grid {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.alert-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-border) 76%, transparent);
+  border-radius: 1.15rem;
+  background: color-mix(in srgb, var(--white) 62%, transparent);
+}
+
+.alert-item > span {
+  margin-top: 0.15rem;
+  color: var(--caramel);
+  font-size: 1rem;
+}
+
+.alert-item strong {
+  color: var(--ink);
+  font-family: var(--font-heading);
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+.alert-item h3 {
+  margin: 0.25rem 0 0;
+  color: var(--ink);
+  font-size: 0.76rem;
+}
+
+.alert-item p {
+  margin: 0.25rem 0 0;
+  color: var(--ui-text-muted);
+  font-size: 0.64rem;
+  line-height: 1.45;
+}
+
 @keyframes dashboard-rise {
   from { opacity: 0; transform: translateY(0.75rem); }
 }
@@ -249,10 +436,15 @@ useSeoMeta({ title: 'Dashboard | Tilana Admin', robots: 'noindex, nofollow' });
 @media (max-width: 54rem) {
   .stats-grid { grid-template-columns: minmax(0, 1fr); }
   .stat-card { min-height: 7.75rem; }
+  .alerts-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 34rem) {
   .section-heading { align-items: flex-start; flex-direction: column; }
+  .sales-filters { width: 100%; align-items: stretch; flex-direction: column; }
+  .period-select { width: 100%; }
+  .alerts-heading { grid-template-columns: auto minmax(0, 1fr); }
+  .review-button { grid-column: 1 / -1; justify-self: stretch; }
 }
 
 @media (prefers-reduced-motion: reduce) {

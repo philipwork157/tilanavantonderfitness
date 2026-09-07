@@ -9,6 +9,7 @@
     "./checkout": "./src/checkout.ts",
     "./coaching": "./src/coaching.ts",
     "./contact": "./src/contact.ts",
+    "./dashboard": "./src/dashboard.ts",
     "./newsletter": "./src/newsletter.ts",
     "./newsletter.messages": "./src/newsletter.messages.ts",
     "./payments": "./src/payments.ts",

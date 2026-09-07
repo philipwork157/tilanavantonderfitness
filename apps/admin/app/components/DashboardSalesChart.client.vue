@@ -18,6 +18,7 @@ type SalesPoint = {
 
 const props = defineProps<{
   series: SalesPoint[];
+  periodDays: number;
 }>();
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
@@ -114,7 +115,7 @@ const chartOptions = computed<ChartOptions<'bar'>>(() => {
     <Bar
       :data="chartData"
       :options="chartOptions"
-      aria-label="Net Paystack sales for the last 30 days"
+      :aria-label="`Net Paystack sales for the last ${periodDays} days`"
     >
       Sales chart could not be displayed.
     </Bar>
