@@ -11,6 +11,7 @@
     "./contact": "./src/contact.ts",
     "./newsletter": "./src/newsletter.ts",
     "./newsletter.messages": "./src/newsletter.messages.ts",
+    "./payments": "./src/payments.ts",
     "./programs": "./src/programs.ts"
   },
   "scripts": {

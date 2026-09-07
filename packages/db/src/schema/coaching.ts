@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { check, date, index, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { check, date, foreignKey, index, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { clients, users } from './identity';
 
 // Biological sex is required for the BMR calculation and is kept separate from
@@ -18,7 +18,8 @@ export type NutritionMethod = (typeof nutritionMethodValues)[number];
 
 /**
  * One row per client: the slowly-changing baseline used to calculate calories.
- * Health data — admin-only via RLS.
+ * Health data — available only through authenticated admin server routes. RLS
+ * remains deny-by-default for direct Supabase client access.
  */
 export const clientHealthProfiles = pgTable(
   'client_health_profiles',
@@ -77,7 +78,7 @@ export const clientCheckins = pgTable(
   },
   (table) => [
     uniqueIndex('client_checkins_client_date_unique').on(table.clientId, table.checkinDate),
-    index('client_checkins_client_date_idx').on(table.clientId, table.checkinDate),
+    uniqueIndex('client_checkins_id_client_unique').on(table.id, table.clientId),
     check('client_checkins_weight_range', sql`${table.weightGrams} between 20000 and 400000`),
     check('client_checkins_measurements_non_negative', sql`
       (${table.waistMm} is null or ${table.waistMm} >= 0) and
@@ -117,7 +118,7 @@ export const clientNutritionTargets = pgTable(
   {
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
     clientId: integer('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
-    checkinId: integer('checkin_id').references(() => clientCheckins.id, { onDelete: 'set null' }),
+    checkinId: integer('checkin_id'),
     method: text('method').$type<NutritionMethod>().notNull().default('mifflin_st_jeor'),
     effectiveFrom: date('effective_from').notNull(),
     bmrKcal: integer('bmr_kcal').notNull(),
@@ -131,6 +132,11 @@ export const clientNutritionTargets = pgTable(
   },
   (table) => [
     index('client_nutrition_targets_client_effective_idx').on(table.clientId, table.effectiveFrom),
+    foreignKey({
+      name: 'client_nutrition_targets_checkin_client_fk',
+      columns: [table.checkinId, table.clientId],
+      foreignColumns: [clientCheckins.id, clientCheckins.clientId],
+    }).onDelete('cascade'),
     check('client_nutrition_targets_method_value', sql`${table.method} in ('mifflin_st_jeor')`),
     check('client_nutrition_targets_kcal_non_negative', sql`
       ${table.bmrKcal} >= 0 and ${table.tdeeKcal} >= 0 and ${table.targetKcal} >= 0 and

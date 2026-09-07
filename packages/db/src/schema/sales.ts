@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { check, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { check, foreignKey, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { programVolumes } from './catalog';
 import { clients, users } from './identity';
 
@@ -63,6 +63,7 @@ export const orders = pgTable(
     ),
     index('orders_client_created_at_idx').on(table.clientId, table.createdAt),
     index('orders_status_created_at_idx').on(table.status, table.createdAt),
+    uniqueIndex('orders_id_client_unique').on(table.id, table.clientId),
   ],
 ).enableRLS();
 
@@ -71,7 +72,8 @@ export const orderItems = pgTable(
   'order_items',
   {
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
-    orderId: integer('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+    orderId: integer('order_id').notNull(),
+    clientId: integer('client_id').notNull(),
     programVolumeId: integer('program_volume_id').references(() => programVolumes.id, { onDelete: 'set null' }),
     description: text('description').notNull(),
     quantity: integer('quantity').notNull().default(1),
@@ -84,6 +86,12 @@ export const orderItems = pgTable(
     check('order_items_quantity_positive', sql`${table.quantity} > 0`),
     check('order_items_unit_price_non_negative', sql`${table.unitPriceCents} >= 0`),
     check('order_items_total_matches', sql`${table.lineTotalCents} = ${table.quantity} * ${table.unitPriceCents}`),
+    foreignKey({
+      name: 'order_items_order_client_orders_id_client_fk',
+      columns: [table.orderId, table.clientId],
+      foreignColumns: [orders.id, orders.clientId],
+    }).onDelete('cascade'),
+    uniqueIndex('order_items_id_client_volume_unique').on(table.id, table.clientId, table.programVolumeId),
     index('order_items_order_idx').on(table.orderId),
     index('order_items_program_volume_idx').on(table.programVolumeId),
   ],
@@ -108,6 +116,7 @@ export const payments = pgTable(
     amountCents: integer('amount_cents').notNull(),
     currency: text('currency').notNull().default('ZAR'),
     feesCents: integer('fees_cents'),
+    refundedAmountCents: integer('refunded_amount_cents').notNull().default(0),
     verifiedAt: timestamp('verified_at', { withTimezone: true }),
     paidAt: timestamp('paid_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -133,11 +142,16 @@ export const payments = pgTable(
     ),
     check('payments_amount_positive', sql`${table.amountCents} > 0`),
     check('payments_fees_non_negative', sql`${table.feesCents} is null or ${table.feesCents} >= 0`),
+    check(
+      'payments_refunded_amount_valid',
+      sql`${table.refundedAmountCents} >= 0 and ${table.refundedAmountCents} <= ${table.amountCents}`,
+    ),
     check('payments_currency_format', sql`${table.currency} ~ '^[A-Z]{3}$'`),
     uniqueIndex('payments_provider_reference_unique').on(table.provider, table.providerReference),
     uniqueIndex('payments_provider_transaction_unique')
       .on(table.provider, table.providerTransactionId)
       .where(sql`${table.providerTransactionId} is not null`),
+    uniqueIndex('payments_id_provider_currency_unique').on(table.id, table.provider, table.currency),
     index('payments_order_created_at_idx').on(table.orderId, table.createdAt),
     index('payments_status_updated_at_idx').on(table.status, table.updatedAt),
   ],
@@ -186,7 +200,7 @@ export const paymentRefunds = pgTable(
   'payment_refunds',
   {
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
-    paymentId: integer('payment_id').notNull().references(() => payments.id, { onDelete: 'restrict' }),
+    paymentId: integer('payment_id').notNull(),
     provider: text('provider').notNull().default('paystack'),
     providerRefundId: text('provider_refund_id'),
     status: text('status').$type<PaymentRefundStatus>().notNull().default('pending'),
@@ -208,6 +222,11 @@ export const paymentRefunds = pgTable(
     ),
     check('payment_refunds_amount_positive', sql`${table.amountCents} > 0`),
     check('payment_refunds_currency_format', sql`${table.currency} ~ '^[A-Z]{3}$'`),
+    foreignKey({
+      name: 'payment_refunds_payment_provider_currency_fk',
+      columns: [table.paymentId, table.provider, table.currency],
+      foreignColumns: [payments.id, payments.provider, payments.currency],
+    }).onDelete('restrict'),
     uniqueIndex('payment_refunds_provider_id_unique')
       .on(table.provider, table.providerRefundId)
       .where(sql`${table.providerRefundId} is not null`),

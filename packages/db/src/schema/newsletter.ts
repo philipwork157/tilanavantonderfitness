@@ -26,7 +26,7 @@ export const newsletterSubscribers = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex('newsletter_subscribers_email_unique').on(table.email),
+    uniqueIndex('newsletter_subscribers_email_unique').on(sql`lower(${table.email})`),
     index('newsletter_subscribers_status_created_at_idx').on(table.status, table.createdAt),
     check('newsletter_subscribers_email_length', sql`char_length(${table.email}) between 3 and 254`),
     check('newsletter_subscribers_source_length', sql`char_length(${table.source}) between 1 and 80`),

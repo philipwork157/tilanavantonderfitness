@@ -11,6 +11,7 @@ import {
   programmeCatalogByKey,
   type ProgrammeKey,
 } from '@tilana/contracts/programs';
+import { adminPaymentRefundRequestSchema } from '@tilana/contracts/payments';
 
 definePageMeta({ layout: 'dashboard' });
 
@@ -36,6 +37,17 @@ const route = useRoute();
 const { data, status, error, refresh } = await useFetch('/api/admin/clients', { lazy: true });
 const { data: enquiriesData } = await useFetch('/api/admin/contacts', { lazy: true });
 type ClientRecord = NonNullable<typeof data.value>['clients'][number];
+type ProgrammeRecord = ClientRecord['programmes'][number];
+
+const showRefundForm = ref(false);
+const refunding = ref(false);
+const refundError = ref('');
+const refundTarget = ref<{ clientName: string; programme: ProgrammeRecord } | null>(null);
+const refundForm = reactive({
+  amountRands: 0,
+  customerNote: '',
+  merchantNote: '',
+});
 
 const form = reactive({
   firstName: '',
@@ -93,15 +105,24 @@ const enquiryOptions = computed(() => {
   ];
 });
 
-const paidValueCents = computed(() =>
-  (data.value?.clients ?? []).reduce(
-    (total, client) => total + client.programmes.reduce(
-      (clientTotal, programme) => clientTotal + (programme.status === 'paid' ? programme.priceCents : 0),
-      0,
-    ),
+const paidValueCents = computed(() => {
+  const valuesByOrder = new Map<number, { grossCents: number; refundedCents: number; status: string }>();
+  for (const client of data.value?.clients ?? []) {
+    for (const programme of client.programmes) {
+      const order = valuesByOrder.get(programme.orderId) ?? {
+        grossCents: 0,
+        refundedCents: programme.payment?.refundedAmountCents ?? 0,
+        status: programme.status,
+      };
+      order.grossCents += programme.priceCents;
+      valuesByOrder.set(programme.orderId, order);
+    }
+  }
+  return [...valuesByOrder.values()].reduce(
+    (total, order) => total + (order.status === 'paid' ? Math.max(0, order.grossCents - order.refundedCents) : 0),
     0,
-  ),
-);
+  );
+});
 
 function createProgrammeInput(key: ProgrammeKey): ProgrammeInput {
   return {
@@ -252,6 +273,85 @@ async function saveClient() {
   }
 }
 
+function isFirstOrderProgramme(programmes: ProgrammeRecord[], index: number) {
+  return programmes.findIndex((item) => item.orderId === programmes[index]?.orderId) === index;
+}
+
+function openRefundForm(client: ClientRecord, programme: ProgrammeRecord) {
+  if (!programme.payment || programme.payment.refundableAmountCents <= 0) return;
+  refundTarget.value = {
+    clientName: `${client.firstName} ${client.lastName}`,
+    programme,
+  };
+  refundForm.amountRands = programme.payment.refundableAmountCents / 100;
+  refundForm.customerNote = '';
+  refundForm.merchantNote = '';
+  refundError.value = '';
+  successMessage.value = '';
+  showRefundForm.value = true;
+}
+
+function closeRefundForm() {
+  if (refunding.value) return;
+  showRefundForm.value = false;
+  refundTarget.value = null;
+  refundError.value = '';
+}
+
+async function submitRefund() {
+  const target = refundTarget.value;
+  if (!target?.programme.payment) return;
+  if (target.programme.payment.pendingRefundAmountCents > 0) {
+    refundError.value = 'Wait for the current refund to be resolved in Paystack before trying again.';
+    return;
+  }
+
+  refundError.value = '';
+  const amountCents = Math.round(Number(refundForm.amountRands) * 100);
+  const parsed = adminPaymentRefundRequestSchema.safeParse({
+    amountCents,
+    customerNote: refundForm.customerNote,
+    merchantNote: refundForm.merchantNote,
+  });
+  if (!parsed.success) {
+    refundError.value = parsed.error.issues[0]?.message ?? 'Please check the refund details.';
+    return;
+  }
+  if (parsed.data.amountCents > target.programme.payment.refundableAmountCents) {
+    refundError.value = `The most you can refund is ${formatZar(target.programme.payment.refundableAmountCents)}.`;
+    return;
+  }
+
+  refunding.value = true;
+  try {
+    await $fetch(`/api/admin/orders/${target.programme.orderId}/refund`, {
+      method: 'POST',
+      body: parsed.data,
+    });
+    await refresh();
+    successMessage.value = `${formatZar(parsed.data.amountCents)} for ${target.programme.orderNumber} was submitted to Paystack. Programme access will only be removed after Paystack confirms a full refund.`;
+    showRefundForm.value = false;
+    refundTarget.value = null;
+    await nextTick();
+    document.querySelector('.success-banner')?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      block: 'center',
+    });
+  } catch (requestError) {
+    refundError.value = (requestError as RequestError).data?.statusMessage
+      ?? 'The refund could not be submitted. Please try again.';
+    await refresh();
+    const updatedProgramme = (data.value?.clients ?? [])
+      .flatMap((client) => client.programmes)
+      .find((programme) => programme.orderId === target.programme.orderId);
+    if (updatedProgramme) {
+      refundTarget.value = { clientName: target.clientName, programme: updatedProgramme };
+    }
+  } finally {
+    refunding.value = false;
+  }
+}
+
 function formatDate(value: string | Date) {
   return new Intl.DateTimeFormat('en-ZA', {
     dateStyle: 'medium',
@@ -259,9 +359,28 @@ function formatDate(value: string | Date) {
   }).format(new Date(value));
 }
 
-function statusColor(value: string): 'success' | 'warning' | 'neutral' {
+function statusColor(value: string): 'success' | 'warning' | 'error' | 'neutral' {
   if (value === 'paid') return 'success';
   if (value === 'pending') return 'warning';
+  if (value === 'refunded') return 'error';
+  return 'neutral';
+}
+
+function refundStatusLabel(value: string) {
+  const labels: Record<string, string> = {
+    pending: 'Refund pending',
+    processing: 'Refund processing',
+    processed: 'Refund processed',
+    failed: 'Refund failed',
+    'needs-attention': 'Refund needs attention',
+  };
+  return labels[value] ?? value;
+}
+
+function refundStatusColor(value: string): 'success' | 'warning' | 'error' | 'neutral' {
+  if (value === 'processed') return 'success';
+  if (value === 'failed' || value === 'needs-attention') return 'error';
+  if (value === 'pending' || value === 'processing') return 'warning';
   return 'neutral';
 }
 
@@ -479,9 +598,39 @@ useSeoMeta({ title: 'Clients | Tilana Admin', robots: 'noindex, nofollow' });
           </template>
           <template #programmes-cell="{ row }">
             <div class="client-programmes">
-              <div v-for="programme in row.original.programmes" :key="`${programme.orderId}-${programme.name}`">
+              <div
+                v-for="(programme, programmeIndex) in row.original.programmes"
+                :key="`${programme.orderId}-${programme.name}`"
+              >
                 <span><strong>{{ programme.name }}</strong><small>{{ programme.orderNumber }}</small></span>
-                <span><b>{{ formatZar(programme.priceCents) }}</b><UBadge :color="statusColor(programme.status)" variant="subtle">{{ programme.status }}</UBadge></span>
+                <span class="programme-finance">
+                  <span><b>{{ formatZar(programme.priceCents) }}</b><UBadge :color="statusColor(programme.status)" variant="subtle">{{ programme.status }}</UBadge></span>
+                  <template v-if="programme.payment && isFirstOrderProgramme(row.original.programmes, programmeIndex)">
+                    <small v-if="programme.payment.refundedAmountCents">
+                      {{ formatZar(programme.payment.refundedAmountCents) }} refunded
+                    </small>
+                    <small v-if="programme.payment.pendingRefundAmountCents">
+                      {{ formatZar(programme.payment.pendingRefundAmountCents) }} awaiting Paystack
+                    </small>
+                    <UBadge
+                      v-if="programme.payment.latestRefundStatus"
+                      :color="refundStatusColor(programme.payment.latestRefundStatus)"
+                      variant="subtle"
+                    >
+                      {{ refundStatusLabel(programme.payment.latestRefundStatus) }}
+                    </UBadge>
+                    <UButton
+                      v-if="programme.payment.environment === data?.paystackEnvironment && programme.payment.refundableAmountCents > 0 && programme.payment.pendingRefundAmountCents === 0"
+                      type="button"
+                      label="Refund"
+                      icon="i-lucide-undo-2"
+                      color="error"
+                      variant="soft"
+                      size="xs"
+                      @click="openRefundForm(row.original, programme)"
+                    />
+                  </template>
+                </span>
               </div>
               <small v-if="!row.original.programmes.length">No programmes recorded</small>
             </div>
@@ -517,6 +666,73 @@ useSeoMeta({ title: 'Clients | Tilana Admin', robots: 'noindex, nofollow' });
         </UTable>
       </UCard>
     </section>
+
+    <UModal v-model:open="showRefundForm" title="Refund Paystack payment">
+      <template #body>
+        <form v-if="refundTarget?.programme.payment" class="refund-form" @submit.prevent="submitRefund">
+          <div class="refund-order">
+            <span><UIcon name="i-lucide-receipt-text" /></span>
+            <div>
+              <small>{{ refundTarget.programme.orderNumber }}</small>
+              <strong>{{ refundTarget.clientName }}</strong>
+              <p>{{ refundTarget.programme.name }} · {{ refundTarget.programme.payment.environment }} payment</p>
+            </div>
+          </div>
+
+          <UAlert
+            color="warning"
+            variant="soft"
+            icon="i-lucide-triangle-alert"
+            title="This submits a real refund request to Paystack"
+            description="You can refund all or part of the remaining amount. Full programme access is removed only after Paystack confirms the full payment has been refunded."
+          />
+
+          <UFormField
+            label="Refund amount (ZAR)"
+            :help="`${formatZar(refundTarget.programme.payment.refundableAmountCents)} available to refund`"
+            required
+          >
+            <UInput
+              v-model.number="refundForm.amountRands"
+              type="number"
+              min="0.01"
+              :max="refundTarget.programme.payment.refundableAmountCents / 100"
+              step="0.01"
+              size="xl"
+              class="w-full"
+            >
+              <template #leading><span class="currency-prefix">R</span></template>
+            </UInput>
+          </UFormField>
+          <UFormField label="Customer note" hint="Optional · shown with the Paystack refund">
+            <UTextarea v-model="refundForm.customerNote" :rows="2" maxlength="240" class="w-full" />
+          </UFormField>
+          <UFormField label="Internal note" hint="Optional · for your Paystack records">
+            <UTextarea v-model="refundForm.merchantNote" :rows="2" maxlength="500" class="w-full" />
+          </UFormField>
+
+          <UAlert
+            v-if="refundError"
+            color="error"
+            variant="soft"
+            icon="i-lucide-circle-alert"
+            :description="refundError"
+          />
+
+          <div class="form-actions">
+            <UButton type="button" label="Cancel" color="neutral" variant="ghost" :disabled="refunding" @click="closeRefundForm" />
+            <UButton
+              type="submit"
+              :label="`Refund ${formatZar(Math.round(Number(refundForm.amountRands || 0) * 100))}`"
+              icon="i-lucide-undo-2"
+              color="error"
+              :loading="refunding"
+              :disabled="refundTarget.programme.payment.pendingRefundAmountCents > 0 || refundTarget.programme.payment.refundableAmountCents <= 0"
+            />
+          </div>
+        </form>
+      </template>
+    </UModal>
   </div>
 </template>
 
@@ -572,10 +788,19 @@ h1 span { color: var(--caramel); font-family: var(--font-script); font-weight: 4
 .client-identity a, .client-identity small { color: var(--caramel); font-size: 0.63rem; }
 .client-programmes { display: grid; min-width: 22rem; gap: 0.45rem; }
 .client-programmes > div { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.6rem 0.7rem; border-radius: 0.8rem; background: color-mix(in srgb, var(--sand) 28%, transparent); }
-.client-programmes span { display: flex; align-items: center; gap: 0.45rem; }
-.client-programmes span:first-child { display: grid; gap: 0.1rem; }
+.client-programmes > div > span { display: flex; align-items: center; gap: 0.45rem; }
+.client-programmes > div > span:first-child { display: grid; gap: 0.1rem; }
 .client-programmes strong, .client-programmes b { color: var(--ink); font-size: 0.67rem; }
 .client-programmes small, .date-added { color: var(--ui-text-muted); font-size: 0.59rem; }
+.programme-finance { display: grid !important; justify-items: end; }
+.programme-finance > span { display: flex; align-items: center; gap: 0.45rem; }
+.refund-form { display: grid; gap: 1rem; }
+.refund-order { display: flex; align-items: center; gap: 0.9rem; padding: 1rem; border-radius: 1.1rem; background: color-mix(in srgb, var(--sand) 42%, transparent); }
+.refund-order > span { display: grid; width: 2.8rem; aspect-ratio: 1; flex: none; place-items: center; border-radius: 0.85rem; color: var(--ink); background: var(--terracotta); font-size: 1.1rem; }
+.refund-order div { display: grid; }
+.refund-order small { color: var(--caramel); font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.refund-order strong { color: var(--ink); font-size: 0.78rem; }
+.refund-order p { margin: 0.15rem 0 0; font-size: 0.65rem; }
 .client-actions { display: flex; align-items: center; justify-content: end; gap: 0.35rem; }
 .form-reveal-enter-active, .form-reveal-leave-active { transition: opacity var(--motion-base) ease, transform var(--motion-base) var(--ease-out); }
 .form-reveal-enter-from, .form-reveal-leave-to { opacity: 0; transform: translateY(-0.8rem); }

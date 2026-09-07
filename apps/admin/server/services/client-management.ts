@@ -9,6 +9,7 @@ import {
   clients,
   orderItems,
   orders,
+  paymentRefunds,
   payments,
   programAccess,
   programs,
@@ -107,6 +108,7 @@ async function insertManualOrderItems(
       .insert(orderItems)
       .values({
         orderId,
+        clientId,
         programVolumeId: volumeId,
         description: definition.volumeName,
         quantity: 1,
@@ -302,8 +304,9 @@ export async function updateManualClient(
   });
 }
 
-export async function listClientsWithProgrammes() {
-  const rows = await getDatabase()
+export async function listClientsWithProgrammes(paystackEnvironment: 'test' | 'live') {
+  const database = getDatabase();
+  const rows = await database
     .select({
       id: clients.id,
       firstName: clients.firstName,
@@ -328,6 +331,85 @@ export async function listClientsWithProgrammes() {
     .leftJoin(programs, eq(programs.id, programVolumes.programId))
     .orderBy(desc(clients.createdAt), asc(orderItems.createdAt));
 
+  const paymentRows = await database
+    .select({
+      id: payments.id,
+      orderId: payments.orderId,
+      status: payments.status,
+      environment: payments.environment,
+      amountCents: payments.amountCents,
+      refundedAmountCents: payments.refundedAmountCents,
+      createdAt: payments.createdAt,
+    })
+    .from(payments)
+    .where(and(
+      eq(payments.provider, 'paystack'),
+      eq(payments.environment, paystackEnvironment),
+      inArray(payments.status, ['succeeded', 'partially_refunded', 'refunded', 'reversed']),
+    ))
+    .orderBy(desc(payments.createdAt));
+  const paymentIds = paymentRows.map((payment) => payment.id);
+  const refundRows = paymentIds.length
+    ? await database
+        .select({
+          paymentId: paymentRefunds.paymentId,
+          status: paymentRefunds.status,
+          amountCents: paymentRefunds.amountCents,
+          updatedAt: paymentRefunds.updatedAt,
+        })
+        .from(paymentRefunds)
+        .where(inArray(paymentRefunds.paymentId, paymentIds))
+        .orderBy(desc(paymentRefunds.updatedAt))
+    : [];
+
+  const refundsByPayment = new Map<number, {
+    activeAmountCents: number;
+    pendingAmountCents: number;
+    latestStatus: typeof paymentRefunds.$inferSelect.status | null;
+  }>();
+  for (const refund of refundRows) {
+    const summary = refundsByPayment.get(refund.paymentId) ?? {
+      activeAmountCents: 0,
+      pendingAmountCents: 0,
+      latestStatus: null,
+    };
+    summary.latestStatus ??= refund.status;
+    if (refund.status !== 'failed') summary.activeAmountCents += refund.amountCents;
+    if (['pending', 'processing', 'needs-attention'].includes(refund.status)) {
+      summary.pendingAmountCents += refund.amountCents;
+    }
+    refundsByPayment.set(refund.paymentId, summary);
+  }
+
+  type PaystackPaymentSummary = {
+    id: number;
+    status: typeof payments.$inferSelect.status;
+    environment: typeof payments.$inferSelect.environment;
+    amountCents: number;
+    refundedAmountCents: number;
+    pendingRefundAmountCents: number;
+    refundableAmountCents: number;
+    latestRefundStatus: typeof paymentRefunds.$inferSelect.status | null;
+  };
+  const paymentByOrder = new Map<number, PaystackPaymentSummary>();
+  for (const payment of paymentRows) {
+    if (paymentByOrder.has(payment.orderId)) continue;
+    const refunds = refundsByPayment.get(payment.id);
+    const isTerminal = payment.status === 'refunded' || payment.status === 'reversed';
+    paymentByOrder.set(payment.orderId, {
+      id: payment.id,
+      status: payment.status,
+      environment: payment.environment,
+      amountCents: payment.amountCents,
+      refundedAmountCents: payment.refundedAmountCents,
+      pendingRefundAmountCents: refunds?.pendingAmountCents ?? 0,
+      refundableAmountCents: isTerminal
+        ? 0
+        : Math.max(0, payment.amountCents - (refunds?.activeAmountCents ?? 0)),
+      latestRefundStatus: refunds?.latestStatus ?? null,
+    });
+  }
+
   const clientMap = new Map<number, {
     id: number;
     firstName: string;
@@ -344,6 +426,7 @@ export async function listClientsWithProgrammes() {
       priceCents: number;
       status: string;
       programmeKey: ProgrammeKey | null;
+      payment: PaystackPaymentSummary | null;
     }>;
   }>();
 
@@ -375,6 +458,7 @@ export async function listClientsWithProgrammes() {
         priceCents: row.priceCents,
         status: row.orderStatus,
         programmeKey: catalogueItem?.key ?? null,
+        payment: paymentByOrder.get(row.orderId) ?? null,
       });
     }
   }
