@@ -10,6 +10,10 @@ primary_region = "lhr"   # London, matches Supabase eu-west-2
   NODE_ENV = "production"
   PORT = "3000"
   HOST = "0.0.0.0"
+  # Paystack is not live yet. Change this only during the explicit go-live checklist.
+  NUXT_PAYSTACK_ENVIRONMENT = "test"
+  NUXT_PAYSTACK_CALLBACK_URL = "https://tilanavantonder.co.za/checkout/complete"
+  NUXT_ACCOUNT_BASE_URL = "https://admin.tilanavantonder.co.za"
 
 [http_service]
   internal_port = 3000

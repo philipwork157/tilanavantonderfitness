@@ -460,90 +460,134 @@ the live catalogue records or prices.
 
 ## Rollout sequence
 
+### Progress summary
+
+- [x] Phase 0: architecture review and implementation plan
+- [ ] Phase 1: storage prerequisites
+- [ ] Phase 2: forward database migration
+- [ ] Phase 3: catalogue backfill
+- [ ] Phase 4: server and storage services
+- [ ] Phase 5: admin UI
+- [ ] Phase 6: public site and checkout cutover
+- [ ] Phase 7: cleanup and verification
+
+Mark a phase complete only after every task in that phase is checked and its
+relevant verification has passed. Update the detailed task and the progress
+summary together so the two views do not drift.
+
+### Phase 0: architecture review and implementation plan
+
+- [x] Review the existing catalogue, Paystack, customer-access, deployment, and
+  R2 architecture.
+- [x] Define the public/private bucket boundary, bucket names, custom domain,
+  object-key conventions, and credential model.
+- [x] Record the database, API, admin UI, public-site, rollout, and acceptance
+  plan in this document.
+
 ### Phase 1: storage prerequisites
 
-- Create the four R2 buckets.
-- Configure public access/custom domain only for public media.
-- Keep private bucket public access disabled.
-- Create scoped development and production tokens.
-- Configure admin-origin CORS for presigned PUT/HEAD requests.
-- Add documented runtime configuration placeholders.
+- [ ] Create the four R2 buckets.
+- [ ] Configure public access and the custom domain only for public media.
+- [ ] Confirm public access is disabled for both private-program buckets.
+- [ ] Create bucket-scoped development and production download/upload tokens.
+- [ ] Configure admin-origin CORS for presigned PUT/HEAD requests.
+- [ ] Add runtime configuration placeholders to the application and deployment
+  documentation.
+- [ ] Verify the development configuration without uploading production data.
 
 ### Phase 2: forward database migration
 
-- Extend `programs`, `program_volumes`, and `program_files`.
-- Add `program_media` and `program_audit_events`.
-- Add constraints and indexes.
-- Generate and review a new forward Drizzle migration.
-- Do not rewrite an already-applied migration.
+- [ ] Extend `programs`, `program_volumes`, and `program_files`.
+- [ ] Add `program_media` and `program_audit_events`.
+- [ ] Add constraints and indexes.
+- [ ] Generate and review a new forward Drizzle migration.
+- [ ] Confirm no already-applied migration was rewritten.
+- [ ] Run `pnpm db:check`.
 
 ### Phase 3: backfill
 
-- Insert Beginner, Intermediate, Advanced, Reconnect, and Nourish from the
+- [ ] Insert Beginner, Intermediate, Advanced, Reconnect, and Nourish from the
   current static catalogue.
-- Preserve the current slugs, volume numbers, checkout keys, names, prices, and
-  published/coming-soon behavior.
-- Reuse existing integer program and volume rows when checkout has already
+- [ ] Preserve the current slugs, volume numbers, checkout keys, names, prices,
+  and published/coming-soon behavior.
+- [ ] Reuse existing integer program and volume rows when checkout has already
   created them.
-- Verify all existing `order_items` and `program_access` relationships before
+- [ ] Verify all existing `order_items` and `program_access` relationships before
   switching reads.
+- [ ] Confirm the backfill is idempotent and does not duplicate programs or
+  volumes.
 
 ### Phase 4: server and storage services
 
-- Add catalogue query/mutation services.
-- Add upload initiation/finalization and R2 object verification.
-- Extend private download signing without changing entitlement checks.
-- Add audit events and publication validation.
-- Add public catalogue read services with safe cache headers.
+- [ ] Add catalogue query/mutation services.
+- [ ] Add upload initiation/finalization and R2 object verification.
+- [ ] Extend private download signing without changing entitlement checks.
+- [ ] Add audit events and publication validation.
+- [ ] Add public catalogue read services with safe cache headers.
+- [ ] Add shared Zod request/response contracts.
+- [ ] Add focused service and API tests for authorization, validation, and
+  storage failures.
 
 ### Phase 5: admin UI
 
-- Enable Programs navigation.
-- Build list, create/edit, volume, media, file, preview, and publication flows.
-- Display actionable upload and publication errors.
-- Preserve the existing design system and responsive behavior.
+- [ ] Enable Programs navigation.
+- [ ] Build the program list and create/edit screens.
+- [ ] Build volume and price management.
+- [ ] Build public cover-media upload and management.
+- [ ] Build private PDF upload, version, ordering, and deactivation management.
+- [ ] Build preview, publication, unpublish, and archive flows.
+- [ ] Display actionable upload and publication errors.
+- [ ] Preserve the existing design system, accessibility, responsive behavior,
+  and reduced-motion support.
 
 ### Phase 6: public site and checkout cutover
 
-- Render program cards from the public API.
-- Add the generic checkout route.
-- Change checkout contracts and Paystack lookup to database volume slugs.
-- Change the admin client assignment form to database-backed options.
-- Retain existing checkout URL redirects.
-- Remove automatic program/volume creation from the Paystack and client
+- [ ] Render program cards from the public API.
+- [ ] Add accessible loading, empty, and failure states.
+- [ ] Add the generic checkout route.
+- [ ] Change checkout contracts and Paystack lookup to database volume slugs.
+- [ ] Change the admin client assignment form to database-backed options.
+- [ ] Retain existing checkout URL redirects.
+- [ ] Remove automatic program/volume creation from the Paystack and client
   services.
+- [ ] Verify stale-price protection and authoritative server-side pricing.
 
 ### Phase 7: cleanup and verification
 
-- Remove the static catalogue only after data/UI parity is confirmed.
-- Verify no browser bundle contains database, R2, Paystack, or service-role
+- [ ] Remove the static catalogue only after data/UI parity is confirmed.
+- [ ] Verify no browser bundle contains database, R2, Paystack, or service-role
   credentials.
-- Run `pnpm db:check`, `pnpm check`, `pnpm build:web`, and
+- [ ] Run `pnpm db:check`, `pnpm check`, `pnpm build:web`, and
   `pnpm build:admin`.
-- Test development and production configuration separately.
+- [ ] Test development and production configuration separately.
+- [ ] Complete every applicable acceptance test below.
+- [ ] Update `CLAUDE.md`, `docs/database-design.md`, and `docs/deployment.md` to
+  match the delivered architecture.
 
 ## Acceptance tests
 
-- An admin can create a draft without making it public.
-- A program cannot be sold without a published volume, valid positive price,
+- [ ] An admin can create a draft without making it public.
+- [ ] A program cannot be sold without a published volume, valid positive price,
   and ready private file.
-- Public APIs never return drafts, archived programs, or private R2 metadata.
-- A public cover loads through the configured media domain.
-- A private PDF is unreachable without a valid signed URL.
-- An authorized customer's signed download expires after five minutes.
-- A customer cannot download another volume by changing an integer file ID.
-- Checkout rejects unknown, draft, archived, unpublished, file-less, and
+- [ ] Public APIs never return drafts, archived programs, or private R2 metadata.
+- [ ] A public cover loads through the configured media domain.
+- [ ] A private PDF is unreachable without a valid signed URL.
+- [ ] An authorized customer's signed download expires after five minutes.
+- [ ] A customer cannot download another volume by changing an integer file ID.
+- [ ] Checkout rejects unknown, draft, archived, unpublished, file-less, and
   zero-price volumes.
-- Checkout uses the database price and rejects a stale browser price.
-- Successful verified Paystack payment grants the purchased integer volume ID.
-- Failed or abandoned payment does not grant access.
-- Existing paid orders retain their historical descriptions and prices.
-- Existing entitlements still resolve after the catalogue cutover.
-- Full refunds revoke only purchase-derived access according to the existing
+- [ ] Checkout uses the database price and rejects a stale browser price.
+- [ ] Successful verified Paystack payment grants the purchased integer volume
+  ID.
+- [ ] Failed or abandoned payment does not grant access.
+- [ ] Existing paid orders retain their historical descriptions and prices.
+- [ ] Existing entitlements still resolve after the catalogue cutover.
+- [ ] Full refunds revoke only purchase-derived access according to the existing
   refund rules.
-- Replacing a PDF preserves the previous database/audit history and exposes only
-  the current active version to customers.
-- Archiving prevents new purchases without removing existing customer access.
+- [ ] Replacing a PDF preserves the previous database/audit history and exposes
+  only the current active version to customers.
+- [ ] Archiving prevents new purchases without removing existing customer
+  access.
 
 ## Out of scope for the first release
 

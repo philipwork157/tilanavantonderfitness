@@ -1,10 +1,8 @@
 name: Build and deploy (production)
 
-# A merge to main verifies both production builds in parallel without deploying.
-# To release, use Run workflow and choose both applications or just one.
+# Production never runs on push. Use Run workflow on main and choose both
+# applications or just one; the selected builds must pass before deployment.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       target:
@@ -31,7 +29,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Require the main branch and confirmation for deployments
-        if: github.event_name == 'workflow_dispatch'
         env:
           CONFIRM: ${{ inputs.confirm }}
           REF_NAME: ${{ github.ref_name }}
@@ -48,11 +45,12 @@ jobs:
   build-public:
     name: Build public website
     needs: validate
-    if: github.event_name == 'push' || inputs.target == 'both' || inputs.target == 'public'
+    if: inputs.target == 'both' || inputs.target == 'public'
     runs-on: ubuntu-latest
     permissions:
       contents: read
     env:
+      DEPLOYMENT_ENVIRONMENT: production
       PUBLIC_CONTACT_API_URL: ${{ secrets.PUBLIC_CONTACT_API_URL_PROD }}
       PUBLIC_NEWSLETTER_API_URL: ${{ secrets.PUBLIC_NEWSLETTER_API_URL_PROD }}
       PUBLIC_CHECKOUT_API_URL: ${{ secrets.PUBLIC_CHECKOUT_API_URL_PROD }}
@@ -65,17 +63,25 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
+      - name: Validate public environment
+        run: node apps/web/scripts/validate-public-deployment-env.mjs
+      - name: Validate Cloudflare credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo '::error::CLOUDFLARE_API_TOKEN is missing.'; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo '::error::CLOUDFLARE_ACCOUNT_ID is missing.'; exit 1; }
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Build public website
         run: pnpm build:web
       - name: Save public website build
-        if: github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: public-website
           path: apps/web/dist/client
@@ -85,7 +91,7 @@ jobs:
   build-admin:
     name: Build admin website
     needs: validate
-    if: github.event_name == 'push' || inputs.target == 'both' || inputs.target == 'admin'
+    if: inputs.target == 'both' || inputs.target == 'admin'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -95,10 +101,14 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
+      - name: Validate Fly.io credentials
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}
+        run: test -n "$FLY_API_TOKEN" || { echo '::error::FLY_API_TOKEN_PROD is missing.'; exit 1; }
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Build admin website
@@ -107,7 +117,7 @@ jobs:
   deploy-public:
     name: Deploy public website
     needs: build-public
-    if: github.event_name == 'workflow_dispatch' && (inputs.target == 'both' || inputs.target == 'public')
+    if: inputs.target == 'both' || inputs.target == 'public'
     runs-on: ubuntu-latest
     environment: production
     permissions:
@@ -135,7 +145,7 @@ jobs:
   deploy-admin:
     name: Deploy admin website
     needs: build-admin
-    if: github.event_name == 'workflow_dispatch' && (inputs.target == 'both' || inputs.target == 'admin')
+    if: inputs.target == 'both' || inputs.target == 'admin'
     runs-on: ubuntu-latest
     environment: production
     permissions:

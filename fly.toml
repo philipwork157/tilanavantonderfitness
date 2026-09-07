@@ -10,6 +10,9 @@ primary_region = "lhr"   # London, matches Supabase eu-west-2
   NODE_ENV = "production"
   PORT = "3000"
   HOST = "0.0.0.0"
+  NUXT_PAYSTACK_ENVIRONMENT = "test"
+  NUXT_PAYSTACK_CALLBACK_URL = "https://website-dev.tilanavantonder.co.za/checkout/complete"
+  NUXT_ACCOUNT_BASE_URL = "https://admin-dev.tilanavantonder.co.za"
 
 [http_service]
   internal_port = 3000
