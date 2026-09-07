@@ -21,6 +21,14 @@ export default defineNuxtConfig({
     newsletterDevelopmentRecipient: '',
     newsletterApiBaseUrl: 'http://127.0.0.1:3001',
     newsletterSiteUrl: 'http://127.0.0.1:4321',
+    customerAccessDevelopmentRecipient: '',
+    paystackSecretKey: '',
+    paystackEnvironment: 'test',
+    paystackCallbackUrl: 'http://127.0.0.1:4321/checkout/complete',
+    accountBaseUrl: 'http://127.0.0.1:3001',
+    r2AccountId: '',
+    r2AccessKeyId: '',
+    r2SecretAccessKey: '',
   },
   devtools: {
     enabled: false,
@@ -34,6 +42,10 @@ export default defineNuxtConfig({
     '/contacts/**': { headers: { 'cache-control': 'private, no-store' } },
     '/api/auth/**': { headers: { 'cache-control': 'private, no-store' } },
     '/api/admin/**': { headers: { 'cache-control': 'private, no-store' } },
+    '/api/checkout/**': { headers: { 'cache-control': 'no-store' } },
+    '/api/webhooks/**': { headers: { 'cache-control': 'no-store' } },
+    '/account/**': { headers: { 'cache-control': 'private, no-store' } },
+    '/api/customer/**': { headers: { 'cache-control': 'private, no-store' } },
   },
   app: {
     head: {

@@ -39,7 +39,10 @@ const programs = marketingPrograms.map((program) => ({
             {program.price && program.interest && (
               <div class="program-footer">
                 <div class="program-price"><span>Once-off</span><strong>{program.price}</strong></div>
-                <a class="button button-secondary" href={`/contact?interest=${program.interest}`}>Ask about {program.name}</a>
+                <div class="program-actions">
+                  <a class="button button-primary" href={`/checkout/${program.catalogueKey}`}>Buy now</a>
+                  <a class="program-question" href={`/contact?interest=${program.interest}`}>Ask about {program.name}</a>
+                </div>
               </div>
             )}
           </article>
@@ -73,6 +76,8 @@ const programs = marketingPrograms.map((program) => ({
   .program-price span { color: var(--caramel); font-size: 0.64rem; font-weight: 750; letter-spacing: 0.1em; text-transform: uppercase; }
   .program-price strong { color: var(--ink); font-family: var(--font-heading); font-size: 2rem; line-height: 1; }
   .program-tile .button { width: 100%; padding-inline: 0.8rem; }
+  .program-actions { display: grid; gap: 0.75rem; text-align: center; }
+  .program-question { color: var(--chocolate); font-size: 0.72rem; font-weight: 700; text-decoration: underline; text-underline-offset: 0.2em; }
   .program-beginner { --card-accent: var(--terracotta); }
   .program-intermediate { --card-accent: var(--sage); }
   .program-advanced { --card-accent: var(--caramel); }

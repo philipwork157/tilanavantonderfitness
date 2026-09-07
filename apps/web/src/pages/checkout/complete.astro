@@ -1,0 +1,71 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const statusApiUrl = import.meta.env.PUBLIC_CHECKOUT_STATUS_API_URL ?? 'http://127.0.0.1:3001/api/checkout/status';
+const accountUrl = import.meta.env.PUBLIC_ACCOUNT_URL ?? 'http://127.0.0.1:3001/account/sign-in';
+---
+
+<BaseLayout title="Payment status" description="Check the status of your program payment.">
+  <main class="section complete-page" data-payment-status data-api-url={statusApiUrl}>
+    <div class="container status-card">
+      <p class="eyebrow">Secure checkout</p>
+      <h1 data-status-title>Confirming your payment…</h1>
+      <p data-status-copy>Please keep this page open while Paystack confirms the payment.</p>
+      <a class="button button-secondary" href="/program" data-status-link hidden>Back to programs</a>
+      <a class="button button-primary account-link" href={accountUrl} data-account-link hidden>Access my programs</a>
+    </div>
+  </main>
+</BaseLayout>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-payment-status]');
+  const title = root?.querySelector<HTMLElement>('[data-status-title]');
+  const copy = root?.querySelector<HTMLElement>('[data-status-copy]');
+  const link = root?.querySelector<HTMLElement>('[data-status-link]');
+  const accountLink = root?.querySelector<HTMLElement>('[data-account-link]');
+  const reference = new URLSearchParams(window.location.search).get('reference');
+
+  const show = (heading: string, message: string) => {
+    if (title) title.textContent = heading;
+    if (copy) copy.textContent = message;
+    if (link) link.hidden = false;
+  };
+
+  const checkStatus = async () => {
+    if (!root || !reference) {
+      show('Payment reference missing', 'Please contact Tilana if you completed a payment but cannot see its status.');
+      return;
+    }
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      try {
+        const response = await fetch(`${root.dataset.apiUrl}?reference=${encodeURIComponent(reference)}`);
+        const result = await response.json() as { status?: string; orderNumber?: string };
+        if (result.status === 'succeeded') {
+          show('Payment received', `Thank you. Your order ${result.orderNumber ?? ''} is confirmed and access is linked to your email address.`);
+          if (accountLink) accountLink.hidden = false;
+          return;
+        }
+        if (result.status && !['pending'].includes(result.status)) {
+          show('Payment not completed', 'No successful payment was recorded. You can return to the programs page and try again.');
+          return;
+        }
+      } catch {
+        // A webhook may still be in flight, so retry briefly before showing help.
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 2000));
+    }
+
+    show('Payment is still processing', 'Confirmation can take a moment. Please check again shortly or contact Tilana with your payment reference.');
+  };
+
+  void checkStatus();
+</script>
+
+<style>
+  .complete-page { min-height: 65vh; display: grid; place-items: center; background: var(--cream); }
+  .status-card { max-width: 46rem; padding: clamp(2rem, 6vw, 4rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-md); text-align: center; }
+  .status-card h1 { margin: 0.75rem 0 1rem; font-family: var(--font-heading); font-size: clamp(2.2rem, 6vw, 4rem); }
+  .status-card p:not(.eyebrow) { margin: 0 auto 1.8rem; max-width: 36rem; line-height: 1.7; }
+  .account-link { margin-left: 0.6rem; }
+</style>

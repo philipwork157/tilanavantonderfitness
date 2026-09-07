@@ -1,6 +1,8 @@
 import type { AdminSessionResponse } from '@tilana/contracts/auth';
 
 export default defineNuxtRouteMiddleware(async (to) => {
+  if (to.path.startsWith('/account')) return;
+
   const adminUser = useAdminUser();
   const isLoginPage = to.path === '/login';
 

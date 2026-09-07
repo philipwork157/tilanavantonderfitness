@@ -16,6 +16,8 @@ const policySections = [
     body: [
       'If you submit an enquiry from the contact page, you provide your name, email address, selected area of interest, message and consent confirmation. Supplying an enquiry is voluntary, but a name, reply address and enough context are needed to respond meaningfully.',
       'If you join the newsletter, the website collects your email address, consent date, signup source, confirmation status and the applicable privacy-policy version. Newsletter subscription is voluntary and uses a confirmation email before marketing messages are sent.',
+      'If you buy a program, the checkout collects your name, email address, optional phone number, selected program, order and payment status, and the information needed to give you access. Card and bank details are entered directly into Paystack and are not stored by this website.',
+      'If you access a purchased program, Supabase manages your verified sign-in and the website records the link between that account, your customer record and your program access.',
       'Please do not send diagnoses, medical records, identity numbers, detailed injury information, pregnancy complications or other sensitive health information through the public contact form.',
       'The website uses Cloudflare Web Analytics to understand aggregate visits and website performance. Cloudflare Web Analytics does not use cookies, local storage or fingerprinting to identify or track individual visitors. The website also stores a light-or-dark theme preference in your browser. The hosting provider may process standard technical information such as an IP address, browser information and security logs to deliver and protect the site.',
     ],
@@ -31,6 +33,7 @@ const policySections = [
     body: [
       'Information is used to respond to your enquiry, understand which service you are asking about, assess whether Tilana can assist, recommend an appropriately qualified professional when the request falls outside her scope, and take requested steps before a possible client relationship.',
       'Newsletter information is used only to confirm and manage your subscription and send the occasional emails you requested. It is not added from a contact enquiry unless you separately subscribe.',
+      'Purchase information is used to process and reconcile payment, prevent duplicate fulfilment, provide receipts and customer support, link a verified customer account, and control access to purchased program files.',
       'If you later become a client, additional information will be collected through a separate onboarding process with its own explanations and consent choices. Contact details are not added to a marketing list unless separate, optional marketing consent is requested in future.',
     ],
   },
@@ -40,6 +43,7 @@ const policySections = [
       'Personal information is not sold. It may be processed by service providers that are reasonably necessary to run the website, secure it, provide email, store records or meet professional and legal obligations. Information may also be disclosed where required by law or with your specific permission.',
       'Cloudflare hosts and protects the public website, provides privacy-focused analytics and helps prevent automated spam through Turnstile. Cloudflare may process technical information such as an IP address, browser details and security events when delivering or protecting the website.',
       'Supabase provides the protected database and authentication infrastructure used to store website enquiries, newsletter subscription records and authorised administration data. Amazon Web Services Simple Email Service (AWS SES) delivers contact notifications, newsletter confirmation messages and requested newsletter emails; it processes the recipient address and the information needed to deliver each message.',
+      'Paystack processes program payments and related payment information. Cloudflare R2 stores private program files and receives only the technical information needed when a signed-in customer downloads an entitled file.',
       'These providers may process or store information outside South Africa. Where that occurs, reasonable steps will be taken to use providers and arrangements that offer an adequate level of protection and appropriate contractual, organisational and technical safeguards.',
     ],
   },
@@ -94,7 +98,7 @@ const policySections = [
           <li>No sale of personal information</li>
           <li>No health records through the public form</li>
         </ul>
-        <p class="effective-date">Effective date: 24 August 2026</p>
+        <p class="effective-date">Effective date: 6 September 2026</p>
       </aside>
 
       <div class="privacy-content">

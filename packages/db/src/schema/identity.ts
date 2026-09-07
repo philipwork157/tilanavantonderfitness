@@ -83,7 +83,7 @@ export const clients = pgTable(
       sql`${table.gender} is null or ${table.gender} in ('female', 'male', 'non-binary', 'other', 'prefer-not-to-say')`,
     ),
     uniqueIndex('clients_user_id_unique').on(table.userId),
-    index('clients_email_idx').on(sql`lower(${table.email})`),
+    uniqueIndex('clients_email_unique').on(sql`lower(${table.email})`),
     index('clients_created_at_idx').on(table.createdAt),
   ],
 ).enableRLS();

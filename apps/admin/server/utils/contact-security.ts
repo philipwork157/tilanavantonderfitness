@@ -34,7 +34,7 @@ export function applyContactCors(event: Parameters<typeof getHeader>[0]): string
 
   setResponseHeaders(event, {
     'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400',
     'Cache-Control': 'no-store',
@@ -92,7 +92,7 @@ export async function enforceContactRateLimit(ip: string, namespace = 'contact')
   if (existing.count > RATE_LIMIT_MAX_REQUESTS) {
     throw createError({
       statusCode: 429,
-      statusMessage: 'Too many enquiries. Please try again later.',
+      statusMessage: 'Too many requests. Please try again later.',
     });
   }
 }

@@ -71,6 +71,20 @@
       "when": 1788719294360,
       "tag": "20260906182814_slim_moon_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788720985425,
+      "tag": "20260906185625_living_spot",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788721469478,
+      "tag": "20260906190429_same_black_cat",
+      "breakpoints": true
     }
   ]
 }

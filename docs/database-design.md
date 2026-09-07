@@ -10,6 +10,8 @@ The application separates authentication, customer records, purchases, billing, 
   references the UUID in `auth.users.id`.
 - `user_roles` stores `admin`, `staff`, or `customer` roles separately from editable profile fields.
 - `clients` is the business record used by orders and invoices. A client can be created before they have a login, then linked through nullable `clients.user_id` after accepting an invitation.
+- Client email addresses are unique case-insensitively so a verified Supabase
+  account can claim exactly one pre-existing guest customer record.
 
 Tilana will have a normal Supabase Auth user, a `users` row, and an `admin` row in `user_roles`. Public signup and profile update routes must never grant administrative roles.
 
@@ -29,11 +31,39 @@ The customer-facing email should link to `/account/programs`. The Nuxt server ve
 
 ## Purchases and payments
 
-- `orders` belongs to a client and stores totals in integer cents.
+- `orders` belongs to a client, snapshots the guest checkout email, and stores totals in integer cents.
 - `order_items` records each purchased program volume and snapshots its description and price at checkout.
-- `payments` records the payment provider, status, reference, amount, and paid time.
+- `payments` records one payment attempt. An order may have multiple attempts so a
+  customer can safely retry checkout without creating a duplicate order.
+- Paystack references, transaction IDs, environment, raw provider status,
+  checkout details, channel, fees, and verification time remain on `payments`;
+  application logic uses the normalized payment status.
+- `payment_events` is the idempotency and audit ledger for signed webhooks. Its
+  provider event key prevents a retried event from fulfilling an order twice.
+- `payment_refunds` records each full or partial refund independently.
 
 For example, R400 is stored as `40000`. If Nourish Volume 1 later costs R500, the old `order_items.unit_price_cents` remains `40000`, so purchase history stays accurate.
+
+For the initial customer checkout, the public website should offer a direct
+“Buy this program” action rather than requiring a basket. The checkout app
+requires Supabase authentication before it creates an order, ensuring the
+purchase can be linked to `users -> clients -> program_access`. The Nuxt server
+must calculate the price from `program_volumes`, initialize Paystack, and return
+only the hosted checkout URL or access code to the browser.
+
+The Paystack callback is a user-interface return path, not proof of payment.
+Only a server-verified successful payment with the expected reference, amount,
+and currency may atomically mark the payment and order as paid and create
+`program_access`. Replayed callbacks and webhook deliveries must be safe no-ops.
+
+After payment, a customer requests a passwordless link using the same email
+address. The Nuxt server generates a Supabase Auth token without asking
+Supabase to deliver email, sends the branded access link through AWS SES, and
+verifies its token hash at the callback. The callback creates the integer-keyed
+`users` row only for a verified Supabase identity, links `clients.user_id`, and
+grants the `customer` role. Private program files are returned as short-lived
+R2 download redirects only after the server checks that integer-linked
+entitlement.
 
 ## Invoices
 

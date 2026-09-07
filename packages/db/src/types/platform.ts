@@ -4,6 +4,8 @@ import type {
   invoices,
   orderItems,
   orders,
+  paymentEvents,
+  paymentRefunds,
   payments,
   users,
   programAccess,
@@ -33,6 +35,10 @@ export type OrderItem = typeof orderItems.$inferSelect;
 export type NewOrderItem = typeof orderItems.$inferInsert;
 export type Payment = typeof payments.$inferSelect;
 export type NewPayment = typeof payments.$inferInsert;
+export type PaymentEvent = typeof paymentEvents.$inferSelect;
+export type NewPaymentEvent = typeof paymentEvents.$inferInsert;
+export type PaymentRefund = typeof paymentRefunds.$inferSelect;
+export type NewPaymentRefund = typeof paymentRefunds.$inferInsert;
 export type ProgramAccess = typeof programAccess.$inferSelect;
 export type NewProgramAccess = typeof programAccess.$inferInsert;
 

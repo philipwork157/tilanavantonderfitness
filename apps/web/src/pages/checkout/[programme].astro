@@ -1,0 +1,135 @@
+---
+import type { PurchasableProgrammeKey } from '@tilana/contracts/checkout';
+import { purchasableProgrammeKeyValues } from '@tilana/contracts/checkout';
+import { formatZar, programmeCatalogByKey } from '@tilana/contracts/programs';
+import PageHero from '@tilana/ui-astro/PageHero.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export function getStaticPaths() {
+  return purchasableProgrammeKeyValues.map((programme) => ({ params: { programme } }));
+}
+
+const programmeKey = Astro.params.programme as PurchasableProgrammeKey;
+const programme = programmeCatalogByKey[programmeKey];
+const checkoutApiUrl = import.meta.env.PUBLIC_CHECKOUT_API_URL ?? 'http://127.0.0.1:3001/api/checkout/paystack';
+const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
+---
+
+<BaseLayout title={`Buy ${programme.name}`} description={`Secure checkout for ${programme.volumeName}.`}>
+  <PageHero eyebrow="Secure checkout" title="Start your" script="next chapter." intro={`Buy ${programme.volumeName} once and access it through your customer account.`} />
+
+  <section class="section checkout-section">
+    <div class="container checkout-grid">
+      <aside class="order-card">
+        <p class="eyebrow">Your program</p>
+        <h2>{programme.volumeName}</h2>
+        <p>Your price is confirmed securely by the server before Paystack opens.</p>
+        <div class="price"><span>Once-off payment</span><strong>{formatZar(programme.suggestedPriceCents)}</strong></div>
+        <ul>
+          <li>Secure Paystack checkout</li>
+          <li>No account needed before payment</li>
+          <li>Your purchase is linked when you verify your email</li>
+        </ul>
+      </aside>
+
+      <form class="checkout-form" data-checkout-form data-api-url={checkoutApiUrl} data-programme-key={programmeKey} data-price-cents={programme.suggestedPriceCents} novalidate>
+        <div class="honeypot" aria-hidden="true"><label>Leave empty<input name="website" tabindex="-1" autocomplete="off" /></label></div>
+        <div class="name-grid">
+          <label>First name<input name="firstName" autocomplete="given-name" maxlength="100" required /></label>
+          <label>Last name<input name="lastName" autocomplete="family-name" maxlength="100" required /></label>
+        </div>
+        <label>Email address<input name="email" type="email" autocomplete="email" maxlength="254" required /></label>
+        <label>Phone number <small>(optional)</small><input name="phone" type="tel" autocomplete="tel" maxlength="30" /></label>
+        <label class="consent">
+          <input name="consent" type="checkbox" required />
+          <span>I agree to the <a href="/privacy">privacy policy</a> and understand this is a digital program providing general education, not clinical care.</span>
+        </label>
+        {turnstileSiteKey && <div class="cf-turnstile" data-sitekey={turnstileSiteKey} data-action="checkout" data-theme="auto"></div>}
+        <button class="button button-primary" type="submit"><span>Continue to secure payment</span></button>
+        <p class="form-status" data-form-status role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { checkoutRequestSchema } from '@tilana/contracts/checkout';
+
+  const form = document.querySelector<HTMLFormElement>('[data-checkout-form]');
+  const status = form?.querySelector<HTMLElement>('[data-form-status]');
+  const button = form?.querySelector<HTMLButtonElement>('button[type="submit"]');
+  const label = button?.querySelector<HTMLElement>('span');
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!form || !status || !button || !label) return;
+    const data = new FormData(form);
+    const parsed = checkoutRequestSchema.safeParse({
+      programmeKey: form.dataset.programmeKey,
+      expectedPriceCents: Number(form.dataset.priceCents),
+      firstName: data.get('firstName'),
+      lastName: data.get('lastName'),
+      email: data.get('email'),
+      phone: data.get('phone'),
+      consent: data.get('consent') === 'on',
+      website: data.get('website'),
+      turnstileToken: String(data.get('cf-turnstile-response') ?? ''),
+    });
+
+    if (!parsed.success) {
+      status.textContent = 'Please complete all required details and accept the privacy agreement.';
+      status.dataset.state = 'error';
+      return;
+    }
+
+    button.disabled = true;
+    label.textContent = 'Opening Paystack…';
+    status.textContent = '';
+    delete status.dataset.state;
+
+    try {
+      const response = await fetch(form.dataset.apiUrl ?? '', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parsed.data),
+      });
+      const body = await response.json().catch(() => null) as { authorizationUrl?: string; statusMessage?: string; message?: string } | null;
+      if (!response.ok || !body?.authorizationUrl) {
+        throw new Error(body?.statusMessage ?? body?.message ?? 'Checkout could not be started.');
+      }
+      window.location.assign(body.authorizationUrl);
+    } catch (error) {
+      status.textContent = error instanceof Error ? error.message : 'Checkout could not be started.';
+      status.dataset.state = 'error';
+      button.disabled = false;
+      label.textContent = 'Continue to secure payment';
+      (window as Window & { turnstile?: { reset: () => void } }).turnstile?.reset();
+    }
+  });
+</script>
+
+<style>
+  .checkout-section { background: var(--cream); }
+  .checkout-grid { display: grid; align-items: start; gap: clamp(2rem, 6vw, 5rem); grid-template-columns: 0.85fr 1.15fr; }
+  .order-card, .checkout-form { padding: clamp(1.5rem, 4vw, 2.5rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+  .order-card { background: var(--sage); }
+  .order-card h2 { margin: 0.7rem 0 1rem; font-family: var(--font-heading); font-size: clamp(2rem, 4vw, 3rem); }
+  .order-card p { line-height: 1.7; }
+  .order-card ul { display: grid; gap: 0.65rem; margin: 1.5rem 0 0; padding-left: 1.2rem; font-size: 0.78rem; }
+  .price { display: grid; gap: 0.25rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgb(15 14 19 / 15%); }
+  .price span { font-size: 0.7rem; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; }
+  .price strong { font-family: var(--font-heading); font-size: 2.4rem; }
+  .checkout-form { position: relative; display: grid; gap: 1.2rem; background: var(--white); }
+  .checkout-form label:not(.consent) { display: grid; gap: 0.45rem; color: var(--ink); font-size: 0.75rem; font-weight: 700; }
+  .checkout-form input:not([type="checkbox"]) { width: 100%; padding: 0.9rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--ink); background: var(--cream); font: inherit; }
+  .checkout-form input:focus { border-color: var(--caramel); outline: 3px solid rgb(213 162 127 / 22%); }
+  .name-grid { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; }
+  .consent { display: flex; align-items: flex-start; gap: 0.75rem; font-size: 0.72rem; line-height: 1.6; }
+  .consent input { margin-top: 0.25rem; }
+  .consent a { text-decoration: underline; }
+  .form-status { min-height: 1em; margin: 0; font-size: 0.75rem; }
+  .form-status[data-state="error"] { color: #9d2d24; }
+  .honeypot { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  @media (max-width: 48rem) { .checkout-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 30rem) { .name-grid { grid-template-columns: 1fr; } }
+</style>
