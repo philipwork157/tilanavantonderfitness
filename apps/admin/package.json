@@ -22,8 +22,10 @@
     "@tilana/db": "workspace:*",
     "@tilana/email": "workspace:*",
     "@tilana/ui-nuxt": "workspace:*",
+    "chart.js": "^4.5.1",
     "drizzle-orm": "^0.45.2",
-    "nuxt": "latest"
+    "nuxt": "latest",
+    "vue-chartjs": "^5.3.4"
   },
   "devDependencies": {
     "@iconify-json/lucide": "latest",
