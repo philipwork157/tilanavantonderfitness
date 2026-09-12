@@ -181,6 +181,11 @@ Program PDFs are not attached to email and are not public. `program_files` store
 private Cloudflare R2 bucket/object metadata. After an entitlement check, the
 server returns a short-lived presigned download URL.
 
+R2 configuration uses separate environment-specific credentials: an Object
+Read-only token for private customer downloads and an Object Read & Write token
+for authenticated admin uploads to the matching public and private buckets.
+Keep all R2 configuration in Nuxt/Fly runtime secrets, never in Fly TOML files.
+
 ## Security boundaries
 
 - Only Nuxt server routes/services may import `@tilana/db/server` or

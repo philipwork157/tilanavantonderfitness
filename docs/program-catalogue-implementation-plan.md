@@ -66,10 +66,10 @@ Create separate buckets for access class and environment:
 
 | Environment | Purpose | Recommended bucket name | Public access |
 | --- | --- | --- | --- |
-| Development | Marketing covers and preview images | `tilanavantonder-public-media-dev` | Development URL or optional dev domain |
-| Development | Purchased program PDFs | `tilanavantonder-private-programs-dev` | Disabled |
-| Production | Marketing covers and preview images | `tilanavantonder-public-media-prod` | Custom domain only |
-| Production | Purchased program PDFs | `tilanavantonder-private-programs-prod` | Disabled |
+| Development | Marketing covers and preview images | `tilanavantonder-dev-public-media` | Development custom domain |
+| Development | Purchased program PDFs | `tilanavantonder-dev-private-programs` | Disabled |
+| Production | Marketing covers and preview images | `tilanavantonder-prod-public-media` | Custom domain only |
+| Production | Purchased program PDFs | `tilanavantonder-prod-private-programs` | Disabled |
 
 This prevents a test configuration from exposing or overwriting production
 files. Bucket names follow R2's lowercase letters, numbers, and hyphens rule.
@@ -463,7 +463,7 @@ the live catalogue records or prices.
 ### Progress summary
 
 - [x] Phase 0: architecture review and implementation plan
-- [ ] Phase 1: storage prerequisites
+- [x] Phase 1: storage prerequisites
 - [ ] Phase 2: forward database migration
 - [ ] Phase 3: catalogue backfill
 - [ ] Phase 4: server and storage services
@@ -486,14 +486,24 @@ summary together so the two views do not drift.
 
 ### Phase 1: storage prerequisites
 
-- [ ] Create the four R2 buckets.
-- [ ] Configure public access and the custom domain only for public media.
-- [ ] Confirm public access is disabled for both private-program buckets.
-- [ ] Create bucket-scoped development and production download/upload tokens.
-- [ ] Configure admin-origin CORS for presigned PUT/HEAD requests.
-- [ ] Add runtime configuration placeholders to the application and deployment
+- [x] Create the four R2 buckets.
+- [x] Configure public access and the custom domain only for public media.
+- [x] Confirm public access is disabled for both private-program buckets.
+- [x] Create bucket-scoped development and production download/upload tokens.
+- [x] Configure admin-origin CORS for presigned PUT/HEAD requests.
+- [x] Add runtime configuration placeholders to the application and deployment
   documentation.
-- [ ] Verify the development configuration without uploading production data.
+- [x] Verify the development configuration without uploading production data.
+  The read-only token can access the private development bucket, the upload
+  token can access both development buckets, and the public-media custom domain
+  is reachable. Verification used non-mutating bucket checks and uploaded no
+  objects.
+
+### Deferred deployment setup
+
+- [ ] Before deploying the R2-backed catalogue features, add the eight
+  `NUXT_R2_*` runtime variables to the `tilanavantonder-admin-dev` Fly secret
+  store and repeat the connectivity checks from the deployed application.
 
 ### Phase 2: forward database migration
 

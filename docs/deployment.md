@@ -122,12 +122,9 @@ Both Fly configurations use the same Dockerfile and Nitro Node server:
 an optimized server build. The Fly app name and environment-specific URLs
 separate development delivery behavior from production behavior.
 
-Non-sensitive Paystack environment, callback, and account URLs are pinned in
-`fly.toml` and `fly.prod.toml`. Do not create Fly secrets with the same names;
-Fly secrets override TOML environment values.
-
-Keep sensitive runtime values in each Fly app's secret store. At minimum, audit
-these names independently for development and production:
+Paystack configuration is intentionally not stored in either Fly TOML file.
+Configure it together with the sensitive runtime values in each Fly app's
+secret store. Audit these names independently for development and production:
 
 - `NUXT_DATABASE_URL`
 - `NUXT_SUPABASE_URL`
@@ -142,6 +139,10 @@ these names independently for development and production:
 - `NUXT_NEWSLETTER_DEVELOPMENT_RECIPIENT`
 - `NUXT_NEWSLETTER_API_BASE_URL`
 - `NUXT_NEWSLETTER_SITE_URL`
+- `NUXT_PAYSTACK_SECRET_KEY`
+- `NUXT_PAYSTACK_ENVIRONMENT`
+- `NUXT_PAYSTACK_CALLBACK_URL`
+- `NUXT_ACCOUNT_BASE_URL`
 - `AWS_REGION`
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
@@ -157,37 +158,48 @@ though Paystack rows record their test/live provider environment.
 
 ## Paystack and customer access
 
-Paystack is currently test-only. Keep both Fly TOML environments set to `test`
-and do not configure an `sk_live_...` key yet.
-
-Configure the test secret only where test checkout should work:
-
-- `NUXT_PAYSTACK_SECRET_KEY`
-
-The value must be a Paystack `sk_test_...` key. The environment, callback, and
-account URLs come from the matching Fly TOML. Leaving the production app without
-`NUXT_PAYSTACK_SECRET_KEY` keeps production checkout unavailable while the rest
-of the site can be deployed safely.
+Paystack is currently test-only. Configure `NUXT_PAYSTACK_ENVIRONMENT=test` in
+both Fly apps and do not configure an `sk_live_...` key yet. Where test checkout
+should work, configure `NUXT_PAYSTACK_SECRET_KEY` with an `sk_test_...` key and
+set the callback and account URLs shown in the Fly configuration table above.
+Leaving the production app without `NUXT_PAYSTACK_SECRET_KEY` keeps production
+checkout unavailable while the rest of the site can be deployed safely.
 
 Only as part of a future reviewed go-live should all of the following happen
 together:
 
-1. Set `NUXT_PAYSTACK_ENVIRONMENT="live"` in `fly.prod.toml`.
+1. Change the production Fly secret `NUXT_PAYSTACK_ENVIRONMENT` to `live`.
 2. Store the production `sk_live_...` key in the production Fly app only.
 3. Configure and verify the production Paystack webhook URL.
 4. Run a real low-value end-to-end payment, entitlement, email, download, and
    refund test.
 
-Cloudflare R2 is implemented in the later program-catalogue storage phase. Its
-current private-download configuration uses these server-only variables:
+Cloudflare R2 catalogue storage uses these server-only variables:
 
 - `NUXT_R2_ACCOUNT_ID`
-- `NUXT_R2_ACCESS_KEY_ID`
-- `NUXT_R2_SECRET_ACCESS_KEY`
+- `NUXT_R2_PUBLIC_MEDIA_BUCKET`
+- `NUXT_R2_PUBLIC_MEDIA_BASE_URL`
+- `NUXT_R2_PRIVATE_PROGRAM_BUCKET`
+- `NUXT_R2_DOWNLOAD_ACCESS_KEY_ID`
+- `NUXT_R2_DOWNLOAD_SECRET_ACCESS_KEY`
+- `NUXT_R2_UPLOAD_ACCESS_KEY_ID`
+- `NUXT_R2_UPLOAD_SECRET_ACCESS_KEY`
 
-The R2 token should have read access only to the private program bucket. The
-server returns five-minute presigned download URLs only after checking the
-signed-in customer's active `program_access` row.
+Configure them in the matching Fly application's secret store, not in either
+Fly TOML file. Use these non-credential values:
+
+| Variable | Development | Production |
+| --- | --- | --- |
+| `NUXT_R2_PUBLIC_MEDIA_BUCKET` | `tilanavantonder-dev-public-media` | `tilanavantonder-prod-public-media` |
+| `NUXT_R2_PUBLIC_MEDIA_BASE_URL` | `https://media-dev.tilanavantonder.co.za` | `https://media.tilanavantonder.co.za` |
+| `NUXT_R2_PRIVATE_PROGRAM_BUCKET` | `tilanavantonder-dev-private-programs` | `tilanavantonder-prod-private-programs` |
+
+The download token must have Object Read-only access to the matching private
+program bucket. The upload token must have Object Read & Write access only to
+the matching public-media and private-program buckets. Development and
+production must use separate credentials. The server returns five-minute
+presigned download URLs only after checking the signed-in customer's active
+`program_access` row.
 
 For test mode, configure Paystack's webhook as
 `https://admin-dev.tilanavantonder.co.za/api/webhooks/paystack`. The development
