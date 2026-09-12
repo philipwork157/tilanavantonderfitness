@@ -22,10 +22,20 @@ UUID is never used as an application foreign key outside `users.supabase_id`.
 
 ## Programs and private files
 
-- `programs` stores the program family, such as Strong or Nourish.
-- `program_volumes` stores sellable versions, such as Nourish Volume 1 and Nourish Volume 2.
-- `program_files` stores Cloudflare R2 metadata. PDFs remain in a private R2 bucket; permanent public file URLs are never stored.
+- `programs` stores the program family, marketing card content, publication
+  state, and display order, such as Strong or Nourish.
+- `program_volumes` stores sellable versions, stable checkout slugs, current
+  integer-cent prices, and publication order, such as Nourish Volume 1 and
+  Nourish Volume 2.
+- `program_media` stores versioned public cover-image metadata. Only ready,
+  active media is eligible for the public catalogue.
+- `program_files` stores private Cloudflare R2 PDF metadata and its pending,
+  ready, or failed upload lifecycle. Permanent public file URLs are never
+  stored.
 - `program_access` is the entitlement checked before issuing a short-lived download response. Access can originate from a purchase, manual grant, or promotion.
+- `program_audit_events` is the append-only history of catalogue, price,
+  publication, and file-management actions. It stores safe summaries rather
+  than secrets or signed URLs.
 
 The customer-facing email should link to `/account/programs`. The Nuxt server verifies the session, linked client, and active entitlement before returning the R2 object through a binding or short-lived signed URL.
 

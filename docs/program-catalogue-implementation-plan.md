@@ -464,7 +464,7 @@ the live catalogue records or prices.
 
 - [x] Phase 0: architecture review and implementation plan
 - [x] Phase 1: storage prerequisites
-- [ ] Phase 2: forward database migration
+- [x] Phase 2: forward database migration
 - [ ] Phase 3: catalogue backfill
 - [ ] Phase 4: server and storage services
 - [ ] Phase 5: admin UI
@@ -507,12 +507,17 @@ summary together so the two views do not drift.
 
 ### Phase 2: forward database migration
 
-- [ ] Extend `programs`, `program_volumes`, and `program_files`.
-- [ ] Add `program_media` and `program_audit_events`.
-- [ ] Add constraints and indexes.
-- [ ] Generate and review a new forward Drizzle migration.
-- [ ] Confirm no already-applied migration was rewritten.
-- [ ] Run `pnpm db:check`.
+- [x] Extend `programs`, `program_volumes`, and `program_files`.
+- [x] Add `program_media` and `program_audit_events`.
+- [x] Add constraints and indexes.
+- [x] Generate and review a new forward Drizzle migration.
+- [x] Confirm no already-applied migration was rewritten.
+- [x] Run `pnpm db:check`.
+
+### Phase 3 prerequisite
+
+- [ ] Apply `20260912093400_lean_sabra.sql` to the development database and
+  confirm it completes successfully before running the catalogue backfill.
 
 ### Phase 3: backfill
 
@@ -526,6 +531,8 @@ summary together so the two views do not drift.
   switching reads.
 - [ ] Confirm the backfill is idempotent and does not duplicate programs or
   volumes.
+- [ ] Verify existing `program_files` objects in private R2 and mark a row
+  `ready` only when its object metadata matches.
 
 ### Phase 4: server and storage services
 

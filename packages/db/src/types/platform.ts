@@ -9,7 +9,9 @@ import type {
   payments,
   users,
   programAccess,
+  programAuditEvents,
   programFiles,
+  programMedia,
   programs,
   programVolumes,
   userRoles,
@@ -28,6 +30,10 @@ export type ProgramVolume = typeof programVolumes.$inferSelect;
 export type NewProgramVolume = typeof programVolumes.$inferInsert;
 export type ProgramFile = typeof programFiles.$inferSelect;
 export type NewProgramFile = typeof programFiles.$inferInsert;
+export type ProgramMedia = typeof programMedia.$inferSelect;
+export type NewProgramMedia = typeof programMedia.$inferInsert;
+export type ProgramAuditEvent = typeof programAuditEvents.$inferSelect;
+export type NewProgramAuditEvent = typeof programAuditEvents.$inferInsert;
 
 export type Order = typeof orders.$inferSelect;
 export type NewOrder = typeof orders.$inferInsert;
