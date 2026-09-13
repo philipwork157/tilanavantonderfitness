@@ -178,6 +178,14 @@ export const publicCatalogueResponseSchema = z.object({
   programs: z.array(publicCatalogueProgramSchema),
 });
 
+export const publicCatalogueVolumeDetailSchema = publicCatalogueVolumeSchema.extend({
+  program: publicCatalogueProgramSchema,
+});
+
+export const publicCatalogueVolumeResponseSchema = z.object({
+  volume: publicCatalogueVolumeDetailSchema,
+});
+
 export type AdminProgramCreateRequest = z.infer<typeof adminProgramCreateRequestSchema>;
 export type AdminProgramUpdateRequest = z.infer<typeof adminProgramUpdateRequestSchema>;
 export type AdminProgramStatusRequest = z.infer<typeof adminProgramStatusRequestSchema>;
@@ -192,3 +200,4 @@ export type AdminCatalogueDeactivateRequest = z.infer<typeof adminCatalogueDeact
 export type CatalogueUploadResponse = z.infer<typeof catalogueUploadResponseSchema>;
 export type PublicCatalogueProgram = z.infer<typeof publicCatalogueProgramSchema>;
 export type PublicCatalogueVolume = z.infer<typeof publicCatalogueVolumeSchema>;
+export type PublicCatalogueVolumeDetail = z.infer<typeof publicCatalogueVolumeDetailSchema>;

@@ -150,6 +150,10 @@ export function getVolumePublicationIssues(volume: CataloguePublicationCandidate
   }).filter(issue => issue.volumeId === volume.id);
 }
 
+export function isCheckoutPriceCurrent(expectedPriceCents: number, currentPriceCents: number): boolean {
+  return expectedPriceCents === currentPriceCents;
+}
+
 export function getProgramFileReplacementIssue(
   file: Pick<ProgramFileReplacementCandidate, 'id' | 'programVolumeId'>,
   replacement: ProgramFileReplacementCandidate | null,

@@ -25,7 +25,7 @@ const form = reactive({
   cardLabel: '',
   headline: '',
   description: '',
-  accent: 'reconnect',
+  accent: 'terracotta',
   sortOrder: 0,
 });
 
@@ -34,14 +34,6 @@ const statusOptions = [
   { label: 'Drafts', value: 'draft' },
   { label: 'Published', value: 'published' },
   { label: 'Archived', value: 'archived' },
-];
-
-const accentOptions = [
-  { label: 'Beginner · Terracotta', value: 'beginner' },
-  { label: 'Intermediate · Sage', value: 'intermediate' },
-  { label: 'Advanced · Caramel', value: 'advanced' },
-  { label: 'Reconnect · Terracotta', value: 'reconnect' },
-  { label: 'Nourish · Sage', value: 'nourish' },
 ];
 
 const { data, status, error, refresh } = await useFetch<AdminCatalogueProgramsResponse>(
@@ -79,7 +71,7 @@ function resetForm() {
     cardLabel: '',
     headline: '',
     description: '',
-    accent: 'reconnect',
+    accent: 'terracotta',
     sortOrder: programs.value.length,
   });
   formError.value = '';
@@ -245,7 +237,7 @@ useSeoMeta({ title: 'Programs | Tilana Admin', robots: 'noindex, nofollow' });
         <form class="program-form" @submit.prevent="createProgram">
           <div class="form-intro">
             <span><UIcon name="i-lucide-sparkles" /></span>
-            <div><h2>Start with the essentials</h2><p>Everything remains a private draft until you explicitly publish it.</p></div>
+            <div><h2>Start with the essentials</h2><p>Everything remains a private draft. After creating it, add one or more sellable volumes.</p></div>
           </div>
           <div class="form-grid">
             <UFormField label="Program name" required>
@@ -255,10 +247,10 @@ useSeoMeta({ title: 'Programs | Tilana Admin', robots: 'noindex, nofollow' });
               <UInput v-model="form.slug" placeholder="reconnect" size="lg" class="w-full" />
             </UFormField>
             <UFormField label="Card label">
-              <UInput v-model="form.cardLabel" placeholder="Reconnect · Volume 1" size="lg" class="w-full" />
+              <UInput v-model="form.cardLabel" placeholder="Reconnect" size="lg" class="w-full" />
             </UFormField>
-            <UFormField label="Visual accent">
-              <USelect v-model="form.accent" :items="accentOptions" value-key="value" size="lg" class="w-full" />
+            <UFormField label="Card colour" help="This controls the public card colours, not its volumes.">
+              <CatalogueAccentSelect v-model="form.accent" />
             </UFormField>
             <UFormField label="Headline" class="full-field">
               <UInput v-model="form.headline" placeholder="Reconnect with your pelvic floor." size="lg" class="w-full" />

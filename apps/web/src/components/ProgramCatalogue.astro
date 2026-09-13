@@ -1,0 +1,251 @@
+---
+interface Props {
+  variant?: 'full' | 'compact';
+  eyebrow?: string;
+  title?: string;
+  showAllLink?: boolean;
+}
+
+const {
+  variant = 'full',
+  eyebrow = 'The program collection',
+  title = 'Explore at your own pace.',
+  showAllLink = false,
+} = Astro.props;
+const catalogueApiBaseUrl = (
+  import.meta.env.PUBLIC_CATALOGUE_API_BASE_URL
+  ?? 'http://127.0.0.1:3001/api/public'
+).replace(/\/+$/, '');
+---
+
+<section
+  class:list={['section', 'catalogue-section', `catalogue-${variant}`]}
+  data-program-catalogue
+  data-api-url={`${catalogueApiBaseUrl}/programs`}
+  aria-busy="true"
+>
+  <div class="container">
+    <div class="catalogue-heading">
+      <div><p class="eyebrow">{eyebrow}</p><h2 class="heading-lg">{title}</h2></div>
+      <div class="catalogue-controls" data-catalogue-controls aria-label="Program carousel controls" hidden>
+        <button type="button" data-catalogue-prev aria-label="Previous programs" disabled>←</button>
+        <button type="button" data-catalogue-next aria-label="Next programs" disabled>→</button>
+      </div>
+    </div>
+
+    <div class="catalogue-state catalogue-loading" data-catalogue-loading role="status">
+      <span class="state-icon" aria-hidden="true">•••</span>
+      <div><h3>Loading programs</h3><p>Fetching the latest programmes, volumes and prices.</p></div>
+    </div>
+    <div class="catalogue-state catalogue-error" data-catalogue-error role="alert" hidden>
+      <span class="state-icon" aria-hidden="true">!</span>
+      <div><h3>Programs are temporarily unavailable</h3><p>Please try again in a moment.</p></div>
+      <button type="button" class="button button-secondary" data-catalogue-retry>Try again</button>
+    </div>
+    <div class="catalogue-state catalogue-empty" data-catalogue-empty role="status" hidden>
+      <span class="state-icon" aria-hidden="true">○</span>
+      <div><h3>New programs are being prepared</h3><p>Please check back soon for the next available release.</p></div>
+    </div>
+
+    <div class="catalogue-rail" data-catalogue-rail aria-label="Available programs" tabindex="0" hidden></div>
+    {showAllLink && <a class="button button-dark catalogue-all-link" href="/program">Explore all programs</a>}
+  </div>
+</section>
+
+<script>
+  import {
+    publicCatalogueResponseSchema,
+    type PublicCatalogueProgram,
+    type PublicCatalogueVolume,
+  } from '@tilana/contracts/catalogue';
+
+  const priceFormatter = new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
+    currency: 'ZAR',
+    maximumFractionDigits: 2,
+  });
+
+  function normaliseAccent(value: string): 'terracotta' | 'sage' | 'caramel' {
+    if (['sage', 'intermediate', 'nourish'].includes(value)) return 'sage';
+    if (['caramel', 'advanced'].includes(value)) return 'caramel';
+    return 'terracotta';
+  }
+
+  function element<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    return node;
+  }
+
+  function createVolume(volume: PublicCatalogueVolume) {
+    const row = element('div', 'catalogue-volume');
+    const copy = element('div');
+    const name = element('strong');
+    name.textContent = volume.name;
+    const price = element('span');
+    price.textContent = priceFormatter.format(volume.priceCents / 100);
+    copy.append(name, price);
+    row.append(copy);
+
+    if (volume.isAvailable) {
+      const link = element('a', 'button button-primary');
+      link.href = `/checkout?programme=${encodeURIComponent(volume.slug)}`;
+      link.textContent = 'Buy now';
+      link.setAttribute('aria-label', `Buy ${volume.name}`);
+      row.append(link);
+    } else {
+      const unavailable = element('span', 'volume-unavailable');
+      unavailable.textContent = 'Unavailable';
+      row.append(unavailable);
+    }
+    return row;
+  }
+
+  function createProgramCard(program: PublicCatalogueProgram) {
+    const card = element('article', `card catalogue-card accent-${normaliseAccent(program.accent)}`);
+    if (program.cover) {
+      const cover = element('img', 'catalogue-cover');
+      cover.src = program.cover.url;
+      cover.alt = program.cover.altText;
+      cover.loading = 'lazy';
+      cover.decoding = 'async';
+      if (program.cover.width) cover.width = program.cover.width;
+      if (program.cover.height) cover.height = program.cover.height;
+      card.append(cover);
+    }
+
+    const body = element('div', 'catalogue-card-body');
+    const label = element('span', 'badge');
+    label.textContent = program.cardLabel;
+    const name = element('p', 'catalogue-program-name');
+    name.textContent = program.name;
+    const headline = element('h3');
+    headline.textContent = program.headline;
+    const description = element('p', 'catalogue-description');
+    description.textContent = program.description;
+    const volumes = element('div', 'catalogue-volumes');
+    volumes.setAttribute('aria-label', `${program.name} volumes`);
+    program.volumes.forEach(volume => volumes.append(createVolume(volume)));
+    body.append(label, name, headline, description, volumes);
+    card.append(body);
+    return card;
+  }
+
+  function setHidden(node: Element | null, hidden: boolean) {
+    if (node instanceof HTMLElement) node.hidden = hidden;
+  }
+
+  function initialiseRail(root: HTMLElement) {
+    const rail = root.querySelector<HTMLElement>('[data-catalogue-rail]');
+    const controls = root.querySelector<HTMLElement>('[data-catalogue-controls]');
+    const previous = root.querySelector<HTMLButtonElement>('[data-catalogue-prev]');
+    const next = root.querySelector<HTMLButtonElement>('[data-catalogue-next]');
+    if (!rail || !controls || !previous || !next || controls.dataset.ready) return;
+    controls.dataset.ready = 'true';
+
+    const sync = () => {
+      const maximum = Math.max(0, rail.scrollWidth - rail.clientWidth - 1);
+      previous.disabled = rail.scrollLeft <= 1;
+      next.disabled = rail.scrollLeft >= maximum;
+    };
+    const step = () => {
+      const card = rail.querySelector<HTMLElement>('.catalogue-card');
+      const gap = Number.parseFloat(getComputedStyle(rail).columnGap || '20') || 20;
+      return card ? card.offsetWidth + gap : rail.clientWidth * 0.85;
+    };
+    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+    previous.addEventListener('click', () => rail.scrollBy({ left: -step(), behavior }));
+    next.addEventListener('click', () => rail.scrollBy({ left: step(), behavior }));
+    rail.addEventListener('scroll', sync, { passive: true });
+    window.addEventListener('resize', sync);
+    requestAnimationFrame(sync);
+  }
+
+  async function loadCatalogue(root: HTMLElement) {
+    const loading = root.querySelector('[data-catalogue-loading]');
+    const error = root.querySelector('[data-catalogue-error]');
+    const empty = root.querySelector('[data-catalogue-empty]');
+    const rail = root.querySelector<HTMLElement>('[data-catalogue-rail]');
+    const controls = root.querySelector('[data-catalogue-controls]');
+    if (!rail) return;
+
+    root.setAttribute('aria-busy', 'true');
+    setHidden(loading, false);
+    setHidden(error, true);
+    setHidden(empty, true);
+    setHidden(rail, true);
+    setHidden(controls, true);
+
+    try {
+      const response = await fetch(root.dataset.apiUrl ?? '', { headers: { Accept: 'application/json' } });
+      const body: unknown = await response.json().catch(() => null);
+      const parsed = publicCatalogueResponseSchema.safeParse(body);
+      if (!response.ok || !parsed.success) throw new Error('Invalid catalogue response.');
+
+      rail.replaceChildren(...parsed.data.programs.map(createProgramCard));
+      const isEmpty = parsed.data.programs.length === 0;
+      setHidden(empty, !isEmpty);
+      setHidden(rail, isEmpty);
+      setHidden(controls, isEmpty || parsed.data.programs.length < 2);
+      if (!isEmpty) initialiseRail(root);
+    } catch {
+      setHidden(error, false);
+    } finally {
+      setHidden(loading, true);
+      root.setAttribute('aria-busy', 'false');
+    }
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-program-catalogue]').forEach((root) => {
+    root.querySelector('[data-catalogue-retry]')?.addEventListener('click', () => loadCatalogue(root));
+    loadCatalogue(root);
+  });
+</script>
+
+<style is:global>
+  .catalogue-section { background: var(--cream); }
+  .catalogue-compact { background: color-mix(in srgb, var(--sand) 60%, var(--cream)); }
+  .catalogue-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 1.5rem; margin-bottom: 2.4rem; }
+  .catalogue-heading .heading-lg { margin: 0; font-size: clamp(2rem, 4vw, 3.5rem); }
+  .catalogue-controls { display: flex; gap: 0.65rem; flex: none; }
+  .catalogue-controls button { display: grid; width: 3rem; height: 3rem; place-items: center; padding: 0; border: 1px solid var(--color-border); border-radius: 50%; color: var(--ink); background: color-mix(in srgb, var(--white) 82%, var(--cream)); font: inherit; font-size: 1.15rem; cursor: pointer; transition: color var(--motion-fast) ease, background-color var(--motion-fast) ease, transform var(--motion-fast) ease, opacity var(--motion-fast) ease; }
+  .catalogue-controls button:hover:not(:disabled) { color: var(--color-on-primary); background: var(--caramel); transform: translateY(-2px); }
+  .catalogue-controls button:disabled { opacity: 0.32; cursor: default; }
+  .catalogue-state { display: flex; min-height: 9rem; align-items: center; gap: 1rem; padding: 1.25rem; border: 1px dashed var(--color-border); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--white) 66%, transparent); }
+  .catalogue-state .state-icon { display: grid; width: 3rem; height: 3rem; flex: none; place-items: center; border-radius: 1rem; color: var(--ink); background: var(--sage); font-weight: 800; letter-spacing: 0.08em; }
+  .catalogue-error .state-icon { background: var(--terracotta); }
+  .catalogue-state h3, .catalogue-state p { margin: 0; }
+  .catalogue-state h3 { color: var(--ink); font-family: var(--font-heading); font-size: 1.35rem; }
+  .catalogue-state p { margin-top: 0.25rem; font-size: 0.78rem; }
+  .catalogue-state .button { margin-left: auto; }
+  .catalogue-rail { display: grid; gap: 1.25rem; grid-auto-columns: clamp(20rem, 28vw, 25rem); grid-auto-flow: column; overflow-x: auto; overscroll-behavior-inline: contain; padding: 0.4rem 0 1.25rem; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .catalogue-rail::-webkit-scrollbar { display: none; }
+  .catalogue-card { --card-accent: var(--terracotta); display: flex; min-height: 38rem; flex-direction: column; padding: 0; scroll-snap-align: start; }
+  .catalogue-card.accent-sage { --card-accent: var(--sage); }
+  .catalogue-card.accent-caramel { --card-accent: var(--caramel); }
+  .catalogue-cover { display: block; width: 100%; height: 13rem; object-fit: cover; }
+  .catalogue-card-body { display: flex; flex: 1; flex-direction: column; padding: clamp(1.45rem, 2.5vw, 2rem); }
+  .catalogue-program-name { margin: 1.35rem 0 0.55rem; color: var(--caramel); font-size: 0.68rem; font-weight: 750; letter-spacing: 0.12em; text-transform: uppercase; }
+  .catalogue-card h3 { margin: 0; color: var(--ink); font-family: var(--font-heading); font-size: clamp(1.85rem, 3vw, 2.45rem); line-height: 1.06; }
+  .catalogue-description { margin: 1rem 0 0; font-size: 0.86rem; line-height: 1.72; }
+  .catalogue-volumes { display: grid; gap: 0.65rem; margin-top: auto; padding-top: 1.5rem; }
+  .catalogue-volume { display: flex; align-items: center; justify-content: space-between; gap: 0.85rem; padding-top: 0.75rem; border-top: 1px solid var(--color-border); }
+  .catalogue-volume > div { display: grid; gap: 0.15rem; min-width: 0; }
+  .catalogue-volume strong { overflow: hidden; color: var(--ink); font-size: 0.75rem; text-overflow: ellipsis; white-space: nowrap; }
+  .catalogue-volume span { color: var(--caramel); font-size: 0.72rem; font-weight: 750; }
+  .catalogue-volume .button { min-height: 2.6rem; flex: none; padding: 0.65rem 1rem; font-size: 0.78rem; }
+  .catalogue-volume .volume-unavailable { color: var(--ink); opacity: 0.6; }
+  .catalogue-all-link { display: flex; width: fit-content; margin: 2rem auto 0; }
+  .catalogue-section [hidden] { display: none !important; }
+  @media (max-width: 72rem) { .catalogue-rail { grid-auto-columns: minmax(19rem, 42vw); } }
+  @media (max-width: 48rem) {
+    .catalogue-heading { align-items: center; gap: 1rem; }
+    .catalogue-controls button { width: 2.75rem; height: 2.75rem; }
+    .catalogue-rail { grid-auto-columns: minmax(18rem, 86vw); }
+    .catalogue-state { align-items: flex-start; flex-wrap: wrap; }
+    .catalogue-state .button { width: 100%; margin-left: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .catalogue-controls button, .catalogue-card { transition: none; }
+  }
+</style>

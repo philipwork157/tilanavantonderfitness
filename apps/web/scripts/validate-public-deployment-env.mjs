@@ -12,6 +12,7 @@ const environments = {
 const expectedPaths = {
   PUBLIC_CONTACT_API_URL: '/api/contact',
   PUBLIC_NEWSLETTER_API_URL: '/api/newsletter/subscribe',
+  PUBLIC_CATALOGUE_API_BASE_URL: '/api/public',
   PUBLIC_CHECKOUT_API_URL: '/api/checkout/paystack',
   PUBLIC_CHECKOUT_STATUS_API_URL: '/api/checkout/status',
   PUBLIC_ACCOUNT_URL: '/account/sign-in',

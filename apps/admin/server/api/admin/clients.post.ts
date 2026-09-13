@@ -1,6 +1,7 @@
 import { adminClientCreateRequestSchema } from '@tilana/contracts/clients';
 import {
   ClientEmailExistsError,
+  ProgramVolumeUnavailableError,
   createManualClient,
 } from '../../services/client-management';
 import { requireAdmin } from '../../utils/admin-auth';
@@ -22,6 +23,9 @@ export default defineEventHandler(async (event) => {
     return { ok: true, client };
   } catch (error) {
     if (error instanceof ClientEmailExistsError) {
+      throw createError({ statusCode: 409, statusMessage: error.message });
+    }
+    if (error instanceof ProgramVolumeUnavailableError) {
       throw createError({ statusCode: 409, statusMessage: error.message });
     }
     throw error;

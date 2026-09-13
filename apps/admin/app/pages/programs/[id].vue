@@ -23,6 +23,7 @@ import {
   catalogueStatusLabels,
   formatCatalogueFileSize,
   formatCatalogueMoney,
+  normaliseCatalogueAccent,
   slugifyCatalogueValue,
   uploadCatalogueObject,
 } from '../../utils/catalogue';
@@ -61,7 +62,7 @@ const programForm = reactive({
   cardLabel: '',
   headline: '',
   description: '',
-  accent: 'reconnect',
+  accent: 'terracotta',
   sortOrder: 0,
 });
 const savingProgram = ref(false);
@@ -113,14 +114,6 @@ const confirmationOpen = computed({
   },
 });
 
-const accentOptions = [
-  { label: 'Beginner · Terracotta', value: 'beginner' },
-  { label: 'Intermediate · Sage', value: 'intermediate' },
-  { label: 'Advanced · Caramel', value: 'advanced' },
-  { label: 'Reconnect · Terracotta', value: 'reconnect' },
-  { label: 'Nourish · Sage', value: 'nourish' },
-];
-
 watch(program, (value) => {
   if (!value) return;
   Object.assign(programForm, {
@@ -129,7 +122,7 @@ watch(program, (value) => {
     cardLabel: value.cardLabel ?? '',
     headline: value.headline ?? '',
     description: value.description ?? '',
-    accent: value.accent ?? 'reconnect',
+    accent: normaliseCatalogueAccent(value.accent),
     sortOrder: value.sortOrder,
   });
   coverAltText.value = activeCover.value?.altText ?? `${value.name} program cover`;
@@ -594,7 +587,15 @@ useSeoMeta({
               <UFormField label="Program name" required><UInput v-model="programForm.name" size="lg" class="w-full" /></UFormField>
               <UFormField label="URL slug" required help="Changing this changes the future public URL."><UInput v-model="programForm.slug" size="lg" class="w-full" /></UFormField>
               <UFormField label="Card label"><UInput v-model="programForm.cardLabel" size="lg" class="w-full" /></UFormField>
-              <UFormField label="Visual accent"><USelect v-model="programForm.accent" :items="accentOptions" value-key="value" size="lg" class="w-full" /></UFormField>
+              <UFormField label="Card colour" help="This controls the public card colours, not its volumes."><CatalogueAccentSelect v-model="programForm.accent" /></UFormField>
+              <div class="volume-shortcut full-field">
+                <span><UIcon name="i-lucide-layers-3" /></span>
+                <div>
+                  <strong>{{ program.volumes.length }} {{ program.volumes.length === 1 ? 'volume' : 'volumes' }}</strong>
+                  <small>Add Nourish Volume 1, Volume 2 and future releases as separate sellable volumes.</small>
+                </div>
+                <UButton :label="program.volumes.length ? 'Manage volumes' : 'Add first volume'" icon="i-lucide-arrow-down" color="neutral" variant="soft" to="#program-volumes" />
+              </div>
               <UFormField label="Headline" class="full-field"><UInput v-model="programForm.headline" size="lg" class="w-full" /></UFormField>
               <UFormField label="Description" class="full-field"><UTextarea v-model="programForm.description" :rows="6" class="w-full" /></UFormField>
               <UFormField label="Display order"><UInput v-model.number="programForm.sortOrder" type="number" min="0" step="1" size="lg" class="w-full" /></UFormField>
@@ -603,7 +604,7 @@ useSeoMeta({
           </form>
         </UCard>
 
-        <aside id="program-preview" class="preview-card" :class="`accent-${program.accent ?? 'default'}`">
+        <aside id="program-preview" class="preview-card" :class="`accent-${programForm.accent || 'terracotta'}`">
           <div class="preview-cover">
             <img v-if="activeCover?.publicUrl" :src="activeCover.publicUrl" :alt="activeCover.altText">
             <span v-else><UIcon name="i-lucide-image" /><small>Cover preview</small></span>
@@ -651,16 +652,16 @@ useSeoMeta({
         <p v-if="coverUploadStage" class="upload-stage" role="status"><UIcon name="i-lucide-loader-circle" class="spin" />{{ coverUploadStage }}</p>
       </section>
 
-      <section class="management-card volume-manager">
+      <section id="program-volumes" class="management-card volume-manager">
         <div class="section-heading">
-          <div><p class="eyebrow">Products and delivery</p><h2>Volumes, prices and PDFs</h2><p>Each published volume needs a stable slug, price above zero and at least one ready PDF.</p></div>
+          <div><p class="eyebrow">Products and delivery</p><h2>Program volumes</h2><p>Create as many volumes as needed. Each has its own checkout slug, price, publication status and private PDFs.</p></div>
           <UButton label="Add volume" icon="i-lucide-plus" @click="openCreateVolume" />
         </div>
 
         <div v-if="program.volumes.length" class="volume-list">
           <article v-for="volume in program.volumes" :key="volume.id" class="volume-card">
             <header>
-              <span class="volume-number">{{ volume.volumeNumber }}</span>
+              <span class="volume-number">V{{ volume.volumeNumber }}</span>
               <div><h3>{{ volume.name }}</h3><p>{{ volume.slug || 'Checkout slug needed' }}</p></div>
               <UBadge :color="volume.isPublished ? 'success' : 'warning'" variant="subtle">{{ volume.isPublished ? 'Published' : 'Draft' }}</UBadge>
               <UButton label="Edit" icon="i-lucide-pencil" color="neutral" variant="soft" @click="openEditVolume(volume)" />
@@ -707,7 +708,7 @@ useSeoMeta({
             <p v-if="uploadingVolumeId === volume.id" class="upload-stage" role="status"><UIcon name="i-lucide-loader-circle" class="spin" />{{ pdfUploadStage }}</p>
           </article>
         </div>
-        <div v-else class="empty-manager"><span><UIcon name="i-lucide-layers-3" /></span><div><h3>No volumes yet</h3><p>Add the first sellable volume, its price and private PDF.</p></div></div>
+        <div v-else class="empty-manager"><span><UIcon name="i-lucide-layers-3" /></span><div><h3>No volumes yet</h3><p>Add Volume 1 now. You can return later to add Volume 2 and future releases.</p></div></div>
       </section>
 
       <section class="management-card publication-manager">
@@ -790,10 +791,15 @@ useSeoMeta({
 .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1.25rem; }
 .full-field { grid-column: 1 / -1; }
 .editor-card .section-actions { justify-content: flex-end; margin-top: 1.2rem; }
+.volume-shortcut { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.8rem; padding: 0.85rem; border: 1px solid color-mix(in srgb, var(--sage) 74%, var(--color-border)); border-radius: 1.1rem; background: color-mix(in srgb, var(--sage) 38%, transparent); }
+.volume-shortcut > span { display: grid; width: 2.5rem; aspect-ratio: 1; place-items: center; border-radius: 0.8rem; color: var(--ink); background: var(--sage); }
+.volume-shortcut > div { display: grid; gap: 0.16rem; }
+.volume-shortcut strong { color: var(--ink); font-size: 0.68rem; }
+.volume-shortcut small { font-size: 0.58rem; line-height: 1.45; }
 .preview-card { position: sticky; top: 5.8rem; overflow: hidden; scroll-margin-top: 6rem; }
-.preview-card.accent-intermediate, .preview-card.accent-nourish { --preview-accent: var(--sage); }
-.preview-card.accent-advanced { --preview-accent: var(--caramel); }
-.preview-card.accent-beginner, .preview-card.accent-reconnect, .preview-card.accent-default { --preview-accent: var(--terracotta); }
+.preview-card.accent-sage, .preview-card.accent-intermediate, .preview-card.accent-nourish { --preview-accent: var(--sage); }
+.preview-card.accent-caramel, .preview-card.accent-advanced { --preview-accent: var(--caramel); }
+.preview-card.accent-terracotta, .preview-card.accent-beginner, .preview-card.accent-reconnect, .preview-card.accent-default { --preview-accent: var(--terracotta); }
 .preview-cover { display: grid; min-height: 13rem; place-items: center; overflow: hidden; background: linear-gradient(145deg, var(--preview-accent), var(--sand)); }
 .preview-cover img { width: 100%; height: 13rem; object-fit: cover; }
 .preview-cover > span { display: grid; justify-items: center; gap: 0.45rem; color: var(--ink); font-size: 1.5rem; }
@@ -815,10 +821,11 @@ useSeoMeta({
 .empty-manager h3, .empty-manager p { margin: 0; }
 .empty-manager h3 { color: var(--ink); font-family: var(--font-heading); font-size: 1.2rem; }
 .empty-manager p { margin-top: 0.2rem; font-size: 0.64rem; }
+.volume-manager { scroll-margin-top: 6rem; }
 .volume-list { display: grid; gap: 1rem; margin-top: 1.25rem; }
 .volume-card { padding: 1rem; border: 1px solid var(--color-border); border-radius: 1.4rem; background: color-mix(in srgb, var(--white) 84%, var(--cream)); }
 .volume-card > header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 0.8rem; }
-.volume-number { display: grid; width: 2.7rem; aspect-ratio: 1; place-items: center; border-radius: 0.9rem; color: var(--ink); background: var(--terracotta); font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; }
+.volume-number { display: grid; width: 2.7rem; aspect-ratio: 1; place-items: center; border-radius: 0.9rem; color: var(--ink); background: var(--terracotta); font-family: var(--font-heading); font-size: 0.95rem; font-weight: 700; }
 .volume-card h3, .volume-card h4, .volume-card p { margin: 0; }
 .volume-card h3 { color: var(--ink); font-family: var(--font-heading); font-size: 1.3rem; }
 .volume-card header p { margin-top: 0.2rem; color: var(--caramel); font-size: 0.58rem; }
@@ -869,6 +876,8 @@ useSeoMeta({
   .file-row { grid-template-columns: auto minmax(0, 1fr); }
   .file-row > :nth-child(3), .file-row > :nth-child(4) { grid-column: 2; justify-self: start; }
   .section-heading { align-items: stretch; flex-direction: column; }
+  .volume-shortcut { grid-template-columns: auto minmax(0, 1fr); }
+  .volume-shortcut > :last-child { grid-column: 1 / -1; justify-content: center; }
 }
 @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
 </style>

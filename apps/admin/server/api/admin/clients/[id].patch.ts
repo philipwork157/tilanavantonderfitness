@@ -2,6 +2,7 @@ import { adminClientUpdateRequestSchema } from '@tilana/contracts/clients';
 import {
   ClientEmailExistsError,
   ClientNotEditableError,
+  ProgramVolumeUnavailableError,
   updateManualClient,
 } from '../../../services/client-management';
 import { requireAdmin } from '../../../utils/admin-auth';
@@ -31,6 +32,9 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 409, statusMessage: error.message });
     }
     if (error instanceof ClientNotEditableError) {
+      throw createError({ statusCode: 409, statusMessage: error.message });
+    }
+    if (error instanceof ProgramVolumeUnavailableError) {
       throw createError({ statusCode: 409, statusMessage: error.message });
     }
     throw error;

@@ -6,17 +6,14 @@ import {
   type ClientPurchaseStatus,
 } from '@tilana/contracts/clients';
 import {
-  formatZar,
-  programmeCatalog,
-  programmeCatalogByKey,
-  type ProgrammeKey,
-} from '@tilana/contracts/programs';
+  formatCatalogueMoney as formatZar,
+} from '../../utils/catalogue';
 import { adminPaymentRefundRequestSchema } from '@tilana/contracts/payments';
 
 definePageMeta({ layout: 'dashboard' });
 
 interface ProgrammeInput {
-  programmeKey: ProgrammeKey;
+  programVolumeId: number | undefined;
   priceRands: number;
 }
 
@@ -57,7 +54,7 @@ const form = reactive({
   gender: 'not-specified' as GenderSelection,
   notes: '',
   purchaseStatus: 'paid' as ClientPurchaseStatus,
-  programmes: [createProgrammeInput('strong-volume-1')] as ProgrammeInput[],
+  programmes: [{ programVolumeId: undefined, priceRands: 0 }] as ProgrammeInput[],
 });
 
 const columns = [
@@ -67,10 +64,10 @@ const columns = [
   { id: 'actions', header: '' },
 ];
 
-const programmeOptions = programmeCatalog.map((programme) => ({
-  label: programme.volumeName,
-  value: programme.key,
-}));
+const programmeOptions = computed(() => (data.value?.programVolumes ?? []).map(volume => ({
+  label: `${volume.name}${volume.isPublished && volume.programStatus === 'published' ? '' : ' · Draft'}`,
+  value: volume.id,
+})));
 const genderOptions = [
   { label: 'Not specified', value: 'not-specified' },
   ...clientGenderValues.map((value) => ({
@@ -124,21 +121,24 @@ const paidValueCents = computed(() => {
   );
 });
 
-function createProgrammeInput(key: ProgrammeKey): ProgrammeInput {
+function createProgrammeInput(programVolumeId?: number): ProgrammeInput {
+  const volume = (data.value?.programVolumes ?? []).find(item => item.id === programVolumeId)
+    ?? data.value?.programVolumes[0];
   return {
-    programmeKey: key,
-    priceRands: programmeCatalogByKey[key].suggestedPriceCents / 100,
+    programVolumeId: volume?.id,
+    priceRands: (volume?.currentPriceCents ?? 0) / 100,
   };
 }
 
 function updateProgrammePrice(item: ProgrammeInput) {
-  item.priceRands = programmeCatalogByKey[item.programmeKey].suggestedPriceCents / 100;
+  const volume = (data.value?.programVolumes ?? []).find(value => value.id === item.programVolumeId);
+  item.priceRands = (volume?.currentPriceCents ?? 0) / 100;
 }
 
 function addProgramme() {
-  const used = new Set(form.programmes.map((item) => item.programmeKey));
-  const next = programmeCatalog.find((programme) => !used.has(programme.key));
-  if (next) form.programmes.push(createProgrammeInput(next.key));
+  const used = new Set(form.programmes.map(item => item.programVolumeId));
+  const next = (data.value?.programVolumes ?? []).find(volume => !used.has(volume.id));
+  if (next) form.programmes.push(createProgrammeInput(next.id));
 }
 
 function removeProgramme(index: number) {
@@ -157,14 +157,15 @@ function importEnquiry(enquiryId: string) {
   form.lastName = nameParts.join(' ');
   form.email = enquiry.email;
 
-  const programmeByInterest = {
-    strong: 'strong-volume-1',
-    move: 'move-volume-1',
-    nourish: 'nourish-volume-1',
-    reconnect: 'reconnect-volume-1',
+  const programmeSlugByInterest = {
+    strong: 'strong',
+    move: 'move',
+    nourish: 'nourish',
+    reconnect: 'reconnect',
   } as const;
-  const programmeKey = programmeByInterest[enquiry.interest as keyof typeof programmeByInterest];
-  if (programmeKey) form.programmes = [createProgrammeInput(programmeKey)];
+  const programmeSlug = programmeSlugByInterest[enquiry.interest as keyof typeof programmeSlugByInterest];
+  const volume = (data.value?.programVolumes ?? []).find(item => item.programSlug === programmeSlug);
+  if (volume) form.programmes = [createProgrammeInput(volume.id)];
 }
 
 function resetForm() {
@@ -176,7 +177,7 @@ function resetForm() {
     gender: 'not-specified',
     notes: '',
     purchaseStatus: 'paid',
-    programmes: [createProgrammeInput('strong-volume-1')],
+    programmes: [createProgrammeInput()],
   });
   formError.value = '';
   selectedEnquiryId.value = 'manual';
@@ -208,14 +209,14 @@ async function openEditForm(client: ClientRecord) {
     ? 'pending'
     : 'paid';
   const editableProgrammes = client.programmes
-    .filter((programme): programme is typeof programme & { programmeKey: ProgrammeKey } => Boolean(programme.programmeKey))
+    .filter((programme): programme is typeof programme & { programVolumeId: number } => Boolean(programme.programVolumeId))
     .map((programme) => ({
-      programmeKey: programme.programmeKey,
+      programVolumeId: programme.programVolumeId,
       priceRands: programme.priceCents / 100,
     }));
   form.programmes = editableProgrammes.length
     ? editableProgrammes
-    : [createProgrammeInput('strong-volume-1')];
+    : [createProgrammeInput()];
   formError.value = '';
   showForm.value = true;
   await nextTick();
@@ -237,7 +238,7 @@ async function saveClient() {
     notes: form.notes,
     purchaseStatus: form.purchaseStatus,
     programmes: form.programmes.map((item) => ({
-      programmeKey: item.programmeKey,
+      programVolumeId: item.programVolumeId,
       priceCents: Math.round(Number(item.priceRands) * 100),
     })),
   });
@@ -484,16 +485,26 @@ useSeoMeta({ title: 'Clients | Tilana Admin', robots: 'noindex, nofollow' });
                 icon="i-lucide-plus"
                 color="neutral"
                 variant="soft"
-                :disabled="form.programmes.length >= programmeCatalog.length"
+                :disabled="!programmeOptions.length || form.programmes.length >= programmeOptions.length"
                 @click="addProgramme"
               />
             </div>
 
-            <div class="programme-inputs">
+            <UAlert
+              v-if="!programmeOptions.length"
+              color="warning"
+              variant="soft"
+              icon="i-lucide-library"
+              title="Create a programme volume first"
+              description="Client access must be linked to a database-managed volume. Add one in Programs, then return here."
+              :actions="[{ label: 'Open Programs', to: '/programs', color: 'neutral', variant: 'soft' }]"
+            />
+
+            <div v-else class="programme-inputs">
               <div v-for="(item, index) in form.programmes" :key="index" class="programme-row">
                 <UFormField label="Programme" required>
                   <USelect
-                    v-model="item.programmeKey"
+                    v-model="item.programVolumeId"
                     :items="programmeOptions"
                     value-key="value"
                     size="xl"
@@ -539,6 +550,7 @@ useSeoMeta({ title: 'Clients | Tilana Admin', robots: 'noindex, nofollow' });
               :icon="editingClientId ? 'i-lucide-save' : 'i-lucide-user-check'"
               size="xl"
               :loading="saving"
+              :disabled="!programmeOptions.length"
             />
           </div>
         </form>

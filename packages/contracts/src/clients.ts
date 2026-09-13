@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { programmeCatalog } from './programs';
 
 export const clientGenderValues = [
   'female',
@@ -10,13 +9,9 @@ export const clientGenderValues = [
 ] as const;
 
 export const clientPurchaseStatusValues = ['paid', 'pending'] as const;
-export const programmeKeyValues = programmeCatalog.map((programme) => programme.key) as [
-  (typeof programmeCatalog)[number]['key'],
-  ...(typeof programmeCatalog)[number]['key'][],
-];
 
 export const adminClientProgrammeSchema = z.object({
-  programmeKey: z.enum(programmeKeyValues),
+  programVolumeId: z.number().int().positive(),
   priceCents: z.number().int().min(0).max(10_000_000),
 });
 
@@ -30,8 +25,8 @@ export const adminClientCreateRequestSchema = z.object({
   purchaseStatus: z.enum(clientPurchaseStatusValues).default('paid'),
   programmes: z.array(adminClientProgrammeSchema).min(1, 'Add at least one programme.').max(10),
 }).superRefine((value, context) => {
-  const keys = value.programmes.map((programme) => programme.programmeKey);
-  if (new Set(keys).size !== keys.length) {
+  const volumeIds = value.programmes.map((programme) => programme.programVolumeId);
+  if (new Set(volumeIds).size !== volumeIds.length) {
     context.addIssue({
       code: 'custom',
       path: ['programmes'],

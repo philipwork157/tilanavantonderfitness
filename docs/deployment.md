@@ -53,12 +53,14 @@ Add these under **Settings -> Secrets and variables -> Actions -> Secrets**:
 - `FLY_API_TOKEN_PROD` (production Fly app)
 - `PUBLIC_CONTACT_API_URL_DEV`
 - `PUBLIC_NEWSLETTER_API_URL_DEV`
+- `PUBLIC_CATALOGUE_API_BASE_URL_DEV`
 - `PUBLIC_CHECKOUT_API_URL_DEV`
 - `PUBLIC_CHECKOUT_STATUS_API_URL_DEV`
 - `PUBLIC_ACCOUNT_URL_DEV`
 - `PUBLIC_TURNSTILE_SITE_KEY_DEV`
 - `PUBLIC_CONTACT_API_URL_PROD`
 - `PUBLIC_NEWSLETTER_API_URL_PROD`
+- `PUBLIC_CATALOGUE_API_BASE_URL_PROD`
 - `PUBLIC_CHECKOUT_API_URL_PROD`
 - `PUBLIC_CHECKOUT_STATUS_API_URL_PROD`
 - `PUBLIC_ACCOUNT_URL_PROD`
@@ -74,6 +76,7 @@ Use these environment-specific values:
 | --- | --- |
 | `PUBLIC_CONTACT_API_URL_DEV` | `https://admin-dev.tilanavantonder.co.za/api/contact` |
 | `PUBLIC_NEWSLETTER_API_URL_DEV` | `https://admin-dev.tilanavantonder.co.za/api/newsletter/subscribe` |
+| `PUBLIC_CATALOGUE_API_BASE_URL_DEV` | `https://admin-dev.tilanavantonder.co.za/api/public` |
 | `PUBLIC_CHECKOUT_API_URL_DEV` | `https://admin-dev.tilanavantonder.co.za/api/checkout/paystack` |
 | `PUBLIC_CHECKOUT_STATUS_API_URL_DEV` | `https://admin-dev.tilanavantonder.co.za/api/checkout/status` |
 | `PUBLIC_ACCOUNT_URL_DEV` | `https://admin-dev.tilanavantonder.co.za/account/sign-in` |
@@ -83,6 +86,7 @@ Use these environment-specific values:
 | --- | --- |
 | `PUBLIC_CONTACT_API_URL_PROD` | `https://admin.tilanavantonder.co.za/api/contact` |
 | `PUBLIC_NEWSLETTER_API_URL_PROD` | `https://admin.tilanavantonder.co.za/api/newsletter/subscribe` |
+| `PUBLIC_CATALOGUE_API_BASE_URL_PROD` | `https://admin.tilanavantonder.co.za/api/public` |
 | `PUBLIC_CHECKOUT_API_URL_PROD` | `https://admin.tilanavantonder.co.za/api/checkout/paystack` |
 | `PUBLIC_CHECKOUT_STATUS_API_URL_PROD` | `https://admin.tilanavantonder.co.za/api/checkout/status` |
 | `PUBLIC_ACCOUNT_URL_PROD` | `https://admin.tilanavantonder.co.za/account/sign-in` |

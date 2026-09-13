@@ -1,6 +1,5 @@
 import type { CheckoutRequest, CheckoutResponse, CheckoutStatusResponse } from '@tilana/contracts/checkout';
 import type { AdminPaymentRefundRequest } from '@tilana/contracts/payments';
-import { programmeCatalogByKey } from '@tilana/contracts/programs';
 import type { Database } from '@tilana/db/server';
 import {
   clients,
@@ -10,12 +9,15 @@ import {
   paymentRefunds,
   payments,
   programAccess,
+  programFiles,
   programs,
   programVolumes,
   type PaymentRefundStatus,
 } from '@tilana/db/schema';
 import { and, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { getDatabase } from '../utils/database';
+import { getCatalogueStorageConfiguration } from '../utils/r2';
+import { isCheckoutPriceCurrent } from './catalogue-policy';
 
 type DatabaseTransaction = Parameters<Parameters<Database['transaction']>[0]>[0];
 
@@ -117,35 +119,12 @@ async function getOrCreateClient(transaction: DatabaseTransaction, input: Checko
   return { id: client.id, email };
 }
 
-async function getPurchasableVolume(transaction: DatabaseTransaction, programmeKey: CheckoutRequest['programmeKey']) {
-  const definition = programmeCatalogByKey[programmeKey];
-  let [programme] = await transaction
-    .select({ id: programs.id, status: programs.status })
-    .from(programs)
-    .where(eq(programs.slug, definition.slug))
-    .limit(1);
-
-  if (!programme) {
-    [programme] = await transaction
-      .insert(programs)
-      .values({ slug: definition.slug, name: definition.name, status: 'published' })
-      .onConflictDoNothing()
-      .returning({ id: programs.id, status: programs.status });
-  }
-
-  if (!programme) {
-    [programme] = await transaction
-      .select({ id: programs.id, status: programs.status })
-      .from(programs)
-      .where(eq(programs.slug, definition.slug))
-      .limit(1);
-  }
-
-  if (!programme || programme.status !== 'published') {
-    throw createError({ statusCode: 409, statusMessage: 'This program is not available for purchase yet.' });
-  }
-
-  let [volume] = await transaction
+async function getPurchasableVolume(
+  transaction: DatabaseTransaction,
+  volumeSlug: CheckoutRequest['volumeSlug'],
+) {
+  const storage = getCatalogueStorageConfiguration();
+  const [volume] = await transaction
     .select({
       id: programVolumes.id,
       name: programVolumes.name,
@@ -154,51 +133,30 @@ async function getPurchasableVolume(transaction: DatabaseTransaction, programmeK
       isPublished: programVolumes.isPublished,
     })
     .from(programVolumes)
+    .innerJoin(programs, eq(programs.id, programVolumes.programId))
     .where(and(
-      eq(programVolumes.programId, programme.id),
-      eq(programVolumes.volumeNumber, definition.volumeNumber),
+      eq(programVolumes.slug, volumeSlug),
+      eq(programVolumes.isPublished, true),
+      eq(programs.status, 'published'),
     ))
     .limit(1);
 
-  if (!volume) {
-    [volume] = await transaction
-      .insert(programVolumes)
-      .values({
-        programId: programme.id,
-        volumeNumber: definition.volumeNumber,
-        name: definition.volumeName,
-        currentPriceCents: definition.suggestedPriceCents,
-        currency: 'ZAR',
-        isPublished: true,
-      })
-      .onConflictDoNothing()
-      .returning({
-        id: programVolumes.id,
-        name: programVolumes.name,
-        priceCents: programVolumes.currentPriceCents,
-        currency: programVolumes.currency,
-        isPublished: programVolumes.isPublished,
-      });
+  if (!volume || !volume.isPublished || volume.priceCents <= 0 || volume.currency !== 'ZAR') {
+    throw createError({ statusCode: 409, statusMessage: 'This program is not available for purchase yet.' });
   }
 
-  if (!volume) {
-    [volume] = await transaction
-      .select({
-        id: programVolumes.id,
-        name: programVolumes.name,
-        priceCents: programVolumes.currentPriceCents,
-        currency: programVolumes.currency,
-        isPublished: programVolumes.isPublished,
-      })
-      .from(programVolumes)
-      .where(and(
-        eq(programVolumes.programId, programme.id),
-        eq(programVolumes.volumeNumber, definition.volumeNumber),
-      ))
-      .limit(1);
-  }
+  const [readyFile] = await transaction
+    .select({ id: programFiles.id })
+    .from(programFiles)
+    .where(and(
+      eq(programFiles.programVolumeId, volume.id),
+      eq(programFiles.uploadStatus, 'ready'),
+      eq(programFiles.isActive, true),
+      eq(programFiles.r2Bucket, storage.privateProgramBucket),
+    ))
+    .limit(1);
 
-  if (!volume || !volume.isPublished || volume.priceCents <= 0) {
+  if (!readyFile) {
     throw createError({ statusCode: 409, statusMessage: 'This program is not available for purchase yet.' });
   }
 
@@ -218,8 +176,8 @@ export async function initializePaystackCheckout(input: CheckoutRequest): Promis
   const database = getDatabase();
   const checkout = await database.transaction(async (transaction) => {
     const customer = await getOrCreateClient(transaction, input);
-    const volume = await getPurchasableVolume(transaction, input.programmeKey);
-    if (volume.priceCents !== input.expectedPriceCents) {
+    const volume = await getPurchasableVolume(transaction, input.volumeSlug);
+    if (!isCheckoutPriceCurrent(input.expectedPriceCents, volume.priceCents)) {
       throw createError({ statusCode: 409, statusMessage: 'The program price has changed. Please refresh before paying.' });
     }
     const orderNumber = makeOrderNumber();

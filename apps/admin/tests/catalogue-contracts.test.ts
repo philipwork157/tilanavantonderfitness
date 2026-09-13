@@ -8,6 +8,8 @@ import {
   CATALOGUE_IMAGE_MAX_BYTES,
   CATALOGUE_PDF_MAX_BYTES,
 } from '@tilana/contracts/catalogue';
+import { checkoutRequestSchema } from '@tilana/contracts/checkout';
+import { adminClientCreateRequestSchema } from '@tilana/contracts/clients';
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
@@ -61,5 +63,47 @@ describe('catalogue API contracts', () => {
     assert.equal(adminProgramFileUpdateRequestSchema.safeParse({ displayName: 'Workbook', sortOrder: 2 }).success, true);
     assert.equal(adminProgramMediaUpdateRequestSchema.safeParse({}).success, false);
     assert.equal(adminProgramMediaUpdateRequestSchema.safeParse({ altText: 'Woman exercising safely' }).success, true);
+  });
+
+  it('starts checkout with a database volume slug and rejects the removed static key field', () => {
+    const request = {
+      volumeSlug: 'reconnect-volume-2',
+      expectedPriceCents: 39_900,
+      firstName: 'Tilana',
+      lastName: 'van Tonder',
+      email: 'tilana@example.com',
+      phone: '',
+      consent: true,
+      website: '',
+      turnstileToken: '',
+    };
+    assert.equal(checkoutRequestSchema.safeParse(request).success, true);
+    assert.equal(checkoutRequestSchema.safeParse({
+      ...request,
+      volumeSlug: undefined,
+      programmeKey: 'reconnect-volume-1',
+    }).success, false);
+  });
+
+  it('links manual client assignments to unique positive integer volume IDs', () => {
+    const request = {
+      firstName: 'Tilana',
+      lastName: 'van Tonder',
+      email: 'tilana@example.com',
+      purchaseStatus: 'paid',
+      programmes: [{ programVolumeId: 42, priceCents: 39_900 }],
+    };
+    assert.equal(adminClientCreateRequestSchema.safeParse(request).success, true);
+    assert.equal(adminClientCreateRequestSchema.safeParse({
+      ...request,
+      programmes: [{ programVolumeId: 0, priceCents: 39_900 }],
+    }).success, false);
+    assert.equal(adminClientCreateRequestSchema.safeParse({
+      ...request,
+      programmes: [
+        { programVolumeId: 42, priceCents: 39_900 },
+        { programVolumeId: 42, priceCents: 45_000 },
+      ],
+    }).success, false);
   });
 });

@@ -1,16 +1,8 @@
 import { z } from 'zod';
-
-export const purchasableProgrammeKeyValues = [
-  'move-volume-1',
-  'nourish-volume-1',
-  'reconnect-volume-1',
-] as const;
-
-export const purchasableProgrammeKeySchema = z.enum(purchasableProgrammeKeyValues);
-export type PurchasableProgrammeKey = z.infer<typeof purchasableProgrammeKeySchema>;
+import { catalogueSlugSchema } from '@tilana/contracts/catalogue';
 
 export const checkoutRequestSchema = z.object({
-  programmeKey: purchasableProgrammeKeySchema,
+  volumeSlug: catalogueSlugSchema,
   expectedPriceCents: z.number().int().positive(),
   firstName: z.string().trim().min(1).max(100),
   lastName: z.string().trim().min(1).max(100),

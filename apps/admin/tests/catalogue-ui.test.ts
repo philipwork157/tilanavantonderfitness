@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   catalogueErrorMessage,
   formatCatalogueFileSize,
+  normaliseCatalogueAccent,
   slugifyCatalogueValue,
 } from '../app/utils/catalogue.ts';
 
@@ -26,5 +27,13 @@ describe('catalogue UI helpers', () => {
     assert.equal(formatCatalogueFileSize(null), 'Size unavailable');
     assert.equal(formatCatalogueFileSize(2_048), '2 KB');
     assert.equal(formatCatalogueFileSize(5 * 1_024 * 1_024), '5.0 MB');
+  });
+
+  it('keeps legacy program accents compatible with generic colour themes', () => {
+    assert.equal(normaliseCatalogueAccent('nourish'), 'sage');
+    assert.equal(normaliseCatalogueAccent('advanced'), 'caramel');
+    assert.equal(normaliseCatalogueAccent('reconnect'), 'terracotta');
+    assert.equal(normaliseCatalogueAccent('sage'), 'sage');
+    assert.equal(normaliseCatalogueAccent(null), 'terracotta');
   });
 });

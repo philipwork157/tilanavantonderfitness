@@ -112,7 +112,7 @@ See `docs/database-design.md` for the detailed domain model.
 
 Customers do not need to create an account before buying a program. The flow is:
 
-1. The public website sends the selected program key and guest contact details
+1. The public website sends the selected database volume slug and guest contact details
    to the Nuxt checkout API.
 2. The server validates the request and reads the authoritative price from
    `program_volumes`; it never trusts a browser-supplied price.

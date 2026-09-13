@@ -468,7 +468,7 @@ the live catalogue records or prices.
 - [x] Phase 3: intentionally skipped for the fresh development catalogue
 - [x] Phase 4: server and storage services
 - [x] Phase 5: admin UI
-- [ ] Phase 6: public site and checkout cutover
+- [x] Phase 6: public site and checkout cutover
 - [ ] Phase 7: cleanup and verification
 
 Mark a phase complete only after every task in that phase is checked and its
@@ -585,15 +585,28 @@ integer-ID routes. Verification completed with `pnpm test`, `pnpm check`,
 
 ### Phase 6: public site and checkout cutover
 
-- [ ] Render program cards from the public API.
-- [ ] Add accessible loading, empty, and failure states.
-- [ ] Add the generic checkout route.
-- [ ] Change checkout contracts and Paystack lookup to database volume slugs.
-- [ ] Change the admin client assignment form to database-backed options.
-- [ ] Retain existing checkout URL redirects.
-- [ ] Remove automatic program/volume creation from the Paystack and client
+- [x] Render program cards from the public API.
+- [x] Add accessible loading, empty, and failure states.
+- [x] Add the generic checkout route.
+- [x] Change checkout contracts and Paystack lookup to database volume slugs.
+- [x] Change the admin client assignment form to database-backed options.
+- [x] Retain existing checkout URL redirects.
+- [x] Remove automatic program/volume creation from the Paystack and client
   services.
-- [ ] Verify stale-price protection and authoritative server-side pricing.
+- [x] Verify stale-price protection and authoritative server-side pricing.
+
+Phase 6 replaces the public catalogue and checkout runtime dependencies on the
+static catalogue with published data from the safe public API. The public cards
+include every managed volume, current database price, cover image, availability
+state, and a generic
+`/checkout?programme={volumeSlug}` link. Checkout re-fetches the selected volume,
+submits its stable slug, and the server independently validates publication,
+the active private PDF, currency, and authoritative database price before
+creating integer-linked order records. Legacy checkout paths redirect to the
+generic route. Manual client assignments now select `program_volumes.id`
+directly, and both admin colour selectors display their actual colour swatches.
+Verification completed with `pnpm test`, `pnpm check`, `pnpm db:check`, both
+production builds, and development/production public-environment validation.
 
 ### Phase 7: cleanup and verification
 

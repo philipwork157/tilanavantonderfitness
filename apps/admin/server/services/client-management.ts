@@ -1,9 +1,4 @@
 import type { AdminClientCreateRequest, AdminClientUpdateRequest } from '@tilana/contracts/clients';
-import {
-  programmeCatalog,
-  programmeCatalogByKey,
-  type ProgrammeKey,
-} from '@tilana/contracts/programs';
 import type { Database } from '@tilana/db/server';
 import {
   clients,
@@ -30,6 +25,12 @@ export class ClientNotEditableError extends Error {
   }
 }
 
+export class ProgramVolumeUnavailableError extends Error {
+  constructor() {
+    super('The selected programme volume is unavailable.');
+  }
+}
+
 type DatabaseTransaction = Parameters<Parameters<Database['transaction']>[0]>[0];
 
 function createManualOrderNumber(): string {
@@ -37,59 +38,26 @@ function createManualOrderNumber(): string {
   return `MAN-${date}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
 }
 
-async function ensureProgrammeVolume(
+async function getManualProgrammeVolume(
   transaction: DatabaseTransaction,
-  programmeKey: ProgrammeKey,
+  programVolumeId: number,
 ) {
-  const definition = programmeCatalogByKey[programmeKey];
-  let [programme] = await transaction
-    .insert(programs)
-    .values({
-      slug: definition.slug,
-      name: definition.name,
-      status: 'published',
+  const [volume] = await transaction
+    .select({
+      id: programVolumes.id,
+      name: programVolumes.name,
+      currency: programVolumes.currency,
+      programStatus: programs.status,
     })
-    .onConflictDoNothing({ target: programs.slug })
-    .returning({ id: programs.id });
+    .from(programVolumes)
+    .innerJoin(programs, eq(programs.id, programVolumes.programId))
+    .where(eq(programVolumes.id, programVolumeId))
+    .limit(1);
 
-  if (!programme) {
-    [programme] = await transaction
-      .select({ id: programs.id })
-      .from(programs)
-      .where(eq(programs.slug, definition.slug))
-      .limit(1);
+  if (!volume || volume.programStatus === 'archived' || volume.currency !== 'ZAR') {
+    throw new ProgramVolumeUnavailableError();
   }
-
-  if (!programme) throw new Error(`Programme ${definition.name} is unavailable.`);
-
-  let [volume] = await transaction
-    .insert(programVolumes)
-    .values({
-      programId: programme.id,
-      volumeNumber: definition.volumeNumber,
-      name: definition.volumeName,
-      currentPriceCents: definition.suggestedPriceCents,
-      currency: 'ZAR',
-      isPublished: true,
-    })
-    .onConflictDoNothing({
-      target: [programVolumes.programId, programVolumes.volumeNumber],
-    })
-    .returning({ id: programVolumes.id });
-
-  if (!volume) {
-    [volume] = await transaction
-      .select({ id: programVolumes.id })
-      .from(programVolumes)
-      .where(and(
-        eq(programVolumes.programId, programme.id),
-        eq(programVolumes.volumeNumber, definition.volumeNumber),
-      ))
-      .limit(1);
-  }
-
-  if (!volume) throw new Error(`Programme volume ${definition.volumeName} is unavailable.`);
-  return { definition, volumeId: volume.id };
+  return volume;
 }
 
 async function insertManualOrderItems(
@@ -100,34 +68,55 @@ async function insertManualOrderItems(
   administratorUserId: number,
 ) {
   for (const assignment of input.programmes) {
-    const { definition, volumeId } = await ensureProgrammeVolume(
+    const volume = await getManualProgrammeVolume(
       transaction,
-      assignment.programmeKey,
+      assignment.programVolumeId,
     );
     const [item] = await transaction
       .insert(orderItems)
       .values({
         orderId,
         clientId,
-        programVolumeId: volumeId,
-        description: definition.volumeName,
+        programVolumeId: volume.id,
+        description: volume.name,
         quantity: 1,
         unitPriceCents: assignment.priceCents,
         lineTotalCents: assignment.priceCents,
       })
       .returning({ id: orderItems.id });
 
-    if (!item) throw new Error(`Order item ${definition.volumeName} was not created.`);
+    if (!item) throw new Error(`Order item ${volume.name} was not created.`);
 
     await transaction.insert(programAccess).values({
       clientId,
-      programVolumeId: volumeId,
+      programVolumeId: volume.id,
       orderItemId: item.id,
       source: 'manual',
       status: 'active',
       grantedByUserId: administratorUserId,
     });
   }
+}
+
+export async function listManualProgramVolumeOptions() {
+  return getDatabase()
+    .select({
+      id: programVolumes.id,
+      programId: programs.id,
+      programName: programs.name,
+      programSlug: programs.slug,
+      programStatus: programs.status,
+      volumeNumber: programVolumes.volumeNumber,
+      name: programVolumes.name,
+      slug: programVolumes.slug,
+      currentPriceCents: programVolumes.currentPriceCents,
+      currency: programVolumes.currency,
+      isPublished: programVolumes.isPublished,
+    })
+    .from(programVolumes)
+    .innerJoin(programs, eq(programs.id, programVolumes.programId))
+    .where(ne(programs.status, 'archived'))
+    .orderBy(asc(programs.sortOrder), asc(programs.name), asc(programVolumes.sortOrder), asc(programVolumes.volumeNumber));
 }
 
 async function insertManualPayment(
@@ -321,8 +310,7 @@ export async function listClientsWithProgrammes(paystackEnvironment: 'test' | 'l
       orderNumber: orders.orderNumber,
       programmeName: orderItems.description,
       priceCents: orderItems.lineTotalCents,
-      programmeSlug: programs.slug,
-      volumeNumber: programVolumes.volumeNumber,
+      programVolumeId: programVolumes.id,
     })
     .from(clients)
     .leftJoin(orders, eq(orders.clientId, clients.id))
@@ -425,7 +413,7 @@ export async function listClientsWithProgrammes(paystackEnvironment: 'test' | 'l
       name: string;
       priceCents: number;
       status: string;
-      programmeKey: ProgrammeKey | null;
+      programVolumeId: number | null;
       payment: PaystackPaymentSummary | null;
     }>;
   }>();
@@ -448,16 +436,13 @@ export async function listClientsWithProgrammes(paystackEnvironment: 'test' | 'l
     }
 
     if (row.orderId && row.orderNumber && row.orderStatus && row.programmeName && row.priceCents !== null) {
-      const catalogueItem = programmeCatalog.find((item) =>
-        item.slug === row.programmeSlug && item.volumeNumber === row.volumeNumber,
-      );
       client.programmes.push({
         orderId: row.orderId,
         orderNumber: row.orderNumber,
         name: row.programmeName,
         priceCents: row.priceCents,
         status: row.orderStatus,
-        programmeKey: catalogueItem?.key ?? null,
+        programVolumeId: row.programVolumeId,
         payment: paymentByOrder.get(row.orderId) ?? null,
       });
     }

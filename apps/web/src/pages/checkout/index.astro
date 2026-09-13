@@ -1,0 +1,255 @@
+---
+import PageHero from '@tilana/ui-astro/PageHero.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const catalogueApiBaseUrl = (
+  import.meta.env.PUBLIC_CATALOGUE_API_BASE_URL
+  ?? 'http://127.0.0.1:3001/api/public'
+).replace(/\/+$/, '');
+const checkoutApiUrl = import.meta.env.PUBLIC_CHECKOUT_API_URL ?? 'http://127.0.0.1:3001/api/checkout/paystack';
+const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
+---
+
+<BaseLayout title="Secure program checkout" description="Buy a Tilana van Tonder program securely through Paystack.">
+  <PageHero eyebrow="Secure checkout" title="Start your" script="next chapter." intro="Choose a program volume, pay once, and access it through your customer account." />
+
+  <section
+    class="section checkout-section"
+    data-checkout
+    data-catalogue-api-url={`${catalogueApiBaseUrl}/program-volumes`}
+    data-checkout-api-url={checkoutApiUrl}
+    aria-busy="true"
+  >
+    <div class="container">
+      <div class="checkout-state" data-checkout-loading role="status">
+        <span class="state-icon" aria-hidden="true">•••</span>
+        <div><h2>Loading your program</h2><p>Confirming the latest volume and price.</p></div>
+      </div>
+
+      <div class="checkout-state checkout-error" data-checkout-error role="alert" hidden>
+        <span class="state-icon" aria-hidden="true">!</span>
+        <div><h2 data-error-title>Checkout is unavailable</h2><p data-error-copy>Please return to the programs page and choose an available volume.</p></div>
+        <div class="state-actions">
+          <button type="button" class="button button-secondary" data-checkout-retry hidden>Try again</button>
+          <a class="button button-dark" href="/program">View programs</a>
+        </div>
+      </div>
+
+      <div class="checkout-grid" data-checkout-content hidden>
+        <aside class="order-card">
+          <p class="eyebrow" data-program-name>Your program</p>
+          <h2 data-volume-name></h2>
+          <p data-volume-description>Your price is confirmed securely by the server before Paystack opens.</p>
+          <div class="price"><span>Once-off payment</span><strong data-volume-price></strong></div>
+          <ul>
+            <li>Secure Paystack checkout</li>
+            <li>No account needed before payment</li>
+            <li>Your purchase is linked when you verify your email</li>
+          </ul>
+        </aside>
+
+        <form class="checkout-form" data-checkout-form novalidate>
+          <div class="honeypot" aria-hidden="true"><label>Leave empty<input name="website" tabindex="-1" autocomplete="off" /></label></div>
+          <div class="name-grid">
+            <label>First name<input name="firstName" autocomplete="given-name" maxlength="100" required /></label>
+            <label>Last name<input name="lastName" autocomplete="family-name" maxlength="100" required /></label>
+          </div>
+          <label>Email address<input name="email" type="email" autocomplete="email" maxlength="254" required /></label>
+          <label>Phone number <small>(optional)</small><input name="phone" type="tel" autocomplete="tel" maxlength="30" /></label>
+          <label class="consent">
+            <input name="consent" type="checkbox" required />
+            <span>I agree to the <a href="/privacy">privacy policy</a> and understand this is a digital program providing general education, not clinical care.</span>
+          </label>
+          {turnstileSiteKey && <div class="cf-turnstile" data-sitekey={turnstileSiteKey} data-action="checkout" data-theme="auto"></div>}
+          <button class="button button-primary" type="submit"><span>Continue to secure payment</span></button>
+          <p class="form-status" data-form-status role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import {
+    catalogueSlugSchema,
+    publicCatalogueVolumeResponseSchema,
+    type PublicCatalogueVolumeDetail,
+  } from '@tilana/contracts/catalogue';
+  import { checkoutRequestSchema } from '@tilana/contracts/checkout';
+
+  type ApiMessage = { authorizationUrl?: string; statusMessage?: string; message?: string };
+
+  const priceFormatter = new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
+    currency: 'ZAR',
+    maximumFractionDigits: 2,
+  });
+  const root = document.querySelector<HTMLElement>('[data-checkout]');
+  const loading = root?.querySelector<HTMLElement>('[data-checkout-loading]');
+  const errorPanel = root?.querySelector<HTMLElement>('[data-checkout-error]');
+  const errorTitle = root?.querySelector<HTMLElement>('[data-error-title]');
+  const errorCopy = root?.querySelector<HTMLElement>('[data-error-copy]');
+  const retry = root?.querySelector<HTMLButtonElement>('[data-checkout-retry]');
+  const content = root?.querySelector<HTMLElement>('[data-checkout-content]');
+  const form = root?.querySelector<HTMLFormElement>('[data-checkout-form]');
+  const status = form?.querySelector<HTMLElement>('[data-form-status]');
+  const button = form?.querySelector<HTMLButtonElement>('button[type="submit"]');
+  const buttonLabel = button?.querySelector<HTMLElement>('span');
+  let selectedVolume: PublicCatalogueVolumeDetail | null = null;
+
+  function showError(title: string, copy: string, canRetry: boolean) {
+    if (!root || !errorPanel || !errorTitle || !errorCopy) return;
+    loading?.setAttribute('hidden', '');
+    content?.setAttribute('hidden', '');
+    errorTitle.textContent = title;
+    errorCopy.textContent = copy;
+    retry?.toggleAttribute('hidden', !canRetry);
+    errorPanel.removeAttribute('hidden');
+    root.setAttribute('aria-busy', 'false');
+  }
+
+  async function readJson(response: Response): Promise<ApiMessage | null> {
+    return response.json().catch(() => null) as Promise<ApiMessage | null>;
+  }
+
+  async function loadVolume() {
+    if (!root) return;
+    selectedVolume = null;
+    root.setAttribute('aria-busy', 'true');
+    loading?.removeAttribute('hidden');
+    errorPanel?.setAttribute('hidden', '');
+    content?.setAttribute('hidden', '');
+
+    const parsedSlug = catalogueSlugSchema.safeParse(new URLSearchParams(window.location.search).get('programme'));
+    if (!parsedSlug.success) {
+      showError('Choose a program first', 'Return to the programs page and select the volume you would like to buy.', false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${root.dataset.catalogueApiUrl}/${encodeURIComponent(parsedSlug.data)}`, {
+        headers: { Accept: 'application/json' },
+      });
+      const body: unknown = await response.json().catch(() => null);
+      const parsed = publicCatalogueVolumeResponseSchema.safeParse(body);
+      if (!response.ok || !parsed.success) throw new Error('The selected program could not be loaded.');
+      if (!parsed.data.volume.isAvailable) {
+        showError('This volume is not available yet', 'Please choose another available volume from the programs page.', false);
+        return;
+      }
+
+      selectedVolume = parsed.data.volume;
+      const programName = root.querySelector<HTMLElement>('[data-program-name]');
+      const volumeName = root.querySelector<HTMLElement>('[data-volume-name]');
+      const description = root.querySelector<HTMLElement>('[data-volume-description]');
+      const price = root.querySelector<HTMLElement>('[data-volume-price]');
+      if (programName) programName.textContent = selectedVolume.program.name;
+      if (volumeName) volumeName.textContent = selectedVolume.name;
+      if (description) {
+        description.textContent = selectedVolume.description
+          ?? 'Your price is confirmed securely by the server before Paystack opens.';
+      }
+      if (price) price.textContent = priceFormatter.format(selectedVolume.priceCents / 100);
+      loading?.setAttribute('hidden', '');
+      content?.removeAttribute('hidden');
+      root.setAttribute('aria-busy', 'false');
+    } catch {
+      showError('Program could not be loaded', 'Please try again, or return to the programs page and choose another volume.', true);
+    }
+  }
+
+  retry?.addEventListener('click', () => void loadVolume());
+  void loadVolume();
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!root || !form || !status || !button || !buttonLabel || !selectedVolume) return;
+    const data = new FormData(form);
+    const parsed = checkoutRequestSchema.safeParse({
+      volumeSlug: selectedVolume.slug,
+      expectedPriceCents: selectedVolume.priceCents,
+      firstName: data.get('firstName'),
+      lastName: data.get('lastName'),
+      email: data.get('email'),
+      phone: data.get('phone'),
+      consent: data.get('consent') === 'on',
+      website: data.get('website'),
+      turnstileToken: String(data.get('cf-turnstile-response') ?? ''),
+    });
+
+    if (!parsed.success) {
+      status.textContent = 'Please complete all required details and accept the privacy agreement.';
+      status.dataset.state = 'error';
+      return;
+    }
+
+    button.disabled = true;
+    buttonLabel.textContent = 'Opening Paystack…';
+    status.textContent = '';
+    delete status.dataset.state;
+
+    try {
+      const response = await fetch(root.dataset.checkoutApiUrl ?? '', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parsed.data),
+      });
+      const body = await readJson(response);
+      if (!response.ok || !body?.authorizationUrl) {
+        if (response.status === 409) {
+          await loadVolume();
+          throw new Error(body?.statusMessage ?? body?.message ?? 'The program changed. Please review it before paying.');
+        }
+        throw new Error(body?.statusMessage ?? body?.message ?? 'Checkout could not be started.');
+      }
+      window.location.assign(body.authorizationUrl);
+    } catch (checkoutError) {
+      status.textContent = checkoutError instanceof Error ? checkoutError.message : 'Checkout could not be started.';
+      status.dataset.state = 'error';
+      button.disabled = false;
+      buttonLabel.textContent = 'Continue to secure payment';
+      (window as Window & { turnstile?: { reset: () => void } }).turnstile?.reset();
+    }
+  });
+</script>
+
+<style>
+  .checkout-section { min-height: 42rem; background: var(--cream); }
+  .checkout-grid { display: grid; align-items: start; gap: clamp(2rem, 6vw, 5rem); grid-template-columns: 0.85fr 1.15fr; }
+  .checkout-state { display: flex; min-height: 12rem; align-items: center; gap: 1rem; padding: clamp(1.5rem, 4vw, 2.5rem); border: 1px dashed var(--color-border); border-radius: var(--radius-lg); background: var(--white); }
+  .checkout-state .state-icon { display: grid; width: 3rem; height: 3rem; flex: none; place-items: center; border-radius: 1rem; color: var(--ink); background: var(--sage); font-weight: 800; letter-spacing: 0.08em; }
+  .checkout-error .state-icon { background: var(--terracotta); }
+  .checkout-state h2, .checkout-state p { margin: 0; }
+  .checkout-state h2 { color: var(--ink); font-family: var(--font-heading); font-size: clamp(1.5rem, 3vw, 2.1rem); }
+  .checkout-state p { margin-top: 0.35rem; line-height: 1.6; }
+  .state-actions { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-left: auto; }
+  .order-card, .checkout-form { padding: clamp(1.5rem, 4vw, 2.5rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+  .order-card { background: var(--sage); }
+  .order-card h2 { margin: 0.7rem 0 1rem; font-family: var(--font-heading); font-size: clamp(2rem, 4vw, 3rem); }
+  .order-card p { line-height: 1.7; }
+  .order-card ul { display: grid; gap: 0.65rem; margin: 1.5rem 0 0; padding-left: 1.2rem; font-size: 0.78rem; }
+  .price { display: grid; gap: 0.25rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgb(15 14 19 / 15%); }
+  .price span { font-size: 0.7rem; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; }
+  .price strong { font-family: var(--font-heading); font-size: 2.4rem; }
+  .checkout-form { position: relative; display: grid; gap: 1.2rem; background: var(--white); }
+  .checkout-form label:not(.consent) { display: grid; gap: 0.45rem; color: var(--ink); font-size: 0.75rem; font-weight: 700; }
+  .checkout-form input:not([type="checkbox"]) { width: 100%; padding: 0.9rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--ink); background: var(--cream); font: inherit; }
+  .checkout-form input:focus { border-color: var(--caramel); outline: 3px solid rgb(213 162 127 / 22%); }
+  .name-grid { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; }
+  .consent { display: flex; align-items: flex-start; gap: 0.75rem; font-size: 0.72rem; line-height: 1.6; }
+  .consent input { margin-top: 0.25rem; }
+  .consent a { text-decoration: underline; }
+  .form-status { min-height: 1em; margin: 0; font-size: 0.75rem; }
+  .form-status[data-state="error"] { color: #9d2d24; }
+  .honeypot { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .checkout-section [hidden] { display: none !important; }
+  @media (max-width: 48rem) {
+    .checkout-grid { grid-template-columns: 1fr; }
+    .checkout-state { align-items: flex-start; flex-wrap: wrap; }
+    .state-actions { width: 100%; margin-left: 0; }
+  }
+  @media (max-width: 30rem) {
+    .name-grid { grid-template-columns: 1fr; }
+    .state-actions .button { width: 100%; }
+  }
+</style>

@@ -7,6 +7,7 @@ import {
   getCataloguePublicationIssues,
   getProgramFileReplacementIssue,
   getProgramVolumeAuditEvents,
+  isCheckoutPriceCurrent,
   publicObjectUrl,
   verifyUploadedObject,
 } from '../server/services/catalogue-policy.ts';
@@ -49,6 +50,13 @@ describe('catalogue publication policy', () => {
         hasReadyFile: true,
       }],
     }), []);
+  });
+});
+
+describe('catalogue checkout price policy', () => {
+  it('accepts the current database price and rejects a stale browser price', () => {
+    assert.equal(isCheckoutPriceCurrent(39_900, 39_900), true);
+    assert.equal(isCheckoutPriceCurrent(39_900, 44_900), false);
   });
 });
 

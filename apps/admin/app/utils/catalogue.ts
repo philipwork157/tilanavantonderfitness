@@ -15,6 +15,18 @@ export const catalogueStatusLabels: Record<AdminCatalogueProgramStatus, string> 
   archived: 'Archived',
 };
 
+export const catalogueAccentOptions = [
+  { label: 'Terracotta', value: 'terracotta' },
+  { label: 'Sage', value: 'sage' },
+  { label: 'Caramel', value: 'caramel' },
+];
+
+export function normaliseCatalogueAccent(value: string | null | undefined): string {
+  if (value === 'sage' || value === 'intermediate' || value === 'nourish') return 'sage';
+  if (value === 'caramel' || value === 'advanced') return 'caramel';
+  return 'terracotta';
+}
+
 export function catalogueStatusColor(
   status: AdminCatalogueProgramStatus,
 ): 'success' | 'warning' | 'neutral' {
