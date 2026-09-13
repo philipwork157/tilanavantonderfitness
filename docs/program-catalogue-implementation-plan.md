@@ -465,8 +465,8 @@ the live catalogue records or prices.
 - [x] Phase 0: architecture review and implementation plan
 - [x] Phase 1: storage prerequisites
 - [x] Phase 2: forward database migration
-- [ ] Phase 3: catalogue backfill
-- [ ] Phase 4: server and storage services
+- [x] Phase 3: intentionally skipped for the fresh development catalogue
+- [x] Phase 4: server and storage services
 - [ ] Phase 5: admin UI
 - [ ] Phase 6: public site and checkout cutover
 - [ ] Phase 7: cleanup and verification
@@ -516,34 +516,50 @@ summary together so the two views do not drift.
 
 ### Phase 3 prerequisite
 
-- [ ] Apply `20260912093400_lean_sabra.sql` to the development database and
-  confirm it completes successfully before running the catalogue backfill.
+- [x] Apply `20260912093400_lean_sabra.sql` to the development database and
+  confirm it completes successfully before implementing database-backed
+  catalogue services.
 
-### Phase 3: backfill
+### Phase 3: intentionally skipped
 
-- [ ] Insert Beginner, Intermediate, Advanced, Reconnect, and Nourish from the
-  current static catalogue.
-- [ ] Preserve the current slugs, volume numbers, checkout keys, names, prices,
-  and published/coming-soon behavior.
-- [ ] Reuse existing integer program and volume rows when checkout has already
-  created them.
-- [ ] Verify all existing `order_items` and `program_access` relationships before
-  switching reads.
-- [ ] Confirm the backfill is idempotent and does not duplicate programs or
-  volumes.
-- [ ] Verify existing `program_files` objects in private R2 and mark a row
-  `ready` only when its object metadata matches.
+- [x] Confirm the catalogue is still development-only and does not require a
+  legacy production-data migration.
+- [x] Create catalogue records afresh through the admin management flow instead
+  of copying the static website catalogue into PostgreSQL.
+- [x] Do not run an automated catalogue backfill, seed, or data-deletion step.
+  Existing development rows remain untouched and can be managed through the
+  completed admin tools.
 
 ### Phase 4: server and storage services
 
-- [ ] Add catalogue query/mutation services.
-- [ ] Add upload initiation/finalization and R2 object verification.
-- [ ] Extend private download signing without changing entitlement checks.
-- [ ] Add audit events and publication validation.
-- [ ] Add public catalogue read services with safe cache headers.
-- [ ] Add shared Zod request/response contracts.
-- [ ] Add focused service and API tests for authorization, validation, and
-  storage failures.
+- [x] Add catalogue query/mutation services.
+- [x] Add upload initiation/finalization and R2 object verification.
+- [x] Extend private download signing without changing entitlement checks.
+  Customer file queries now additionally require a ready, active file and the
+  signed download uses the original friendly filename when available.
+- [x] Add audit events and publication validation.
+- [x] Add public catalogue read services with safe cache headers.
+  The public endpoints use a short browser/CDN cache with
+  `stale-while-revalidate`; no in-memory server cache was introduced, so there
+  is no separate cache to invalidate on publication changes.
+- [x] Add shared Zod request/response contracts.
+- [x] Add focused service-policy and API-contract tests for authorization,
+  validation, replacement rules, audit classification, and storage failures.
+- [x] Resolve the Phase 4 review findings: PDF replacement now switches the
+  selected old and new files atomically, current-access totals exclude expired
+  grants, and volume price/publication changes create distinct audit events.
+
+Phase 4 exposes authenticated, same-origin admin routes for program and volume
+management, publication checks/status changes, image/PDF upload initiation,
+R2-backed finalization, atomic replacement, and deactivation. The file finalize
+contract accepts an optional integer `replaceFileId`; when supplied, the
+selected ready file must belong to the same volume and is deactivated in the
+same transaction that activates the replacement. Uploads are limited to supported
+JPEG/PNG/WebP/AVIF images up to 10 MiB and PDFs up to 50 MiB. Public catalogue
+reads are available at `/api/public/programs`, `/api/public/programs/:slug`,
+and `/api/public/program-volumes/:slug`; their response mapping never includes
+private bucket names or object keys. Verification completed with `pnpm test`,
+`pnpm check`, `pnpm db:check`, and `pnpm build:admin`.
 
 ### Phase 5: admin UI
 

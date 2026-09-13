@@ -2,9 +2,11 @@ import { programAccess, programFiles, programs, programVolumes } from '@tilana/d
 import { and, asc, eq, isNull, or, sql } from 'drizzle-orm';
 import { requireCustomer } from '../../utils/customer-auth';
 import { getDatabase } from '../../utils/database';
+import { getCatalogueStorageConfiguration } from '../../utils/r2';
 
 export default defineEventHandler(async (event) => {
   const customer = await requireCustomer(event);
+  const storage = getCatalogueStorageConfiguration();
   const now = new Date();
   const rows = await getDatabase()
     .select({
@@ -17,7 +19,12 @@ export default defineEventHandler(async (event) => {
     .from(programAccess)
     .innerJoin(programVolumes, eq(programVolumes.id, programAccess.programVolumeId))
     .innerJoin(programs, eq(programs.id, programVolumes.programId))
-    .leftJoin(programFiles, and(eq(programFiles.programVolumeId, programVolumes.id), eq(programFiles.isActive, true)))
+    .leftJoin(programFiles, and(
+      eq(programFiles.programVolumeId, programVolumes.id),
+      eq(programFiles.isActive, true),
+      eq(programFiles.uploadStatus, 'ready'),
+      eq(programFiles.r2Bucket, storage.privateProgramBucket),
+    ))
     .where(and(
       eq(programAccess.clientId, customer.clientId),
       eq(programAccess.status, 'active'),

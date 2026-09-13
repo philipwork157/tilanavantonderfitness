@@ -47,6 +47,7 @@ export default defineNuxtConfig({
     '/contacts/**': { headers: { 'cache-control': 'private, no-store' } },
     '/api/auth/**': { headers: { 'cache-control': 'private, no-store' } },
     '/api/admin/**': { headers: { 'cache-control': 'private, no-store' } },
+    '/api/public/**': { headers: { 'cache-control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=600' } },
     '/api/checkout/**': { headers: { 'cache-control': 'no-store' } },
     '/api/webhooks/**': { headers: { 'cache-control': 'no-store' } },
     '/account/**': { headers: { 'cache-control': 'private, no-store' } },

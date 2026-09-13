@@ -8,6 +8,7 @@
     "build": "nuxt build",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "pnpm lint --fix",
+    "test": "node --test tests/*.test.ts",
     "typecheck": "nuxt typecheck",
     "prepare": "nuxt prepare",
     "postinstall": "nuxt prepare"

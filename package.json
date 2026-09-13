@@ -21,6 +21,7 @@
     "db:migrate": "pnpm --filter @tilana/db db:migrate",
     "db:apply": "pnpm --filter @tilana/db db:apply",
     "db:check": "pnpm --filter @tilana/db db:check",
+    "test": "turbo run test",
     "site:build": "pnpm --filter @tilana/web build && node scripts/prepare-site-dist.mjs"
   },
   "devDependencies": {
