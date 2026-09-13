@@ -467,7 +467,7 @@ the live catalogue records or prices.
 - [x] Phase 2: forward database migration
 - [x] Phase 3: intentionally skipped for the fresh development catalogue
 - [x] Phase 4: server and storage services
-- [ ] Phase 5: admin UI
+- [x] Phase 5: admin UI
 - [ ] Phase 6: public site and checkout cutover
 - [ ] Phase 7: cleanup and verification
 
@@ -563,15 +563,25 @@ private bucket names or object keys. Verification completed with `pnpm test`,
 
 ### Phase 5: admin UI
 
-- [ ] Enable Programs navigation.
-- [ ] Build the program list and create/edit screens.
-- [ ] Build volume and price management.
-- [ ] Build public cover-media upload and management.
-- [ ] Build private PDF upload, version, ordering, and deactivation management.
-- [ ] Build preview, publication, unpublish, and archive flows.
-- [ ] Display actionable upload and publication errors.
-- [ ] Preserve the existing design system, accessibility, responsive behavior,
+- [x] Enable Programs navigation.
+- [x] Build the program list and create/edit screens.
+- [x] Build volume and price management.
+- [x] Build public cover-media upload and management.
+- [x] Build private PDF upload, version, ordering, and deactivation management.
+- [x] Build preview, publication, unpublish, and archive flows.
+- [x] Display actionable upload and publication errors.
+- [x] Preserve the existing design system, accessibility, responsive behavior,
   and reduced-motion support.
+
+Phase 5 adds a compact `/programs` catalogue dashboard and a detailed
+`/programs/:id` management workspace. Admins can create and edit programs,
+manage integer-linked volumes and prices, upload and replace private PDFs,
+upload public covers, edit file/media metadata and ordering, inspect upload
+history, review the publication checklist, and publish, unpublish, archive, or
+restore catalogue records. Direct R2 uploads use the Phase 4 initiation and
+finalization services, while metadata edits use authenticated same-origin
+integer-ID routes. Verification completed with `pnpm test`, `pnpm check`,
+`pnpm db:check`, and `pnpm build:admin`.
 
 ### Phase 6: public site and checkout cutover
 

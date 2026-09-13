@@ -1,7 +1,9 @@
 import {
-  adminProgramFileUploadRequestSchema,
   adminProgramFileUploadFinalizeRequestSchema,
+  adminProgramFileUploadRequestSchema,
+  adminProgramFileUpdateRequestSchema,
   adminProgramMediaUploadRequestSchema,
+  adminProgramMediaUpdateRequestSchema,
   adminProgramUpdateRequestSchema,
   CATALOGUE_IMAGE_MAX_BYTES,
   CATALOGUE_PDF_MAX_BYTES,
@@ -52,5 +54,12 @@ describe('catalogue API contracts', () => {
     assert.equal(adminProgramFileUploadFinalizeRequestSchema.safeParse({ replaceFileId: 0 }).success, false);
     assert.equal(adminProgramFileUploadFinalizeRequestSchema.safeParse({ replaceFileId: '42' }).success, false);
     assert.equal(adminProgramFileUploadFinalizeRequestSchema.safeParse({ unexpected: true }).success, false);
+  });
+
+  it('requires at least one valid file or media metadata change', () => {
+    assert.equal(adminProgramFileUpdateRequestSchema.safeParse({}).success, false);
+    assert.equal(adminProgramFileUpdateRequestSchema.safeParse({ displayName: 'Workbook', sortOrder: 2 }).success, true);
+    assert.equal(adminProgramMediaUpdateRequestSchema.safeParse({}).success, false);
+    assert.equal(adminProgramMediaUpdateRequestSchema.safeParse({ altText: 'Woman exercising safely' }).success, true);
   });
 });

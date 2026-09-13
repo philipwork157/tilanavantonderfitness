@@ -112,6 +112,18 @@ export const adminProgramFileUploadRequestSchema = z.object({
   sortOrder: z.number().int().min(0).max(100_000).optional().default(0),
 });
 
+export const adminProgramFileUpdateRequestSchema = z.object({
+  displayName: z.string().trim().min(1, 'Enter a display name.').max(200).optional(),
+  sortOrder: z.number().int().min(0).max(100_000).optional(),
+})
+  .refine(value => Object.keys(value).length > 0, 'Provide at least one field to update.');
+
+export const adminProgramMediaUpdateRequestSchema = z.object({
+  displayName: z.string().trim().min(1, 'Enter a display name.').max(200).optional(),
+  altText: z.string().trim().min(1, 'Enter alternative text.').max(300).optional(),
+})
+  .refine(value => Object.keys(value).length > 0, 'Provide at least one field to update.');
+
 export const adminCatalogueUploadFinalizeRequestSchema = z.object({}).strict();
 
 export const adminProgramFileUploadFinalizeRequestSchema = z.object({
@@ -172,7 +184,9 @@ export type AdminProgramStatusRequest = z.infer<typeof adminProgramStatusRequest
 export type AdminProgramVolumeCreateRequest = z.infer<typeof adminProgramVolumeCreateRequestSchema>;
 export type AdminProgramVolumeUpdateRequest = z.infer<typeof adminProgramVolumeUpdateRequestSchema>;
 export type AdminProgramMediaUploadRequest = z.infer<typeof adminProgramMediaUploadRequestSchema>;
+export type AdminProgramMediaUpdateRequest = z.infer<typeof adminProgramMediaUpdateRequestSchema>;
 export type AdminProgramFileUploadRequest = z.infer<typeof adminProgramFileUploadRequestSchema>;
+export type AdminProgramFileUpdateRequest = z.infer<typeof adminProgramFileUpdateRequestSchema>;
 export type AdminProgramFileUploadFinalizeRequest = z.infer<typeof adminProgramFileUploadFinalizeRequestSchema>;
 export type AdminCatalogueDeactivateRequest = z.infer<typeof adminCatalogueDeactivateRequestSchema>;
 export type CatalogueUploadResponse = z.infer<typeof catalogueUploadResponseSchema>;

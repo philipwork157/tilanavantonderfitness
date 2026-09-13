@@ -1,7 +1,9 @@
 import type {
   AdminCatalogueDeactivateRequest,
   AdminProgramFileUploadRequest,
+  AdminProgramFileUpdateRequest,
   AdminProgramMediaUploadRequest,
+  AdminProgramMediaUpdateRequest,
   CatalogueUploadResponse,
 } from '@tilana/contracts/catalogue';
 import {
@@ -242,6 +244,38 @@ export async function deactivateProgramMedia(
   });
 }
 
+export async function updateProgramMedia(
+  mediaId: number,
+  input: AdminProgramMediaUpdateRequest,
+  userId: number,
+) {
+  return getDatabase().transaction(async (transaction) => {
+    const [media] = await transaction
+      .select({ id: programMedia.id, programId: programMedia.programId })
+      .from(programMedia)
+      .where(eq(programMedia.id, mediaId))
+      .limit(1);
+    if (!media) throw new CatalogueNotFoundError('Program media not found.');
+
+    const [updated] = await transaction
+      .update(programMedia)
+      .set({
+        displayName: input.displayName,
+        altText: input.altText,
+        updatedAt: new Date(),
+      })
+      .where(eq(programMedia.id, mediaId))
+      .returning();
+    if (!updated) throw new Error('The program media was not updated.');
+
+    await addProgramAuditEvent(transaction, userId, 'program_media', media.id, 'updated', {
+      programId: media.programId,
+      fields: Object.keys(input),
+    });
+    return updated;
+  });
+}
+
 export async function initiateProgramFileUpload(
   volumeId: number,
   input: AdminProgramFileUploadRequest,
@@ -468,6 +502,38 @@ export async function deactivateProgramFile(
     await addProgramAuditEvent(transaction, userId, 'program_file', file.id, 'deactivated', {
       volumeId: file.programVolumeId,
       reason: input.reason ?? null,
+    });
+    return updated;
+  });
+}
+
+export async function updateProgramFile(
+  fileId: number,
+  input: AdminProgramFileUpdateRequest,
+  userId: number,
+) {
+  return getDatabase().transaction(async (transaction) => {
+    const [file] = await transaction
+      .select({ id: programFiles.id, programVolumeId: programFiles.programVolumeId })
+      .from(programFiles)
+      .where(eq(programFiles.id, fileId))
+      .limit(1);
+    if (!file) throw new CatalogueNotFoundError('Program file not found.');
+
+    const [updated] = await transaction
+      .update(programFiles)
+      .set({
+        displayName: input.displayName,
+        sortOrder: input.sortOrder,
+        updatedAt: new Date(),
+      })
+      .where(eq(programFiles.id, fileId))
+      .returning();
+    if (!updated) throw new Error('The program file was not updated.');
+
+    await addProgramAuditEvent(transaction, userId, 'program_file', file.id, 'updated', {
+      volumeId: file.programVolumeId,
+      fields: Object.keys(input),
     });
     return updated;
   });

@@ -8,7 +8,7 @@ const navigation = [
   { label: 'Enquiries', icon: 'i-lucide-inbox', to: '/contacts' },
   { label: 'Clients', icon: 'i-lucide-users', to: '/clients' },
   { label: 'Newsletter', icon: 'i-lucide-mail', to: '/newsletter' },
-  { label: 'Programs', icon: 'i-lucide-dumbbell', disabled: true },
+  { label: 'Programs', icon: 'i-lucide-dumbbell', to: '/programs' },
   { label: 'Invoices', icon: 'i-lucide-receipt-text', disabled: true },
 ];
 
@@ -16,6 +16,7 @@ const pageTitle = computed(() => {
   if (route.path === '/contacts') return 'Contact enquiries';
   if (route.path === '/clients') return 'Clients';
   if (route.path === '/newsletter') return 'Newsletter signups';
+  if (route.path.startsWith('/programs')) return 'Programs';
   return 'Dashboard';
 });
 const initials = computed(() => {
@@ -53,6 +54,11 @@ const userMenuItems = computed(() => [
       label: 'Newsletter',
       icon: 'i-lucide-mail',
       to: '/newsletter',
+    },
+    {
+      label: 'Programs',
+      icon: 'i-lucide-dumbbell',
+      to: '/programs',
     },
   ],
   [
@@ -117,7 +123,7 @@ async function signOut() {
           <UIcon name="i-lucide-sparkles" aria-hidden="true" />
           <div>
             <strong>Built to grow</strong>
-            <span>Clients, programs and invoices are ready for the next phase.</span>
+            <span>Manage your clients, programs, payments and audience in one place.</span>
           </div>
         </div>
       </template>

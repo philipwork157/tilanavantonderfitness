@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+import {
+  catalogueErrorMessage,
+  formatCatalogueFileSize,
+  slugifyCatalogueValue,
+} from '../app/utils/catalogue.ts';
+
+describe('catalogue UI helpers', () => {
+  it('creates stable catalogue slugs from human names', () => {
+    assert.equal(slugifyCatalogueValue('  Reconnect: Pelvic Floor — Volume 1  '), 'reconnect-pelvic-floor-volume-1');
+    assert.equal(slugifyCatalogueValue('Nourish & Move'), 'nourish-move');
+  });
+
+  it('surfaces publication issues before generic request errors', () => {
+    assert.equal(catalogueErrorMessage({
+      data: {
+        statusMessage: 'The program is not ready to publish.',
+        data: { issues: [{ message: 'Upload and finalize a program cover image.' }] },
+      },
+    }, 'Fallback'), 'Upload and finalize a program cover image.');
+    assert.equal(catalogueErrorMessage(null, 'Fallback'), 'Fallback');
+  });
+
+  it('formats customer-facing file sizes compactly', () => {
+    assert.equal(formatCatalogueFileSize(null), 'Size unavailable');
+    assert.equal(formatCatalogueFileSize(2_048), '2 KB');
+    assert.equal(formatCatalogueFileSize(5 * 1_024 * 1_024), '5.0 MB');
+  });
+});

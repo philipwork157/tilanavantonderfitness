@@ -45,6 +45,7 @@ export default defineNuxtConfig({
   routeRules: {
     '/dashboard/**': { headers: { 'cache-control': 'private, no-store' } },
     '/contacts/**': { headers: { 'cache-control': 'private, no-store' } },
+    '/programs/**': { headers: { 'cache-control': 'private, no-store' } },
     '/api/auth/**': { headers: { 'cache-control': 'private, no-store' } },
     '/api/admin/**': { headers: { 'cache-control': 'private, no-store' } },
     '/api/public/**': { headers: { 'cache-control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=600' } },
