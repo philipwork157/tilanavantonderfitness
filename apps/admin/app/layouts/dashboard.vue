@@ -9,6 +9,7 @@ const navigation = [
   { label: 'Clients', icon: 'i-lucide-users', to: '/clients' },
   { label: 'Newsletter', icon: 'i-lucide-mail', to: '/newsletter' },
   { label: 'Programs', icon: 'i-lucide-dumbbell', to: '/programs' },
+  { label: 'APIs', icon: 'i-lucide-braces', to: '/api-docs' },
   { label: 'Invoices', icon: 'i-lucide-receipt-text', disabled: true },
 ];
 
@@ -17,6 +18,7 @@ const pageTitle = computed(() => {
   if (route.path === '/clients') return 'Clients';
   if (route.path === '/newsletter') return 'Newsletter signups';
   if (route.path.startsWith('/programs')) return 'Programs';
+  if (route.path.startsWith('/api-docs')) return 'API documentation';
   return 'Dashboard';
 });
 const initials = computed(() => {
@@ -59,6 +61,11 @@ const userMenuItems = computed(() => [
       label: 'Programs',
       icon: 'i-lucide-dumbbell',
       to: '/programs',
+    },
+    {
+      label: 'APIs',
+      icon: 'i-lucide-braces',
+      to: '/api-docs',
     },
   ],
   [
