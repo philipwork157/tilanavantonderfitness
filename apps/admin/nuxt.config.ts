@@ -34,6 +34,9 @@ export default defineNuxtConfig({
     r2DownloadSecretAccessKey: '',
     r2UploadAccessKeyId: '',
     r2UploadSecretAccessKey: '',
+    public: {
+      siteUrl: 'http://127.0.0.1:4321',
+    },
   },
   devtools: {
     enabled: false,

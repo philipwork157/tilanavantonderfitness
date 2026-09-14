@@ -170,7 +170,7 @@ export function getAdminOpenApiDocument() {
     info: {
       title: 'Tilana Platform API',
       version: '1.0.0',
-      description: 'Authenticated internal reference for the Tilana public website, administration portal, customer access, catalogue, newsletter, and payment APIs. Test requests are disabled in the documentation interface to protect live data.',
+      description: 'Authenticated internal reference for the Tilana public website, administration portal, customer access, catalogue, newsletter, and payment APIs. Interactive requests use the selected environment and the signed-in browser session.',
     },
     servers: [{ url: '/', description: 'Current environment' }],
     tags: [

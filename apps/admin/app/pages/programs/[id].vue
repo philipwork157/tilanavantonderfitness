@@ -32,6 +32,7 @@ import {
 definePageMeta({ layout: 'dashboard' });
 
 const route = useRoute();
+const runtimeConfig = useRuntimeConfig();
 const programId = Number(route.params.id);
 if (!Number.isSafeInteger(programId) || programId <= 0) {
   throw createError({ statusCode: 404, statusMessage: 'Program not found.' });
@@ -56,6 +57,15 @@ const activeCover = computed(() => program.value?.media.find(
 ) ?? null);
 const publishedVolumes = computed(() => program.value?.volumes.filter(volume => volume.isPublished) ?? []);
 const readyForPublication = computed(() => publicationData.value?.checklist.ready ?? false);
+const nextVolumeNumber = computed(() => Math.max(
+  0,
+  ...(program.value?.volumes.map(volume => volume.volumeNumber) ?? []),
+) + 1);
+const nextVolumeLabel = computed(() => `Add Volume ${nextVolumeNumber.value}`);
+const publicProgramUrl = computed(() => {
+  const siteUrl = String(runtimeConfig.public.siteUrl || 'http://127.0.0.1:4321').replace(/\/$/, '');
+  return `${siteUrl}/program`;
+});
 
 const programForm = reactive({
   name: '',
@@ -97,6 +107,25 @@ const showFileForm = ref(false);
 const savingFile = ref(false);
 const fileError = ref('');
 const fileForm = reactive({ displayName: '', sortOrder: 0 });
+
+const genericMarketingValues = new Set(['card', 'headline', 'description', 'test', 'testing', 'placeholder']);
+const marketingGuidance = computed(() => {
+  const guidance: string[] = [];
+  const cardLabel = programForm.cardLabel.trim();
+  const headline = programForm.headline.trim();
+  const description = programForm.description.trim();
+
+  if (cardLabel && (cardLabel.length < 4 || genericMarketingValues.has(cardLabel.toLowerCase()))) {
+    guidance.push('Make the card label a specific category, such as Strength or Nourishment.');
+  }
+  if (headline && (headline.length < 12 || genericMarketingValues.has(headline.toLowerCase()))) {
+    guidance.push('Use a customer-focused headline that clearly communicates the main outcome.');
+  }
+  if (description && (description.length < 50 || genericMarketingValues.has(description.toLowerCase()))) {
+    guidance.push('Add a fuller description explaining who the program is for and what it helps them achieve.');
+  }
+  return guidance;
+});
 
 type ConfirmationColor = 'error' | 'warning' | 'primary';
 interface ConfirmationAction {
@@ -185,15 +214,18 @@ async function saveProgram() {
 }
 
 function openCreateVolume() {
-  const nextNumber = Math.max(0, ...(program.value?.volumes.map(volume => volume.volumeNumber) ?? [])) + 1;
+  const nextNumber = nextVolumeNumber.value;
+  const latestVolume = [...(program.value?.volumes ?? [])]
+    .sort((left, right) => right.volumeNumber - left.volumeNumber)[0];
+  const nextSortOrder = Math.max(-1, ...(program.value?.volumes.map(volume => volume.sortOrder) ?? [])) + 1;
   editingVolumeId.value = null;
   Object.assign(volumeForm, {
     name: `${program.value?.name ?? 'Program'} · Volume ${nextNumber}`,
     slug: `${program.value?.slug ?? 'program'}-volume-${nextNumber}`,
     volumeNumber: nextNumber,
     description: '',
-    priceRands: 399,
-    sortOrder: program.value?.volumes.length ?? 0,
+    priceRands: latestVolume ? latestVolume.currentPriceCents / 100 : 399,
+    sortOrder: nextSortOrder,
     isPublished: false,
   });
   volumeError.value = '';
@@ -584,9 +616,18 @@ useSeoMeta({
           <p>{{ program.headline || 'Complete the marketing details, add a cover and prepare at least one volume.' }}</p>
         </div>
         <dl>
-          <div><dt>Gross sales</dt><dd>{{ formatCatalogueMoney(program.grossSalesCents) }}</dd></div>
-          <div><dt>Purchases</dt><dd>{{ program.salesCount }}</dd></div>
-          <div><dt>Current access</dt><dd>{{ program.accessCount }}</dd></div>
+          <div>
+            <dt>Gross sales <UTooltip text="Historical value of paid sales, including orders later refunded. Refunds are not deducted here."><UIcon name="i-lucide-circle-help" /></UTooltip></dt>
+            <dd>{{ formatCatalogueMoney(program.grossSalesCents) }}</dd>
+          </div>
+          <div>
+            <dt>Sales <UTooltip text="Number of paid sales, including sales later refunded."><UIcon name="i-lucide-circle-help" /></UTooltip></dt>
+            <dd>{{ program.salesCount }}</dd>
+          </div>
+          <div>
+            <dt>Active access <UTooltip text="Customers who can currently access this program. This can be lower than sales after a refund, revocation, or expiry."><UIcon name="i-lucide-circle-help" /></UTooltip></dt>
+            <dd>{{ program.accessCount }}</dd>
+          </div>
         </dl>
       </header>
 
@@ -641,7 +682,7 @@ useSeoMeta({
             <div class="field-grid">
               <UFormField label="Program name" required><UInput v-model="programForm.name" size="lg" class="w-full" /></UFormField>
               <UFormField label="URL slug" required help="Changing this changes the future public URL."><UInput v-model="programForm.slug" size="lg" class="w-full" /></UFormField>
-              <UFormField label="Card label"><UInput v-model="programForm.cardLabel" size="lg" class="w-full" /></UFormField>
+              <UFormField label="Card label" help="Use a short, specific customer-facing category."><UInput v-model="programForm.cardLabel" size="lg" class="w-full" /></UFormField>
               <UFormField label="Card colour" help="This controls the public card colours, not its volumes."><CatalogueAccentSelect v-model="programForm.accent" /></UFormField>
               <div class="volume-shortcut full-field">
                 <span><UIcon name="i-lucide-layers-3" /></span>
@@ -651,30 +692,52 @@ useSeoMeta({
                 </div>
                 <UButton :label="program.volumes.length ? 'Manage volumes' : 'Add first volume'" icon="i-lucide-arrow-down" color="neutral" variant="soft" to="#program-volumes" />
               </div>
-              <UFormField label="Headline" class="full-field"><UInput v-model="programForm.headline" size="lg" class="w-full" /></UFormField>
-              <UFormField label="Description" class="full-field"><UTextarea v-model="programForm.description" :rows="6" class="w-full" /></UFormField>
+              <UFormField label="Headline" help="Lead with the outcome or transformation this program supports." class="full-field"><UInput v-model="programForm.headline" size="lg" class="w-full" /></UFormField>
+              <UFormField label="Description" help="Explain who it is for, what it includes, and why it is useful." class="full-field"><UTextarea v-model="programForm.description" :rows="6" class="w-full" /></UFormField>
+              <div v-if="marketingGuidance.length" class="marketing-guidance full-field">
+                <span><UIcon name="i-lucide-lightbulb" /></span>
+                <div>
+                  <strong>Make the public card more useful</strong>
+                  <ul><li v-for="guidance in marketingGuidance" :key="guidance">{{ guidance }}</li></ul>
+                </div>
+              </div>
               <UFormField label="Display order"><UInput v-model.number="programForm.sortOrder" type="number" min="0" step="1" size="lg" class="w-full" /></UFormField>
             </div>
             <div class="section-actions"><UButton type="submit" label="Save details" icon="i-lucide-save" :loading="savingProgram" /></div>
           </form>
         </UCard>
 
-        <aside id="program-preview" class="preview-card" :class="`accent-${programForm.accent || 'terracotta'}`">
-          <div class="preview-cover">
-            <img v-if="activeCover?.publicUrl" :src="activeCover.publicUrl" :alt="activeCover.altText">
-            <span v-else><UIcon name="i-lucide-image" /><small>Cover preview</small></span>
-          </div>
-          <div class="preview-copy">
-            <div><span>{{ program.cardLabel || 'Program label' }}</span><UBadge color="neutral" variant="soft">Preview</UBadge></div>
-            <h2>{{ program.name }}</h2>
-            <h3>{{ program.headline || 'Your program headline will appear here.' }}</h3>
-            <p>{{ program.description || 'Add a concise description to help customers understand what this program offers.' }}</p>
-            <div v-if="publishedVolumes.length" class="preview-prices">
-              <span v-for="volume in publishedVolumes" :key="volume.id">{{ volume.name }} · {{ formatCatalogueMoney(volume.currentPriceCents) }}</span>
+        <div class="side-rail">
+          <aside id="program-preview" class="preview-card" :class="`accent-${programForm.accent || 'terracotta'}`">
+            <div class="preview-cover">
+              <img v-if="activeCover?.publicUrl" :src="activeCover.publicUrl" :alt="activeCover.altText">
+              <span v-else><UIcon name="i-lucide-image" /><small>Cover preview</small></span>
             </div>
-            <span v-else class="preview-empty">Publish a prepared volume to show pricing.</span>
-          </div>
-        </aside>
+            <div class="preview-copy">
+              <div><span>{{ program.cardLabel || 'Program label' }}</span><UBadge color="neutral" variant="soft">Preview</UBadge></div>
+              <h2>{{ program.name }}</h2>
+              <h3>{{ program.headline || 'Your program headline will appear here.' }}</h3>
+              <p>{{ program.description || 'Add a concise description to help customers understand what this program offers.' }}</p>
+              <div v-if="publishedVolumes.length" class="preview-prices">
+                <span v-for="volume in publishedVolumes" :key="volume.id">{{ volume.name }} · {{ formatCatalogueMoney(volume.currentPriceCents) }}</span>
+              </div>
+              <span v-else class="preview-empty">Publish a prepared volume to show pricing.</span>
+            </div>
+          </aside>
+
+          <aside class="quick-actions-card" aria-labelledby="quick-actions-title">
+            <div class="quick-actions-heading">
+              <span><UIcon name="i-lucide-zap" /></span>
+              <div><p class="eyebrow">Shortcuts</p><h2 id="quick-actions-title">Quick actions</h2></div>
+            </div>
+            <div class="quick-actions-list">
+              <UButton :label="nextVolumeLabel" icon="i-lucide-layers-3" block @click="openCreateVolume" />
+              <UButton :label="activeCover ? 'Replace cover' : 'Upload cover'" icon="i-lucide-image-up" color="neutral" variant="soft" block :loading="coverUploading" @click="selectCover" />
+              <UButton label="Preview public page" icon="i-lucide-external-link" color="neutral" variant="soft" block :to="publicProgramUrl" target="_blank" rel="noopener noreferrer" />
+            </div>
+            <p>New volumes open as drafts with the next number, slug, price, and display order already filled in.</p>
+          </aside>
+        </div>
       </section>
 
       <section id="program-cover" class="management-card cover-manager">
@@ -710,7 +773,7 @@ useSeoMeta({
       <section id="program-volumes" class="management-card volume-manager">
         <div class="section-heading">
           <div><p class="eyebrow">Products and delivery</p><h2>Program volumes</h2><p>Create as many volumes as needed. Each has its own checkout slug, price, publication status and private PDFs.</p></div>
-          <UButton label="Add volume" icon="i-lucide-plus" @click="openCreateVolume" />
+          <UButton :label="nextVolumeLabel" icon="i-lucide-plus" @click="openCreateVolume" />
         </div>
 
         <div v-if="program.volumes.length" class="volume-list">
@@ -725,7 +788,7 @@ useSeoMeta({
               <div><dt>Current price</dt><dd>{{ formatCatalogueMoney(volume.currentPriceCents) }}</dd></div>
               <div><dt>Sales</dt><dd>{{ volume.salesCount }}</dd></div>
               <div><dt>Gross sales</dt><dd>{{ formatCatalogueMoney(volume.grossSalesCents) }}</dd></div>
-              <div><dt>Access</dt><dd>{{ volume.accessCount }}</dd></div>
+              <div><dt>Active access</dt><dd>{{ volume.accessCount }}</dd></div>
             </dl>
 
             <div class="files-heading">
@@ -768,7 +831,7 @@ useSeoMeta({
 
     </template>
 
-    <UModal v-model:open="showVolumeForm" :title="editingVolumeId ? 'Edit volume' : 'Add volume'" :dismissible="!savingVolume">
+    <UModal v-model:open="showVolumeForm" :title="editingVolumeId ? 'Edit volume' : nextVolumeLabel" :dismissible="!savingVolume">
       <template #body>
         <form class="modal-form" @submit.prevent="saveVolume">
           <div class="field-grid">
@@ -820,7 +883,8 @@ useSeoMeta({
 .program-heading > div > p:last-child { max-width: 48rem; margin: 0.65rem 0 0; font-size: 0.73rem; line-height: 1.6; }
 .program-heading dl { display: grid; grid-template-columns: repeat(3, minmax(6rem, 1fr)); gap: 0.6rem; margin: 0; }
 .program-heading dl div { min-width: 7rem; padding: 0.8rem; border-radius: 1rem; background: color-mix(in srgb, var(--white) 68%, transparent); }
-.program-heading dt { color: var(--ui-text-muted); font-size: 0.52rem; text-transform: uppercase; }
+.program-heading dt { display: flex; align-items: center; gap: 0.3rem; color: var(--ui-text-muted); font-size: 0.52rem; text-transform: uppercase; }
+.program-heading dt :deep(svg) { width: 0.72rem; height: 0.72rem; cursor: help; }
 .program-heading dd { margin: 0.2rem 0 0; color: var(--ink); font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; }
 .workspace-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(19rem, 0.7fr); gap: 1rem; align-items: start; }
 .editor-card, .management-card, .preview-card { border: 1px solid var(--color-border); border-radius: 1.8rem; background: color-mix(in srgb, var(--white) 82%, var(--cream)); box-shadow: var(--shadow-md); }
@@ -837,7 +901,12 @@ useSeoMeta({
 .volume-shortcut > div { display: grid; gap: 0.16rem; }
 .volume-shortcut strong { color: var(--ink); font-size: 0.68rem; }
 .volume-shortcut small { font-size: 0.58rem; line-height: 1.45; }
-.preview-card { position: sticky; top: 5.8rem; overflow: hidden; scroll-margin-top: 6rem; }
+.marketing-guidance { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.85rem; border: 1px solid color-mix(in srgb, var(--caramel) 38%, var(--color-border)); border-radius: 1rem; background: color-mix(in srgb, var(--sand) 65%, transparent); }
+.marketing-guidance > span { display: grid; width: 2.25rem; aspect-ratio: 1; flex: none; place-items: center; border-radius: 0.75rem; color: var(--ink); background: var(--terracotta); }
+.marketing-guidance strong { color: var(--ink); font-size: 0.68rem; }
+.marketing-guidance ul { display: grid; gap: 0.22rem; margin: 0.35rem 0 0; padding-left: 1rem; font-size: 0.6rem; line-height: 1.45; }
+.side-rail { position: sticky; top: 5.8rem; display: grid; gap: 1rem; min-width: 0; }
+.preview-card { overflow: hidden; scroll-margin-top: 6rem; }
 .preview-card.accent-sage, .preview-card.accent-intermediate, .preview-card.accent-nourish { --preview-accent: var(--sage); }
 .preview-card.accent-caramel, .preview-card.accent-advanced { --preview-accent: var(--caramel); }
 .preview-card.accent-terracotta, .preview-card.accent-beginner, .preview-card.accent-reconnect, .preview-card.accent-default { --preview-accent: var(--terracotta); }
@@ -853,9 +922,15 @@ useSeoMeta({
 .preview-copy p { margin: 0.65rem 0 0; font-size: 0.67rem; line-height: 1.65; }
 .preview-prices { display: grid; gap: 0.35rem; margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid var(--color-border); color: var(--ink); font-size: 0.61rem; font-weight: 700; }
 .preview-empty { display: block; margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid var(--color-border); font-size: 0.6rem; }
+.quick-actions-card { padding: 1.1rem; border: 1px solid color-mix(in srgb, var(--sage) 68%, var(--color-border)); border-radius: 1.5rem; background: linear-gradient(145deg, color-mix(in srgb, var(--sage) 54%, var(--white)), color-mix(in srgb, var(--white) 84%, var(--cream))); box-shadow: var(--shadow-sm); }
+.quick-actions-heading { display: flex; align-items: center; gap: 0.7rem; }
+.quick-actions-heading > span { display: grid; width: 2.6rem; aspect-ratio: 1; flex: none; place-items: center; border-radius: 0.85rem; color: var(--ink); background: var(--sage); font-size: 1rem; }
+.quick-actions-heading h2 { margin: 0; color: var(--ink); font-family: var(--font-heading); font-size: 1.35rem; line-height: 1; }
+.quick-actions-list { display: grid; gap: 0.55rem; margin-top: 1rem; }
+.quick-actions-card > p { margin: 0.85rem 0 0; color: var(--chocolate); font-size: 0.58rem; line-height: 1.5; }
 .management-card { padding: clamp(1.25rem, 2.5vw, 2rem); }
-.cover-details { display: grid; grid-template-columns: minmax(12rem, 0.42fr) minmax(0, 1fr); gap: 1.2rem; align-items: center; margin-top: 1.2rem; padding: 1rem; border-radius: 1.35rem; background: color-mix(in srgb, var(--sage) 44%, transparent); }
-.cover-details img { width: 100%; height: 11rem; border-radius: 1rem; object-fit: cover; }
+.cover-details { display: grid; grid-template-columns: minmax(9rem, 0.28fr) minmax(0, 1fr); gap: 1rem; align-items: center; margin-top: 1rem; padding: 0.8rem; border-radius: 1.2rem; background: color-mix(in srgb, var(--sage) 44%, transparent); }
+.cover-details img { width: 100%; height: 7.5rem; border-radius: 0.85rem; object-fit: cover; }
 .cover-details p { margin: 0.65rem 0; font-size: 0.61rem; }
 .empty-manager { display: flex; align-items: center; gap: 0.9rem; margin-top: 1.2rem; padding: 1rem; border: 1px dashed var(--color-border); border-radius: 1.2rem; }
 .empty-manager > span { display: grid; width: 3rem; aspect-ratio: 1; flex: none; place-items: center; border-radius: 0.95rem; color: var(--ink); background: var(--sage); font-size: 1.1rem; }
@@ -912,8 +987,8 @@ useSeoMeta({
 .confirmation-body p { max-width: 34rem; margin: 1rem 0 1.2rem; font-size: 0.72rem; line-height: 1.65; }
 .confirmation-body > div { display: flex; gap: 0.65rem; }
 @keyframes spin { to { transform: rotate(360deg); } }
-@media (max-width: 72rem) { .workspace-grid { grid-template-columns: 1fr; } .preview-card { position: static; } }
-@media (max-width: 52rem) { .program-heading { align-items: stretch; flex-direction: column; } .program-heading dl { grid-template-columns: repeat(3, 1fr); } .cover-details { grid-template-columns: 1fr; } .volume-card dl { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 72rem) { .workspace-grid { grid-template-columns: 1fr; } .side-rail { position: static; grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.55fr); } }
+@media (max-width: 52rem) { .program-heading { align-items: stretch; flex-direction: column; } .program-heading dl { grid-template-columns: repeat(3, 1fr); } .side-rail, .cover-details { grid-template-columns: 1fr; } .cover-details img { height: 10rem; } .volume-card dl { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 42rem) {
   .page-toolbar { align-items: stretch; flex-direction: column; }
   .toolbar-actions { justify-content: flex-start; }

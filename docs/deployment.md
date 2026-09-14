@@ -151,6 +151,10 @@ secret store. Audit these names independently for development and production:
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
 
+`NUXT_PUBLIC_SITE_URL` is browser-visible configuration, not a secret. Each Fly
+configuration sets it to the matching public website so admin preview links open
+the correct development or production site.
+
 `NUXT_CUSTOMER_ACCESS_DEVELOPMENT_RECIPIENT` is strongly recommended on the Fly
 development app so test access emails cannot be delivered accidentally to a
 customer. It must not redirect production customer emails.

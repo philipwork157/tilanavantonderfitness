@@ -5,12 +5,50 @@ import '@scalar/api-reference/style.css';
 definePageMeta({ layout: 'dashboard' });
 
 const colorMode = useColorMode();
+const scalarFetch: typeof fetch = (input, init) => fetch(input, {
+  ...init,
+  credentials: 'same-origin',
+});
+
+function scrollToScalarTarget(hash: string) {
+  const targetId = decodeURIComponent(hash.replace(/^#/, ''));
+  if (!targetId) return;
+
+  const target = Array.from(document.querySelectorAll<HTMLElement>('.scalar-app [id]'))
+    .find(element => element.id === targetId || element.id.endsWith(`/${targetId}`));
+
+  target?.scrollIntoView({
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    block: 'start',
+  });
+}
+
+function handleScalarSidebarClick(href: string) {
+  if (!import.meta.client) return;
+
+  const targetUrl = new URL(href, window.location.href);
+  if (!targetUrl.hash) return;
+
+  requestAnimationFrame(() => {
+    if (window.location.hash !== targetUrl.hash) {
+      window.history.replaceState(window.history.state, '', targetUrl);
+    }
+
+    // Scalar lazily renders operations and listens for popstate when resolving
+    // deep links. Replaying that event makes embedded dashboard navigation
+    // reliable when pushState alone does not render the selected operation.
+    window.dispatchEvent(new PopStateEvent('popstate'));
+
+    window.setTimeout(() => scrollToScalarTarget(targetUrl.hash), 450);
+  });
+}
+
 const configuration = computed(() => ({
   url: '/api/admin/openapi',
   layout: 'modern' as const,
   theme: 'none' as const,
   forceDarkModeState: colorMode.value === 'dark' ? 'dark' as const : 'light' as const,
-  hideTestRequestButton: true,
+  hideTestRequestButton: false,
   hideDarkModeToggle: true,
   showDeveloperTools: 'never' as const,
   showOperationId: true,
@@ -18,6 +56,8 @@ const configuration = computed(() => ({
   withDefaultFonts: false,
   telemetry: false,
   agent: { disabled: true },
+  customFetch: scalarFetch,
+  onSidebarClick: handleScalarSidebarClick,
   customCss: `
     .light-mode {
       --scalar-color-1: #0f0e13;
@@ -80,8 +120,8 @@ useSeoMeta({
       color="warning"
       variant="soft"
       icon="i-lucide-lock-keyhole"
-      title="Reference mode"
-      description="Request execution is disabled to prevent accidental changes to clients, payments, programs, files, and newsletter campaigns. Authentication and security requirements are still documented for every endpoint."
+      title="Interactive API testing is enabled"
+      description="Select an endpoint in the Scalar sidebar to open its details, then choose Test Request. Requests use your signed-in admin session. POST, PATCH, and PUT requests can change application data, so review the server, parameters, and request body before sending."
     />
 
     <section class="reference-shell" aria-label="Scalar API reference">
