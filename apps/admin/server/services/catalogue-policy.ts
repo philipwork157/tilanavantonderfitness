@@ -154,6 +154,18 @@ export function isCheckoutPriceCurrent(expectedPriceCents: number, currentPriceC
   return expectedPriceCents === currentPriceCents;
 }
 
+export function requiresPurchasedVolumeSlugRedirect(
+  currentSlug: string | null,
+  nextSlug: string | null,
+  hasPurchase: boolean,
+): boolean {
+  const normalizedCurrentSlug = currentSlug?.trim() || null;
+  const normalizedNextSlug = nextSlug?.trim() || null;
+  return hasPurchase
+    && normalizedCurrentSlug !== null
+    && normalizedNextSlug !== normalizedCurrentSlug;
+}
+
 export function getProgramFileReplacementIssue(
   file: Pick<ProgramFileReplacementCandidate, 'id' | 'programVolumeId'>,
   replacement: ProgramFileReplacementCandidate | null,

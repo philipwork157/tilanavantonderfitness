@@ -1,14 +1,46 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PageHero from '@tilana/ui-astro/PageHero.astro';
+import { HouseHeart, ShieldCheck, Sprout } from '@lucide/astro';
 import { Image } from 'astro:assets';
 import trainingImage from '../assets/tilana-training.jpg';
 import strengthImage from '../assets/tilana-strength-training.jpg';
 ---
 <BaseLayout title="About Tilana van Tonder" description="Meet Tilana van Tonder and learn about her inclusive, experience-led approach to finding strength and building healthy habits that last.">
   <PageHero eyebrow="About me" title="Finding strength." script="Building healthy habits." intro="My own journey includes rebuilding after pregnancy, but this space is for women and men at every stage of life who want to move well, feel stronger, and create habits that last." />
-  <section class="section"><div class="container story-grid"><div class="story-gallery"><div class="story-photo" data-reveal><Image src={trainingImage} alt="Tilana van Tonder training on a gym mat" widths={[480, 800, 1200]} sizes="(max-width: 48rem) 92vw, 30rem" loading="lazy" /></div><div class="story-photo" data-reveal><Image src={strengthImage} alt="Tilana van Tonder strength training with dumbbells" widths={[480, 800, 1200]} sizes="(max-width: 48rem) 92vw, 30rem" loading="lazy" /></div></div><div><p class="eyebrow">Why I started</p><h2 class="heading-lg">Strength that fits real life.</h2><div class="copy"><p>Pregnancy and motherhood changed my time, my energy, and the way I related to my body. Rebuilding taught me that progress does not need to look dramatic to be meaningful.</p><p>Those lessons reach far beyond pregnancy. Consistent movement, practical nourishment, and small promises kept over time can help anyone build a stronger, healthier foundation.</p><p>This space is for women returning to movement before or after pregnancy, women who have not experienced pregnancy, and men who want a realistic approach to strength and lasting healthy habits—without pressure, perfection, or quick fixes.</p><p>Something I care about deeply: <strong>your size and your weight do not define your worth.</strong> There is no body you need to earn before you are allowed to feel strong, capable, and at home in yourself.</p><p>I am also not perfect, and I will never pretend to be. If you are looking for a trainer with no cellulite and no stretch marks, I am not the person. I am real, raw, and honest—and I would rather show up that way than sell you an image that is not true.</p><p>I am not a qualified coach (yet). What I share comes from years of personal experimentation, learning, and lived experience with strength, movement, nutrition, and healthy routines. It is general information, not medical or clinical advice. Pain, injury, pregnancy-related concerns, nutrition concerns, or other health issues should be discussed with an appropriately qualified doctor, physiotherapist, dietitian, or healthcare professional.</p></div></div></div></section>
-  <section class="section values"><div class="container"><p class="eyebrow">What matters here</p><h2 class="heading-lg">Kind, honest, sustainable.</h2><div class="value-grid"><article><span>01</span><h3>Real life first</h3><p>Your plan should fit around your life, not make you feel guilty for having one.</p></article><article><span>02</span><h3>Progress over pressure</h3><p>Small actions repeated gently can build meaningful strength and confidence.</p></article><article><span>03</span><h3>Clear boundaries</h3><p>Health concerns belong with an appropriately qualified healthcare professional.</p></article></div></div></section>
+  <section class="section"><div class="container story-grid"><div class="story-gallery"><div class="story-photo" data-reveal><Image src={trainingImage} alt="Tilana van Tonder training on a gym mat" widths={[480, 800, 1200]} sizes="(max-width: 48rem) 92vw, 30rem" loading="lazy" /></div><div class="story-photo" data-reveal><Image src={strengthImage} alt="Tilana van Tonder strength training with dumbbells" widths={[480, 800, 1200]} sizes="(max-width: 48rem) 92vw, 30rem" loading="lazy" /></div></div><div><p class="eyebrow">Why I started</p><h2 class="heading-lg">Strength that fits real life.</h2><div class="copy"><p>Pregnancy and motherhood changed my time, my energy, and the way I related to my body. Rebuilding taught me that progress does not need to look dramatic to be meaningful.</p><p>Those lessons reach far beyond pregnancy. Consistent movement, practical nourishment, and small promises kept over time can help anyone build a stronger, healthier foundation.</p><p>This space is for women returning to movement before or after pregnancy, women who have not experienced pregnancy, and men who want a realistic approach to strength and lasting healthy habits - without pressure, perfection, or quick fixes.</p><p>Something I care about deeply: <strong>your size and your weight do not define your worth.</strong> There is no body you need to earn before you are allowed to feel strong, capable, and at home in yourself.</p><p>I am also not perfect, and I will never pretend to be. If you are looking for a trainer with no cellulite and no stretch marks, I am not the person. I am real, raw, and honest - and I would rather show up that way than sell you an image that is not true.</p><p>I am not a qualified coach (yet). What I share comes from years of personal experimentation, learning, and lived experience with strength, movement, nutrition, and healthy routines. It is general information, not medical or clinical advice. Pain, injury, pregnancy-related concerns, nutrition concerns, or other health issues should be discussed with an appropriately qualified doctor, physiotherapist, dietitian, or healthcare professional.</p></div></div></div></section>
+  <section class="section values">
+    <div class="container">
+      <p class="eyebrow">What matters here</p>
+      <h2 class="heading-lg">Kind, honest, sustainable.</h2>
+      <div class="value-grid">
+        <article data-reveal>
+          <div class="value-card-top">
+            <div class="value-icon" aria-hidden="true"><HouseHeart size={28} stroke-width={1.8} /></div>
+            <span>01</span>
+          </div>
+          <h3>Real life first</h3>
+          <p>Your plan should fit around your life, not make you feel guilty for having one.</p>
+        </article>
+        <article data-reveal>
+          <div class="value-card-top">
+            <div class="value-icon" aria-hidden="true"><Sprout size={28} stroke-width={1.8} /></div>
+            <span>02</span>
+          </div>
+          <h3>Progress over pressure</h3>
+          <p>Small actions repeated gently can build meaningful strength and confidence.</p>
+        </article>
+        <article data-reveal>
+          <div class="value-card-top">
+            <div class="value-icon" aria-hidden="true"><ShieldCheck size={28} stroke-width={1.8} /></div>
+            <span>03</span>
+          </div>
+          <h3>Clear boundaries</h3>
+          <p>Health concerns belong with an appropriately qualified healthcare professional.</p>
+        </article>
+      </div>
+    </div>
+  </section>
   <section class="about-cta"><div class="container"><h2 class="heading-lg">Find the program that meets you where you are.</h2><a class="button button-dark" href="/program">Explore all programs</a></div></section>
 </BaseLayout>
 <style>
@@ -41,13 +73,18 @@ import strengthImage from '../assets/tilana-strength-training.jpg';
   .values { background: color-mix(in srgb, var(--sand) 58%, var(--cream)); }
   .values .heading-lg { margin-bottom: 2.5rem; }
   .value-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, 1fr); }
-  .value-grid article { padding: 2rem; border-radius: var(--radius-lg); background: var(--cream); }
+  .value-grid article { padding: 2rem; border: 1px solid color-mix(in srgb, var(--caramel) 20%, transparent); border-radius: var(--radius-lg); background: var(--cream); }
+  .value-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+  .value-icon { display: grid; width: 3.5rem; height: 3.5rem; place-items: center; border: 1px solid color-mix(in srgb, var(--caramel) 30%, transparent); border-radius: 1rem; color: var(--chocolate); background: color-mix(in srgb, var(--sage) 62%, var(--cream)); transition: border-radius 260ms ease, transform 260ms ease; }
+  .value-icon :global(svg) { display: block; width: 1.75rem; height: 1.75rem; transition: transform 260ms ease; }
   .value-grid span { color: var(--caramel); font-size: 0.7rem; font-weight: 700; }
-  .value-grid h3 { margin: 2.5rem 0 0.7rem; color: var(--ink); font-family: var(--font-heading); font-size: 1.5rem; }
+  .value-grid h3 { margin: 1.8rem 0 0.7rem; color: var(--ink); font-family: var(--font-heading); font-size: 1.5rem; }
   .value-grid p { margin: 0; font-size: 0.85rem; }
+  .value-grid article:hover .value-icon { border-radius: 50%; transform: translateY(-0.2rem); }
+  .value-grid article:hover .value-icon :global(svg) { transform: scale(1.08); }
   .about-cta { padding-block: 4.5rem; background: var(--terracotta); text-align: center; }
   .about-cta h2 { margin-bottom: 1.7rem; color: var(--color-on-primary); }
-  @media (max-width: 48rem) { .story-grid, .value-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 48rem) { .story-grid, .value-grid { grid-template-columns: 1fr; } .value-grid article { padding: 1.5rem; } }
   @media (prefers-reduced-motion: reduce) {
     .story-photo img { transition: none; }
     .story-photo:hover img { transform: none; }

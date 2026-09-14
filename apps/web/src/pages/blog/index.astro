@@ -7,7 +7,7 @@ const getPostImage = (post: (typeof posts)[number]) =>
   post.data.image ?? (post.id === 'welcome-a-little-about-me' ? '/tilana-blog-welcome.jpg' : undefined);
 ---
 <BaseLayout title="Strength & Healthy Habits Blog" description="Practical strength-training guidance from Tilana van Tonder for building confidence, sound movement patterns, and sustainable progress.">
-  <PageHero eyebrow="The blog" title="Useful notes for" script="real life." intro="Simple, encouraging writing about strength, movement, and sustainable progress—without miracle claims." />
+  <PageHero eyebrow="The blog" title="Useful notes for" script="real life." intro="Simple, encouraging writing about strength, movement, and sustainable progress - without miracle claims." />
   <section class="section"><div class="container post-grid">{posts.map((post) => <article><div class="art">{getPostImage(post) && <img src={getPostImage(post)} alt={post.data.imageAlt ?? 'Tilana van Tonder smiling in a white shirt'} width={post.data.imageWidth ?? 944} height={post.data.imageHeight ?? 1104} loading="lazy" decoding="async" />}</div><div class="copy"><span>{post.data.category} · {post.data.readingTime}</span><h2>{post.data.title}</h2><p>{post.data.description}</p><a href={`/blog/${post.id}`}>Read article →</a></div></article>)}</div></section>
 </BaseLayout>
 <style>

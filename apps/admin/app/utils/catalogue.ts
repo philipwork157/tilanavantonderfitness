@@ -35,6 +35,13 @@ export function catalogueStatusColor(
   return 'neutral';
 }
 
+export function shouldMoveIncompleteProgramToDraft(
+  status: AdminCatalogueProgramStatus | null | undefined,
+  publicationReady: boolean | null | undefined,
+): boolean {
+  return status === 'published' && publicationReady === false;
+}
+
 export function formatCatalogueMoney(cents: number): string {
   return new Intl.NumberFormat('en-ZA', {
     style: 'currency',

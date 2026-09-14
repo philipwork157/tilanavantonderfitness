@@ -228,6 +228,9 @@ Keep changes compatible with `pnpm check` and the production build for every
 affected application. Preserve the existing visual system, accessibility,
 responsive behavior, and reduced-motion support.
 
+Avoid em dashes in user-facing website copy. Prefer a full stop, comma,
+parentheses, or a standard hyphen (` - `) when punctuation is needed.
+
 Deployment behavior and environment variables are documented in
 `docs/deployment.md`.
 

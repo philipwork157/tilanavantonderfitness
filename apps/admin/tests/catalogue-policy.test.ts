@@ -9,6 +9,7 @@ import {
   getProgramVolumeAuditEvents,
   isCheckoutPriceCurrent,
   publicObjectUrl,
+  requiresPurchasedVolumeSlugRedirect,
   verifyUploadedObject,
 } from '../server/services/catalogue-policy.ts';
 
@@ -57,6 +58,24 @@ describe('catalogue checkout price policy', () => {
   it('accepts the current database price and rejects a stale browser price', () => {
     assert.equal(isCheckoutPriceCurrent(39_900, 39_900), true);
     assert.equal(isCheckoutPriceCurrent(39_900, 44_900), false);
+  });
+});
+
+describe('catalogue checkout slug policy', () => {
+  it('allows a purchased legacy volume to receive its first checkout slug', () => {
+    assert.equal(requiresPurchasedVolumeSlugRedirect(null, 'beginner-volume-1', true), false);
+  });
+
+  it('requires redirects before changing or removing an established purchased slug', () => {
+    assert.equal(
+      requiresPurchasedVolumeSlugRedirect('beginner-volume-1', 'beginner-volume-one', true),
+      true,
+    );
+    assert.equal(requiresPurchasedVolumeSlugRedirect('beginner-volume-1', null, true), true);
+    assert.equal(
+      requiresPurchasedVolumeSlugRedirect('beginner-volume-1', 'beginner-volume-one', false),
+      false,
+    );
   });
 });
 

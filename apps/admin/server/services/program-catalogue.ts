@@ -24,6 +24,7 @@ import {
   getProgramVolumeAuditEvents,
   getVolumePublicationIssues,
   publicObjectUrl,
+  requiresPurchasedVolumeSlugRedirect,
   type CataloguePublicationCandidate,
   type CataloguePublicationIssue,
 } from './catalogue-policy';
@@ -461,19 +462,20 @@ export async function updateProgramVolume(
     if (!existing) throw new CatalogueNotFoundError('Program volume not found.');
 
     if (input.slug !== undefined && input.slug !== existing.slug) {
+      const nextSlug = optionalText(input.slug) ?? null;
       const [purchase] = await transaction
         .select({ id: orderItems.id })
         .from(orderItems)
         .where(eq(orderItems.programVolumeId, volumeId))
         .limit(1);
-      if (purchase) {
+      if (requiresPurchasedVolumeSlugRedirect(existing.slug, nextSlug, Boolean(purchase))) {
         throw new CatalogueConflictError('A purchased volume slug cannot be changed without a redirect strategy.');
       }
-      if (input.slug) {
+      if (nextSlug) {
         const [duplicate] = await transaction
           .select({ id: programVolumes.id })
           .from(programVolumes)
-          .where(and(eq(programVolumes.slug, input.slug), ne(programVolumes.id, volumeId)))
+          .where(and(eq(programVolumes.slug, nextSlug), ne(programVolumes.id, volumeId)))
           .limit(1);
         if (duplicate) throw new CatalogueConflictError('A volume already uses this slug.');
       }

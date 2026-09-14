@@ -10,7 +10,7 @@ const checkoutApiUrl = import.meta.env.PUBLIC_CHECKOUT_API_URL ?? 'http://127.0.
 const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 ---
 
-<BaseLayout title="Secure program checkout" description="Buy a Tilana van Tonder program securely through Paystack.">
+<BaseLayout title="Secure program checkout" description="Buy a Tilana van Tonder program securely through Paystack." showNewsletter={false}>
   <PageHero eyebrow="Secure checkout" title="Start your" script="next chapter." intro="Choose a program volume, pay once, and access it through your customer account." />
 
   <section

@@ -1,10 +1,66 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { Dumbbell, Footprints, PersonStanding, Sprout } from '@lucide/astro';
 import { Image } from 'astro:assets';
 import heroImage from '../assets/tilana-home.jpg';
 ---
 <BaseLayout title="Strength, Movement & Healthy Habits">
-  <section class="hero"><div class="container hero-grid"><div class="hero-copy"><p class="eyebrow">Realistic strength for every body</p><h1 class="display"><span class="hero-line">Move better.</span><span class="hero-line">Feel stronger.</span><span class="hero-line script">Live healthier.</span></h1><p class="lede">Whether you are a woman or a man, lasting strength is built through purposeful movement and maintainable systems that work in real life. There is no perfection to chase and no quick fix to sell—only practical habits, steady progress, and a lifelong investment in moving well, feeling capable, and living with greater confidence.</p><div class="actions"><a class="button button-primary" href="/program">Explore the programs</a><a class="button button-secondary" href="/about">Meet Tilana</a></div></div><div class="hero-visual"><Image src={heroImage} alt="Tilana van Tonder smiling with her arms crossed" widths={[432, 768, 1023]} sizes="(max-width: 48rem) 92vw, 27rem" loading="eager" fetchpriority="high" /></div></div></section>
+  <section class="hero"><div class="container hero-grid"><div class="hero-copy"><p class="eyebrow">Realistic strength for every body</p><h1 class="display"><span class="hero-line">Move better.</span><span class="hero-line">Feel stronger.</span><span class="hero-line script">Live healthier.</span></h1><p class="lede">Whether you are a woman or a man, lasting strength is built through purposeful movement and maintainable systems that work in real life. There is no perfection to chase and no quick fix to sell - only practical habits, steady progress, and a lifelong investment in moving well, feeling capable, and living with greater confidence.</p><div class="actions"><a class="button button-primary" href="/program">Explore the programs</a><a class="button button-secondary" href="/about">Meet Tilana</a></div></div><div class="hero-visual"><Image src={heroImage} alt="Tilana van Tonder smiling with her arms crossed" widths={[432, 768, 1023]} sizes="(max-width: 48rem) 92vw, 27rem" loading="eager" fetchpriority="high" /></div></div></section>
+
+  <section class="support section" aria-labelledby="support-title">
+    <div class="container support-inner">
+      <header class="support-intro" data-reveal>
+        <div>
+          <p class="eyebrow">How I can help</p>
+          <h2 id="support-title" class="heading-xl">Support for the way <span class="script">you want to move.</span></h2>
+        </div>
+        <p class="support-lede">Personal guidance that meets you where you are and helps you build practical, lasting confidence.</p>
+      </header>
+
+      <div class="support-grid">
+        <article class="card support-card" data-tone="sage" data-reveal>
+          <div class="support-icon" aria-hidden="true">
+            <PersonStanding size={28} stroke-width={1.8} />
+          </div>
+          <div class="support-copy">
+            <h3>Pelvic Floor & Core</h3>
+            <p>Build confidence through pelvic-floor-aware movement, core connection, and practical strength.</p>
+          </div>
+        </article>
+
+        <article class="card support-card" data-tone="terracotta" data-reveal>
+          <div class="support-icon" aria-hidden="true">
+            <Dumbbell size={28} stroke-width={1.8} />
+          </div>
+          <div class="support-copy">
+            <h3>Strength Training</h3>
+            <p>Learn good technique and build full-body strength through progressive training suited to your level.</p>
+          </div>
+        </article>
+
+        <article class="card support-card" data-tone="caramel" data-reveal>
+          <div class="support-icon" aria-hidden="true">
+            <Sprout size={28} stroke-width={1.8} />
+          </div>
+          <div class="support-copy">
+            <h3>Sustainable Weight Loss</h3>
+            <p>Develop realistic movement and lifestyle habits that support lasting progress without extremes or quick fixes.</p>
+          </div>
+        </article>
+
+        <article class="card support-card" data-tone="sand" data-reveal>
+          <div class="support-icon" aria-hidden="true">
+            <Footprints size={28} stroke-width={1.8} />
+          </div>
+          <div class="support-copy">
+            <h3>Running Support</h3>
+            <p>Improve your strength, consistency, and confidence for running, whether you are starting, returning, or working towards a goal.</p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
   <section class="simple-cta"><div class="container" data-reveal><h2 class="heading-xl">Want to train one-on-one?</h2><p class="cta-copy">Please contact me to discuss private training.</p><a class="button button-dark" href="/contact?interest=one-on-one">Get in touch</a></div></section>
 </BaseLayout>
 <style>
@@ -21,6 +77,22 @@ import heroImage from '../assets/tilana-home.jpg';
   .hero-visual { width: min(100%, 27rem); overflow: hidden; justify-self: center; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--sand); box-shadow: var(--shadow-md); animation: visual-in 900ms 160ms cubic-bezier(0.22, 1, 0.36, 1) both; }
   .hero-visual img { display: block; width: 100%; height: auto; }
   .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+  .support { border-block: 1px solid color-mix(in srgb, var(--chocolate) 14%, transparent); background: var(--sage); }
+  .support-intro { display: grid; align-items: end; gap: clamp(1.5rem, 6vw, 5rem); margin-bottom: clamp(2.25rem, 5vw, 3.75rem); grid-template-columns: minmax(0, 1.25fr) minmax(17rem, 0.75fr); }
+  .support-intro .heading-xl { max-width: 45rem; }
+  .support-lede { max-width: 31rem; margin: 0 0 0.35rem; color: var(--chocolate); font-size: clamp(1rem, 1.4vw, 1.1rem); line-height: 1.75; }
+  .support-grid { display: grid; gap: clamp(1rem, 2vw, 1.5rem); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .support-card { display: grid; min-height: 0; align-items: start; gap: clamp(1.1rem, 2.4vw, 1.6rem); grid-template-columns: auto minmax(0, 1fr); padding: clamp(1.5rem, 3vw, 2.15rem); background: color-mix(in srgb, var(--white) 83%, var(--cream)); }
+  .support-card[data-tone='sage'] { --card-accent: var(--chocolate); --icon-bg: color-mix(in srgb, var(--sage) 62%, var(--cream)); }
+  .support-card[data-tone='terracotta'] { --card-accent: var(--terracotta); --icon-bg: color-mix(in srgb, var(--terracotta) 34%, var(--cream)); }
+  .support-card[data-tone='caramel'] { --card-accent: var(--caramel); --icon-bg: color-mix(in srgb, var(--caramel) 24%, var(--cream)); }
+  .support-card[data-tone='sand'] { --card-accent: var(--chocolate); --icon-bg: color-mix(in srgb, var(--sand) 68%, var(--cream)); }
+  .support-icon { display: grid; width: 3.6rem; height: 3.6rem; flex: none; overflow: hidden; place-items: center; border: 1px solid color-mix(in srgb, var(--card-accent) 28%, transparent); border-radius: 1.1rem; color: var(--card-accent); background: var(--icon-bg); transition: border-radius 260ms ease, transform 260ms ease; }
+  .support-icon :global(svg) { display: block; width: 1.75rem !important; max-width: 1.75rem; height: 1.75rem !important; max-height: 1.75rem; transition: transform 260ms ease; }
+  .support-card:hover .support-icon { border-radius: 50%; transform: translateY(-0.2rem); }
+  .support-card:hover .support-icon :global(svg) { transform: scale(1.08); }
+  .support-copy h3 { margin: 0 0 0.55rem; color: var(--ink); font-family: var(--font-heading); font-size: clamp(1.4rem, 2vw, 1.75rem); line-height: 1.15; }
+  .support-copy p { margin: 0; color: var(--chocolate); font-size: 0.93rem; line-height: 1.7; }
   .simple-cta { padding-block: var(--section-space); text-align: center; background: var(--terracotta); }
   .simple-cta :is(.heading-xl, .cta-copy) { color: var(--color-on-primary); }
   .simple-cta .heading-xl { margin-bottom: 0.75rem; }
@@ -31,9 +103,14 @@ import heroImage from '../assets/tilana-home.jpg';
     .hero { min-height: auto; padding-block: 3.5rem 4.5rem; }
     .hero-grid { grid-template-columns: 1fr; }
     .hero-line { white-space: normal; }
+    .support-intro { align-items: start; gap: 1.25rem; grid-template-columns: 1fr; }
+  }
+  @media (max-width: 42rem) {
+    .support-grid { grid-template-columns: 1fr; }
   }
   @media (max-width: 30rem) {
     .actions .button { width: 100%; }
     .hero-visual { width: 100%; }
+    .support-card { grid-template-columns: 1fr; }
   }
 </style>

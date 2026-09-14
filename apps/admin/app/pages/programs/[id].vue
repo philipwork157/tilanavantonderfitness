@@ -24,6 +24,7 @@ import {
   formatCatalogueFileSize,
   formatCatalogueMoney,
   normaliseCatalogueAccent,
+  shouldMoveIncompleteProgramToDraft,
   slugifyCatalogueValue,
   uploadCatalogueObject,
 } from '../../utils/catalogue';
@@ -133,6 +134,12 @@ function clearFeedback() {
   actionNotice.value = '';
 }
 
+function publicationIssueTarget(code: string): string {
+  if (code === 'missing_cover') return '#program-cover';
+  if (code === 'missing_published_volume' || code.startsWith('volume_')) return '#program-volumes';
+  return '#program-information';
+}
+
 async function refreshProgram() {
   await Promise.all([refresh(), refreshPublication()]);
 }
@@ -154,10 +161,22 @@ async function saveProgram() {
   }
 
   savingProgram.value = true;
+  const moveToDraft = shouldMoveIncompleteProgramToDraft(
+    program.value?.status,
+    publicationData.value?.checklist.ready,
+  );
   try {
+    if (moveToDraft) {
+      await $fetch(`/api/admin/programs/${programId}/status`, {
+        method: 'PATCH',
+        body: { status: 'draft' },
+      });
+    }
     await $fetch(`/api/admin/programs/${programId}`, { method: 'PATCH', body: parsed.data });
     await refreshProgram();
-    actionNotice.value = 'Program details saved.';
+    actionNotice.value = moveToDraft
+      ? 'Program details saved. This incomplete program was moved to draft until its publication checklist is complete.'
+      : 'Program details saved.';
   } catch (value) {
     actionError.value = catalogueErrorMessage(value, 'The program details could not be saved.');
   } finally {
@@ -576,12 +595,48 @@ useSeoMeta({
         <template #actions><UButton label="Dismiss" color="error" variant="ghost" @click="actionError = ''" /></template>
       </UAlert>
 
+      <section
+        class="management-card publication-manager"
+        :class="{ ready: readyForPublication }"
+        aria-live="polite"
+      >
+        <div class="publication-header">
+          <div class="publication-copy">
+            <span :class="{ ready: readyForPublication }"><UIcon :name="readyForPublication ? 'i-lucide-badge-check' : 'i-lucide-list-checks'" /></span>
+            <div>
+              <p class="eyebrow">Publication checklist</p>
+              <h2>{{ readyForPublication ? 'Ready to publish' : 'Complete your program' }}</h2>
+              <p>{{ readyForPublication ? 'The public catalogue has everything it needs.' : 'Select an item below to jump directly to the section that needs attention.' }}</p>
+            </div>
+          </div>
+          <UBadge
+            v-if="publicationStatus !== 'pending' || publicationData"
+            class="publication-state"
+            :color="readyForPublication ? 'success' : 'error'"
+            variant="subtle"
+          >
+            {{ readyForPublication ? 'All requirements complete' : `${publicationData?.checklist.issues.length ?? 0} remaining` }}
+          </UBadge>
+        </div>
+        <USkeleton v-if="publicationStatus === 'pending' && !publicationData" class="h-20 rounded-2xl" />
+        <ul v-else-if="publicationData?.checklist.issues.length" class="issue-list">
+          <li v-for="issue in publicationData.checklist.issues" :key="`${issue.code}-${issue.volumeId ?? 'program'}`">
+            <a :href="publicationIssueTarget(issue.code)">
+              <UIcon name="i-lucide-circle-alert" />
+              <span>{{ issue.message }}</span>
+              <UIcon name="i-lucide-arrow-down-right" />
+            </a>
+          </li>
+        </ul>
+        <div v-else class="ready-note"><UIcon name="i-lucide-circle-check-big" /><span>Cover, marketing copy, published volume, price and private PDF are ready.</span></div>
+      </section>
+
       <section class="workspace-grid">
-        <UCard class="editor-card" :ui="{ body: 'p-5 sm:p-7' }">
+        <UCard id="program-information" class="editor-card" :ui="{ body: 'p-5 sm:p-7' }">
           <form @submit.prevent="saveProgram">
             <div class="section-heading">
               <div><p class="eyebrow">Marketing details</p><h2>Program information</h2></div>
-              <span>Saved details</span>
+              <span>Public card content</span>
             </div>
             <div class="field-grid">
               <UFormField label="Program name" required><UInput v-model="programForm.name" size="lg" class="w-full" /></UFormField>
@@ -622,7 +677,7 @@ useSeoMeta({
         </aside>
       </section>
 
-      <section class="management-card cover-manager">
+      <section id="program-cover" class="management-card cover-manager">
         <div class="section-heading">
           <div><p class="eyebrow">Public media</p><h2>Program cover</h2><p>JPEG, PNG, WebP or AVIF · maximum 10 MB.</p></div>
           <div class="section-actions">
@@ -711,21 +766,6 @@ useSeoMeta({
         <div v-else class="empty-manager"><span><UIcon name="i-lucide-layers-3" /></span><div><h3>No volumes yet</h3><p>Add Volume 1 now. You can return later to add Volume 2 and future releases.</p></div></div>
       </section>
 
-      <section class="management-card publication-manager">
-        <div class="publication-copy">
-          <span :class="{ ready: readyForPublication }"><UIcon :name="readyForPublication ? 'i-lucide-badge-check' : 'i-lucide-list-checks'" /></span>
-          <div>
-            <p class="eyebrow">Publication checklist</p>
-            <h2>{{ readyForPublication ? 'Ready to publish' : 'A few details still need attention' }}</h2>
-            <p>{{ readyForPublication ? 'The public catalogue has everything it needs.' : 'Complete the items below before publishing.' }}</p>
-          </div>
-        </div>
-        <USkeleton v-if="publicationStatus === 'pending' && !publicationData" class="h-28 rounded-2xl" />
-        <ul v-else-if="publicationData?.checklist.issues.length" class="issue-list">
-          <li v-for="issue in publicationData.checklist.issues" :key="`${issue.code}-${issue.volumeId ?? 'program'}`"><UIcon name="i-lucide-circle-alert" /><span>{{ issue.message }}</span></li>
-        </ul>
-        <div v-else class="ready-note"><UIcon name="i-lucide-circle-check-big" /><span>Cover, marketing copy, published volume, price and private PDF are ready.</span></div>
-      </section>
     </template>
 
     <UModal v-model:open="showVolumeForm" :title="editingVolumeId ? 'Edit volume' : 'Add volume'" :dismissible="!savingVolume">
@@ -784,6 +824,7 @@ useSeoMeta({
 .program-heading dd { margin: 0.2rem 0 0; color: var(--ink); font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; }
 .workspace-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(19rem, 0.7fr); gap: 1rem; align-items: start; }
 .editor-card, .management-card, .preview-card { border: 1px solid var(--color-border); border-radius: 1.8rem; background: color-mix(in srgb, var(--white) 82%, var(--cream)); box-shadow: var(--shadow-md); }
+.editor-card, .cover-manager, .volume-manager { scroll-margin-top: 6rem; }
 .section-heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
 .section-heading h2, .publication-copy h2 { margin: 0; color: var(--ink); font-family: var(--font-heading); font-size: clamp(1.65rem, 3vw, 2.25rem); line-height: 1.05; }
 .section-heading p:last-child, .publication-copy p:last-child { max-width: 46rem; margin: 0.45rem 0 0; font-size: 0.68rem; line-height: 1.55; }
@@ -847,14 +888,22 @@ useSeoMeta({
 .empty-file { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; padding: 0.75rem; border-radius: 0.9rem; color: var(--ui-text-muted); background: var(--ui-bg-muted); font-size: 0.61rem; }
 .upload-stage { display: flex; align-items: center; gap: 0.45rem; margin: 0.75rem 0 0; color: var(--caramel); font-size: 0.63rem; font-weight: 700; }
 .spin { animation: spin 900ms linear infinite; }
-.publication-manager { display: grid; grid-template-columns: minmax(18rem, 0.72fr) minmax(0, 1.28fr); gap: 1.2rem; align-items: center; }
+.publication-manager { display: grid; gap: 1rem; overflow: hidden; border-color: color-mix(in srgb, var(--terracotta) 55%, var(--color-border)); background: linear-gradient(115deg, color-mix(in srgb, var(--terracotta) 20%, var(--white)), color-mix(in srgb, var(--white) 86%, var(--cream))); box-shadow: 0 1rem 2.5rem color-mix(in srgb, var(--chocolate) 12%, transparent); }
+.publication-manager.ready { border-color: color-mix(in srgb, var(--sage) 78%, var(--color-border)); background: linear-gradient(115deg, color-mix(in srgb, var(--sage) 52%, var(--white)), color-mix(in srgb, var(--white) 86%, var(--cream))); }
+.publication-header { display: flex; align-items: center; justify-content: space-between; gap: 1.25rem; }
 .publication-copy { display: flex; align-items: center; gap: 1rem; }
 .publication-copy > span { display: grid; width: 3.5rem; aspect-ratio: 1; flex: none; place-items: center; border-radius: 1.1rem; color: var(--ink); background: var(--terracotta); font-size: 1.3rem; }
 .publication-copy > span.ready { background: var(--sage); }
-.issue-list { display: grid; gap: 0.45rem; margin: 0; padding: 0; list-style: none; }
-.issue-list li, .ready-note { display: flex; align-items: center; gap: 0.55rem; padding: 0.7rem; border-radius: 0.9rem; font-size: 0.62rem; }
-.issue-list li { color: var(--color-error-700); background: var(--color-error-50); }
-.ready-note { color: var(--ink); background: color-mix(in srgb, var(--sage) 58%, transparent); }
+.publication-state { flex: none; }
+.issue-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; margin: 0; padding: 0; list-style: none; }
+.issue-list a, .ready-note { display: flex; align-items: center; gap: 0.55rem; min-height: 2.7rem; padding: 0.72rem 0.8rem; border-radius: 0.9rem; font-size: 0.64rem; }
+.issue-list a { color: var(--color-error-700); background: var(--color-error-50); text-decoration: none; transition: background-color 180ms ease, transform 180ms ease; }
+.issue-list a > :first-child { flex: none; }
+.issue-list a > span { flex: 1; }
+.issue-list a > :last-child { flex: none; opacity: 0.7; }
+.issue-list a:hover { background: color-mix(in srgb, var(--color-error-50) 72%, var(--terracotta)); transform: translateY(-1px); }
+.issue-list a:focus-visible { outline: 2px solid var(--caramel); outline-offset: 2px; }
+.ready-note { color: var(--ink); background: color-mix(in srgb, var(--sage) 68%, transparent); }
 .modal-form { display: grid; gap: 1rem; }
 .modal-form .field-grid { margin-top: 0; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 0.65rem; }
@@ -863,7 +912,7 @@ useSeoMeta({
 .confirmation-body p { max-width: 34rem; margin: 1rem 0 1.2rem; font-size: 0.72rem; line-height: 1.65; }
 .confirmation-body > div { display: flex; gap: 0.65rem; }
 @keyframes spin { to { transform: rotate(360deg); } }
-@media (max-width: 72rem) { .workspace-grid { grid-template-columns: 1fr; } .preview-card { position: static; } .publication-manager { grid-template-columns: 1fr; } }
+@media (max-width: 72rem) { .workspace-grid { grid-template-columns: 1fr; } .preview-card { position: static; } }
 @media (max-width: 52rem) { .program-heading { align-items: stretch; flex-direction: column; } .program-heading dl { grid-template-columns: repeat(3, 1fr); } .cover-details { grid-template-columns: 1fr; } .volume-card dl { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 42rem) {
   .page-toolbar { align-items: stretch; flex-direction: column; }
@@ -876,6 +925,9 @@ useSeoMeta({
   .file-row { grid-template-columns: auto minmax(0, 1fr); }
   .file-row > :nth-child(3), .file-row > :nth-child(4) { grid-column: 2; justify-self: start; }
   .section-heading { align-items: stretch; flex-direction: column; }
+  .publication-header { align-items: flex-start; flex-direction: column; }
+  .publication-state { align-self: flex-start; }
+  .issue-list { grid-template-columns: 1fr; }
   .volume-shortcut { grid-template-columns: auto minmax(0, 1fr); }
   .volume-shortcut > :last-child { grid-column: 1 / -1; justify-content: center; }
 }

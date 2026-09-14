@@ -4,6 +4,7 @@ import {
   catalogueErrorMessage,
   formatCatalogueFileSize,
   normaliseCatalogueAccent,
+  shouldMoveIncompleteProgramToDraft,
   slugifyCatalogueValue,
 } from '../app/utils/catalogue.ts';
 
@@ -35,5 +36,13 @@ describe('catalogue UI helpers', () => {
     assert.equal(normaliseCatalogueAccent('reconnect'), 'terracotta');
     assert.equal(normaliseCatalogueAccent('sage'), 'sage');
     assert.equal(normaliseCatalogueAccent(null), 'terracotta');
+  });
+
+  it('moves only known incomplete published programs back to draft before editing', () => {
+    assert.equal(shouldMoveIncompleteProgramToDraft('published', false), true);
+    assert.equal(shouldMoveIncompleteProgramToDraft('published', true), false);
+    assert.equal(shouldMoveIncompleteProgramToDraft('published', undefined), false);
+    assert.equal(shouldMoveIncompleteProgramToDraft('draft', false), false);
+    assert.equal(shouldMoveIncompleteProgramToDraft('archived', false), false);
   });
 });
