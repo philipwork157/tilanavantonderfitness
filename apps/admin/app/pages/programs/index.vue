@@ -210,7 +210,7 @@ useSeoMeta({ title: 'Programs | Tilana Admin', robots: 'noindex, nofollow' });
           </div>
           <dl>
             <div><dt>Volumes</dt><dd>{{ program.volumes.length }}</dd></div>
-            <div><dt>Sales</dt><dd>{{ program.salesCount }}</dd></div>
+            <div><dt>Paid customers</dt><dd>{{ program.buyerCount }}</dd></div>
             <div><dt>Access</dt><dd>{{ program.accessCount }}</dd></div>
           </dl>
           <UButton

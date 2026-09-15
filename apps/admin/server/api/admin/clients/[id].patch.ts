@@ -5,11 +5,11 @@ import {
   ProgramVolumeUnavailableError,
   updateManualClient,
 } from '../../../services/client-management';
-import { requireAdmin } from '../../../utils/admin-auth';
+import { requireAdminMutation } from '../../../utils/admin-mutation';
 import { parseDatabaseId } from '../../../utils/database-id';
 
 export default defineEventHandler(async (event) => {
-  const session = await requireAdmin(event);
+  const session = await requireAdminMutation(event);
   const clientId = parseDatabaseId(getRouterParam(event, 'id'));
   if (clientId === null) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid client identifier.' });

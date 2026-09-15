@@ -1,9 +1,9 @@
 import { newsletterCampaignInputSchema } from '@tilana/contracts/newsletter';
 import { saveNewsletterCampaign } from '../../../services/newsletter-campaigns';
-import { requireAdmin } from '../../../utils/admin-auth';
+import { requireAdminMutation } from '../../../utils/admin-mutation';
 
 export default defineEventHandler(async (event) => {
-  const session = await requireAdmin(event);
+  const session = await requireAdminMutation(event);
   const parsed = newsletterCampaignInputSchema.safeParse(await readBody(event));
   if (!parsed.success) throw createError({ statusCode: 400, statusMessage: 'Please check the campaign details.' });
   try {

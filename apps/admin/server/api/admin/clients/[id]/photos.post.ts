@@ -4,7 +4,7 @@ import {
   ClientNotFoundError,
   getCheckinForClient,
 } from '../../../../services/coaching';
-import { requireAdmin } from '../../../../utils/admin-auth';
+import { requireAdminMutation } from '../../../../utils/admin-mutation';
 import { parseDatabaseId } from '../../../../utils/database-id';
 import { createSignedPhotoUrl, uploadClientPhoto } from '../../../../utils/supabase-storage';
 
@@ -17,7 +17,7 @@ const EXTENSION: Record<string, string> = {
 };
 
 export default defineEventHandler(async (event) => {
-  await requireAdmin(event);
+  await requireAdminMutation(event);
   const clientId = parseDatabaseId(getRouterParam(event, 'id'));
   if (clientId === null) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid client identifier.' });

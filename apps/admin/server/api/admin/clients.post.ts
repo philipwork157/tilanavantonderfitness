@@ -4,10 +4,10 @@ import {
   ProgramVolumeUnavailableError,
   createManualClient,
 } from '../../services/client-management';
-import { requireAdmin } from '../../utils/admin-auth';
+import { requireAdminMutation } from '../../utils/admin-mutation';
 
 export default defineEventHandler(async (event) => {
-  const session = await requireAdmin(event);
+  const session = await requireAdminMutation(event);
   const parsed = adminClientCreateRequestSchema.safeParse(await readBody(event));
 
   if (!parsed.success) {

@@ -1,9 +1,9 @@
 import { newsletterCampaignIdSchema } from '@tilana/contracts/newsletter';
 import { sendNewsletterCampaign } from '../../../../../services/newsletter-campaigns';
-import { requireAdmin } from '../../../../../utils/admin-auth';
+import { requireAdminMutation } from '../../../../../utils/admin-mutation';
 
 export default defineEventHandler(async (event) => {
-  await requireAdmin(event);
+  await requireAdminMutation(event);
   const id = newsletterCampaignIdSchema.safeParse(getRouterParam(event, 'id'));
   if (!id.success) throw createError({ statusCode: 400, statusMessage: 'Invalid campaign.' });
   try {

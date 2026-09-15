@@ -291,10 +291,21 @@ export async function initializePaystackBasketCheckout(input: BasketCheckoutRequ
     return { authorizationUrl: response.data.authorization_url, reference: checkout.reference };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Paystack initialization failed.';
-    await database
-      .update(payments)
-      .set({ status: 'failed', providerStatus: 'initialization_failed', failureMessage: message, updatedAt: new Date() })
-      .where(eq(payments.id, checkout.paymentId));
+    await database.transaction(async (transaction) => {
+      const now = new Date();
+      const [failedPayment] = await transaction
+        .update(payments)
+        .set({ status: 'failed', providerStatus: 'initialization_failed', failureMessage: message, updatedAt: now })
+        .where(and(eq(payments.id, checkout.paymentId), eq(payments.status, 'pending')))
+        .returning({ id: payments.id });
+
+      if (failedPayment) {
+        await transaction
+          .update(orders)
+          .set({ status: 'cancelled', updatedAt: now })
+          .where(and(eq(orders.id, checkout.orderId), eq(orders.status, 'pending')));
+      }
+    });
     throw createError({ statusCode: 502, statusMessage: 'Payment could not be started. Please try again.' });
   }
 }
@@ -378,7 +389,7 @@ async function ensureAccessForItem(
   if (!item.programVolumeId) return;
 
   const [activeAccess] = await transaction
-    .select({ id: programAccess.id })
+    .select({ id: programAccess.id, expiresAt: programAccess.expiresAt })
     .from(programAccess)
     .where(and(
       eq(programAccess.clientId, item.clientId),
@@ -386,7 +397,13 @@ async function ensureAccessForItem(
       eq(programAccess.status, 'active'),
     ))
     .limit(1);
-  if (activeAccess) return;
+  if (activeAccess && (!activeAccess.expiresAt || activeAccess.expiresAt > new Date())) return;
+  if (activeAccess) {
+    await transaction
+      .update(programAccess)
+      .set({ status: 'expired', updatedAt: new Date() })
+      .where(eq(programAccess.id, activeAccess.id));
+  }
 
   const [existingAccess] = await transaction
     .select({ id: programAccess.id })
@@ -397,7 +414,7 @@ async function ensureAccessForItem(
   if (existingAccess) {
     await transaction
       .update(programAccess)
-      .set({ status: 'active', revokedAt: null, updatedAt: new Date() })
+      .set({ status: 'active', expiresAt: null, revokedAt: null, updatedAt: new Date() })
       .where(eq(programAccess.id, existingAccess.id));
     return;
   }
@@ -514,7 +531,7 @@ async function processChargeSuccess(
     || providerStatus !== 'success'
     || amount !== payment.amountCents
     || currency !== payment.currency
-    || (environment !== null && environment !== payment.environment)
+    || environment !== payment.environment
   ) {
     await markPaymentEvent(
       transaction,
@@ -525,8 +542,8 @@ async function processChargeSuccess(
     return;
   }
 
-  if (payment.status === 'refunded' || payment.status === 'reversed') {
-    await markPaymentEvent(transaction, eventId, 'ignored', 'The payment was already fully refunded or reversed.');
+  if (['succeeded', 'partially_refunded', 'refunded', 'reversed'].includes(payment.status)) {
+    await markPaymentEvent(transaction, eventId, 'ignored', 'The successful payment was already processed.');
     return;
   }
 
@@ -578,7 +595,7 @@ async function processRefundEvent(
     || !amount
     || amount > payment.amountCents
     || currency !== payment.currency
-    || (environment !== null && environment !== payment.environment)
+    || environment !== payment.environment
     || !['succeeded', 'partially_refunded', 'refunded', 'reversed'].includes(payment.status)
   ) {
     await markPaymentEvent(
@@ -856,7 +873,7 @@ export async function initiatePaystackRefund(
     || !validStatuses.includes(providerStatus as PaymentRefundStatus)
     || responseAmount !== input.amountCents
     || responseCurrency !== reservation.payment.currency
-    || (responseEnvironment !== null && responseEnvironment !== reservation.payment.environment)
+    || responseEnvironment !== reservation.payment.environment
   ) {
     await updateRequestedRefundStatus(reservation.refundId, 'needs-attention', 'refund_response_invalid');
     throw new PaystackRefundError(
@@ -1042,7 +1059,12 @@ export async function verifyPaystackCheckout(reference: string): Promise<void> {
       })
       .where(eq(payments.id, payment.id));
 
-    if (terminalStatus === 'reversed') {
+    if (terminalStatus === 'failed' || terminalStatus === 'abandoned') {
+      await transaction
+        .update(orders)
+        .set({ status: 'cancelled', updatedAt: now })
+        .where(and(eq(orders.id, payment.orderId), eq(orders.status, 'pending')));
+    } else if (terminalStatus === 'reversed') {
       await transaction
         .update(orders)
         .set({ status: 'refunded', updatedAt: now })

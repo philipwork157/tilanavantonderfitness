@@ -49,6 +49,7 @@ export interface AdminCatalogueVolume {
   files: AdminCatalogueFile[];
   salesCount: number;
   grossSalesCents: number;
+  buyerCount: number;
   accessCount: number;
 }
 
@@ -69,6 +70,7 @@ export interface AdminCatalogueProgram {
   volumes: AdminCatalogueVolume[];
   salesCount: number;
   grossSalesCents: number;
+  buyerCount: number;
   accessCount: number;
 }
 

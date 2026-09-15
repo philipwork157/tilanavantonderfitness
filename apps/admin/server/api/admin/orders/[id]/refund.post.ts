@@ -1,12 +1,10 @@
 import { adminPaymentRefundRequestSchema } from '@tilana/contracts/payments';
 import { initiatePaystackRefund, PaystackRefundError } from '../../../../services/paystack';
-import { requireAdmin } from '../../../../utils/admin-auth';
-import { enforceSameOrigin } from '../../../../utils/auth-security';
+import { requireAdminMutation } from '../../../../utils/admin-mutation';
 import { parseDatabaseId } from '../../../../utils/database-id';
 
 export default defineEventHandler(async (event) => {
-  enforceSameOrigin(event);
-  const session = await requireAdmin(event);
+  const session = await requireAdminMutation(event);
   const orderId = parseDatabaseId(getRouterParam(event, 'id'));
   if (orderId === null) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid order identifier.' });

@@ -12,6 +12,7 @@ import {
 } from '@tilana/db/schema';
 import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { getDatabase } from '../utils/database';
+import { shouldGrantManualProgramAccess } from './client-access-policy';
 
 export class ClientEmailExistsError extends Error {
   constructor() {
@@ -66,6 +67,7 @@ async function insertManualOrderItems(
   clientId: number,
   orderId: number,
   administratorUserId: number,
+  grantAccess: boolean,
 ) {
   for (const assignment of input.programmes) {
     const volume = await getManualProgrammeVolume(
@@ -87,14 +89,16 @@ async function insertManualOrderItems(
 
     if (!item) throw new Error(`Order item ${volume.name} was not created.`);
 
-    await transaction.insert(programAccess).values({
-      clientId,
-      programVolumeId: volume.id,
-      orderItemId: item.id,
-      source: 'manual',
-      status: 'active',
-      grantedByUserId: administratorUserId,
-    });
+    if (grantAccess) {
+      await transaction.insert(programAccess).values({
+        clientId,
+        programVolumeId: volume.id,
+        orderItemId: item.id,
+        source: 'manual',
+        status: 'active',
+        grantedByUserId: administratorUserId,
+      });
+    }
   }
 }
 
@@ -187,7 +191,14 @@ export async function createManualClient(
 
     if (!order) throw new Error('The client order was not created.');
 
-    await insertManualOrderItems(transaction, input, client.id, order.id, administratorUserId);
+    await insertManualOrderItems(
+      transaction,
+      input,
+      client.id,
+      order.id,
+      administratorUserId,
+      shouldGrantManualProgramAccess(input.purchaseStatus),
+    );
 
     if (isPaid && totalCents > 0) {
       await insertManualPayment(transaction, order.id, totalCents, now);
@@ -286,7 +297,14 @@ export async function updateManualClient(
     }
 
     if (!order) throw new Error('The client order was not available.');
-    await insertManualOrderItems(transaction, input, clientId, order.id, administratorUserId);
+    await insertManualOrderItems(
+      transaction,
+      input,
+      clientId,
+      order.id,
+      administratorUserId,
+      shouldGrantManualProgramAccess(input.purchaseStatus),
+    );
     if (isPaid) await insertManualPayment(transaction, order.id, totalCents, now);
 
     return { id: clientId, orderNumber: order.orderNumber };

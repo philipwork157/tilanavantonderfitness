@@ -81,6 +81,7 @@ export async function requireCustomer(event: H3Event) {
     .select({ userId: users.id, clientId: clients.id, email: users.email, firstName: users.firstName })
     .from(users)
     .innerJoin(clients, eq(clients.userId, users.id))
+    .innerJoin(userRoles, and(eq(userRoles.userId, users.id), eq(userRoles.role, 'customer')))
     .where(eq(users.supabaseId, user.id))
     .limit(1);
 

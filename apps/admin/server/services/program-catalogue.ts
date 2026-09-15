@@ -9,6 +9,7 @@ import type { Database } from '@tilana/db/server';
 import {
   orderItems,
   orders,
+  payments,
   programAccess,
   programAuditEvents,
   programFiles,
@@ -16,7 +17,7 @@ import {
   programs,
   programVolumes,
 } from '@tilana/db/schema';
-import { and, asc, desc, eq, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import { getDatabase } from '../utils/database';
 import { getCatalogueStorageConfiguration } from '../utils/r2';
 import {
@@ -164,6 +165,9 @@ export async function assertPublishedProgramRemainsValid(
 export async function listAdminPrograms() {
   const database = getDatabase();
   const storage = getCatalogueStorageConfiguration();
+  const configuredEnvironment = String(useRuntimeConfig().paystackEnvironment || 'test') === 'live'
+    ? 'live' as const
+    : 'test' as const;
   const programRows = await database
     .select()
     .from(programs)
@@ -179,7 +183,25 @@ export async function listAdminPrograms() {
   const volumeIds = volumeRows.map(volume => volume.id);
   const now = new Date();
 
-  const [mediaRows, fileRows, salesRows, accessRows] = await Promise.all([
+  const hasReportablePayment = () => exists(
+    database
+      .select({ id: payments.id })
+      .from(payments)
+      .where(and(
+        eq(payments.orderId, orders.id),
+        inArray(payments.status, ['succeeded', 'partially_refunded', 'refunded', 'reversed']),
+        or(
+          eq(payments.provider, 'manual'),
+          and(eq(payments.provider, 'paystack'), eq(payments.environment, configuredEnvironment)),
+        ),
+      )),
+  );
+  const isZeroValueManualOrder = and(
+    sql`${orders.orderNumber} like 'MAN-%'`,
+    eq(orders.totalCents, 0),
+  );
+
+  const [mediaRows, fileRows, salesRows, purchaserRows, accessRows] = await Promise.all([
     database
       .select({
         id: programMedia.id,
@@ -235,22 +257,36 @@ export async function listAdminPrograms() {
           .where(and(
             inArray(orderItems.programVolumeId, volumeIds),
             inArray(orders.status, ['paid', 'refunded']),
+            or(hasReportablePayment(), isZeroValueManualOrder),
           ))
           .groupBy(orderItems.programVolumeId),
     volumeIds.length === 0
       ? Promise.resolve([])
       : database
-          .select({
+          .selectDistinct({
+            volumeId: orderItems.programVolumeId,
+            clientId: orderItems.clientId,
+          })
+          .from(orderItems)
+          .innerJoin(orders, eq(orders.id, orderItems.orderId))
+          .where(and(
+            inArray(orderItems.programVolumeId, volumeIds),
+            eq(orders.status, 'paid'),
+            or(hasReportablePayment(), isZeroValueManualOrder),
+          )),
+    volumeIds.length === 0
+      ? Promise.resolve([])
+      : database
+          .selectDistinct({
             volumeId: programAccess.programVolumeId,
-            accessCount: sql<number>`count(${programAccess.id})::int`,
+            clientId: programAccess.clientId,
           })
           .from(programAccess)
           .where(and(
             inArray(programAccess.programVolumeId, volumeIds),
             eq(programAccess.status, 'active'),
             or(isNull(programAccess.expiresAt), gt(programAccess.expiresAt, now)),
-          ))
-          .groupBy(programAccess.programVolumeId),
+          )),
   ]);
 
   const mediaByProgram = new Map<number, typeof mediaRows>();
@@ -266,7 +302,34 @@ export async function listAdminPrograms() {
     filesByVolume.set(file.programVolumeId, values);
   }
   const salesByVolume = new Map(salesRows.map(row => [row.volumeId, row]));
-  const accessByVolume = new Map(accessRows.map(row => [row.volumeId, row.accessCount]));
+  const programIdByVolume = new Map(volumeRows.map(volume => [volume.id, volume.programId]));
+  const buyersByVolume = new Map<number, Set<number>>();
+  const buyersByProgram = new Map<number, Set<number>>();
+  const accessByVolume = new Map<number, Set<number>>();
+  const accessByProgram = new Map<number, Set<number>>();
+  for (const purchaser of purchaserRows) {
+    if (!purchaser.volumeId) continue;
+    const programId = programIdByVolume.get(purchaser.volumeId);
+    const volumeBuyers = buyersByVolume.get(purchaser.volumeId) ?? new Set<number>();
+    volumeBuyers.add(purchaser.clientId);
+    buyersByVolume.set(purchaser.volumeId, volumeBuyers);
+    if (programId) {
+      const programBuyers = buyersByProgram.get(programId) ?? new Set<number>();
+      programBuyers.add(purchaser.clientId);
+      buyersByProgram.set(programId, programBuyers);
+    }
+  }
+  for (const access of accessRows) {
+    const programId = programIdByVolume.get(access.volumeId);
+    const volumeAccess = accessByVolume.get(access.volumeId) ?? new Set<number>();
+    volumeAccess.add(access.clientId);
+    accessByVolume.set(access.volumeId, volumeAccess);
+    if (programId) {
+      const programAccess = accessByProgram.get(programId) ?? new Set<number>();
+      programAccess.add(access.clientId);
+      accessByProgram.set(programId, programAccess);
+    }
+  }
 
   return programRows.map(program => {
     const volumes = volumeRows
@@ -276,7 +339,8 @@ export async function listAdminPrograms() {
         files: filesByVolume.get(volume.id) ?? [],
         salesCount: salesByVolume.get(volume.id)?.saleCount ?? 0,
         grossSalesCents: salesByVolume.get(volume.id)?.grossCents ?? 0,
-        accessCount: accessByVolume.get(volume.id) ?? 0,
+        buyerCount: buyersByVolume.get(volume.id)?.size ?? 0,
+        accessCount: accessByVolume.get(volume.id)?.size ?? 0,
       }));
     const media = (mediaByProgram.get(program.id) ?? []).map(item => ({
       id: item.id,
@@ -303,7 +367,8 @@ export async function listAdminPrograms() {
       volumes,
       salesCount: volumes.reduce((total, volume) => total + volume.salesCount, 0),
       grossSalesCents: volumes.reduce((total, volume) => total + volume.grossSalesCents, 0),
-      accessCount: volumes.reduce((total, volume) => total + volume.accessCount, 0),
+      buyerCount: buyersByProgram.get(program.id)?.size ?? 0,
+      accessCount: accessByProgram.get(program.id)?.size ?? 0,
     };
   });
 }

@@ -16,7 +16,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1127.0",
     "@aws-sdk/s3-request-presigner": "^3.1127.0",
-    "@internationalized/date": "^3.12.3",
+    "@internationalized/date": "^3.12.4",
     "@scalar/api-reference": "^1.68.0",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",

@@ -621,8 +621,8 @@ useSeoMeta({
             <dd>{{ formatCatalogueMoney(program.grossSalesCents) }}</dd>
           </div>
           <div>
-            <dt>Sales <UTooltip text="Number of paid sales, including sales later refunded."><UIcon name="i-lucide-circle-help" /></UTooltip></dt>
-            <dd>{{ program.salesCount }}</dd>
+            <dt>Paid customers <UTooltip text="Distinct customers with a paid order for any volume in this program. Fully refunded orders are excluded."><UIcon name="i-lucide-circle-help" /></UTooltip></dt>
+            <dd>{{ program.buyerCount }}</dd>
           </div>
           <div>
             <dt>Active access <UTooltip text="Customers who can currently access this program. This can be lower than sales after a refund, revocation, or expiry."><UIcon name="i-lucide-circle-help" /></UTooltip></dt>
@@ -786,7 +786,7 @@ useSeoMeta({
             </header>
             <dl>
               <div><dt>Current price</dt><dd>{{ formatCatalogueMoney(volume.currentPriceCents) }}</dd></div>
-              <div><dt>Sales</dt><dd>{{ volume.salesCount }}</dd></div>
+              <div><dt>Paid customers</dt><dd>{{ volume.buyerCount }}</dd></div>
               <div><dt>Gross sales</dt><dd>{{ formatCatalogueMoney(volume.grossSalesCents) }}</dd></div>
               <div><dt>Active access</dt><dd>{{ volume.accessCount }}</dd></div>
             </dl>
