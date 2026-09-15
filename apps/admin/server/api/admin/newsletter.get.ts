@@ -1,5 +1,5 @@
-import { listNewsletterSubscribers } from '../../services/admin-dashboard';
-import { requireAdmin } from '../../utils/admin-auth';
+import { listNewsletterSubscribers } from '@server/services/admin-dashboard';
+import { requireAdmin } from '@server/utils/admin-auth';
 
 export default defineEventHandler(async (event) => {
   await requireAdmin(event);

@@ -1,8 +1,8 @@
 import { adminLoginRequestSchema } from '@tilana/contracts/auth';
-import { clearLoginRateLimit, enforceLoginRateLimit, enforceSameOrigin } from '../../utils/auth-security';
-import { findAdminUser } from '../../utils/admin-auth';
-import { readZodBody } from '../../utils/route-validation';
-import { createSupabaseAuthClient } from '../../utils/supabase-auth';
+import { clearLoginRateLimit, enforceLoginRateLimit, enforceSameOrigin } from '@server/utils/auth-security';
+import { findAdminUser } from '@server/utils/admin-auth';
+import { readZodBody } from '@server/utils/route-validation';
+import { createSupabaseAuthClient } from '@server/utils/supabase-auth';
 
 export default defineEventHandler(async (event) => {
   enforceSameOrigin(event);

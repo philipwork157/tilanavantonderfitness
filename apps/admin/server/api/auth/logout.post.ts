@@ -1,5 +1,5 @@
-import { enforceSameOrigin } from '../../utils/auth-security';
-import { createSupabaseAuthClient } from '../../utils/supabase-auth';
+import { enforceSameOrigin } from '@server/utils/auth-security';
+import { createSupabaseAuthClient } from '@server/utils/supabase-auth';
 
 export default defineEventHandler(async (event) => {
   enforceSameOrigin(event);

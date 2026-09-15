@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it, vi } from 'vitest';
-import { prepareCheckoutRequest } from '../server/utils/checkout-request.ts';
+import { prepareCheckoutRequest } from '@server/utils/checkout-request.ts';
 
 const security = vi.hoisted(() => ({
   applyContactCors: vi.fn(),
@@ -9,7 +9,7 @@ const security = vi.hoisted(() => ({
   verifyContactTurnstile: vi.fn(async () => undefined),
 }));
 
-vi.mock('../server/utils/contact-security', () => security);
+vi.mock('@server/utils/contact-security', () => security);
 
 const event = {} as Parameters<typeof prepareCheckoutRequest>[0];
 const schema = {

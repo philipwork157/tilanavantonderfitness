@@ -1,5 +1,5 @@
-import { getPaystackCheckoutStatus, verifyPaystackCheckout } from '../../services/paystack';
-import { applyContactCors } from '../../utils/contact-security';
+import { getPaystackCheckoutStatus, verifyPaystackCheckout } from '@server/services/paystack';
+import { applyContactCors } from '@server/utils/contact-security';
 
 export default defineEventHandler(async (event) => {
   applyContactCors(event);

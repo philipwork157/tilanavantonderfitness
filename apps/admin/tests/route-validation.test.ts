@@ -6,7 +6,7 @@ import {
   requireRouteDatabaseId,
   readZodBody,
   validateRequestBody,
-} from '../server/utils/route-validation.ts';
+} from '@server/utils/route-validation.ts';
 
 beforeEach(() => {
   vi.stubGlobal('createError', (input: { statusCode: number; statusMessage: string }) =>

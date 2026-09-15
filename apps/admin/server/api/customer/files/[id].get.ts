@@ -1,9 +1,9 @@
 import { programAccess, programFiles } from '@tilana/db/schema';
 import { and, eq, isNull, or, sql } from 'drizzle-orm';
-import { requireCustomer } from '../../../utils/customer-auth';
-import { getDatabase } from '../../../utils/database';
-import { parseDatabaseId } from '../../../utils/database-id';
-import { createSignedProgramDownload, getCatalogueStorageConfiguration } from '../../../utils/r2';
+import { requireCustomer } from '@server/utils/customer-auth';
+import { getDatabase } from '@server/utils/database';
+import { parseDatabaseId } from '@server/utils/database-id';
+import { createSignedProgramDownload, getCatalogueStorageConfiguration } from '@server/utils/r2';
 
 export default defineEventHandler(async (event) => {
   const fileId = parseDatabaseId(getRouterParam(event, 'id'));

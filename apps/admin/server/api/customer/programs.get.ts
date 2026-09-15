@@ -1,8 +1,8 @@
 import { programAccess, programFiles, programs, programVolumes } from '@tilana/db/schema';
 import { and, asc, eq, isNull, or, sql } from 'drizzle-orm';
-import { requireCustomer } from '../../utils/customer-auth';
-import { getDatabase } from '../../utils/database';
-import { getCatalogueStorageConfiguration } from '../../utils/r2';
+import { requireCustomer } from '@server/utils/customer-auth';
+import { getDatabase } from '@server/utils/database';
+import { getCatalogueStorageConfiguration } from '@server/utils/r2';
 
 export default defineEventHandler(async (event) => {
   const customer = await requireCustomer(event);

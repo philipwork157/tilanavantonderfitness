@@ -4,16 +4,16 @@ import {
   ClientEmailExistsError,
   ClientNotEditableError,
   ProgramVolumeUnavailableError,
-} from '../server/services/client-management.ts';
+} from '@server/services/client-management.ts';
 import {
   CheckinDateExistsError,
   ClientNotFoundError,
   MissingHealthProfileError,
-} from '../server/services/coaching.ts';
+} from '@server/services/coaching.ts';
 import {
   throwClientManagementRouteError,
   throwCoachingRouteError,
-} from '../server/utils/client-route.ts';
+} from '@server/utils/client-route.ts';
 
 beforeEach(() => {
   vi.stubGlobal('createError', (input: { statusCode: number; statusMessage: string }) =>

@@ -27,6 +27,12 @@ APIs.
 - `packages/ui-astro` and `packages/ui-nuxt`: framework-specific shared UI.
 - `supabase/migrations`: committed PostgreSQL migrations and Drizzle metadata.
 
+Use the configured application aliases instead of parent-directory import
+chains: `@app/*` maps to `apps/admin/app/*`, `@server/*` maps to
+`apps/admin/server/*`, and `@web/*` maps to `apps/web/src/*`. Continue using the
+workspace package names (`@tilana/*`) for shared packages. Relative `./` imports
+are appropriate for files in the same directory.
+
 Use the backend structure `API route -> Zod contract -> service -> Drizzle`:
 
 - API routes own HTTP parsing, authentication/authorization, origin checks,

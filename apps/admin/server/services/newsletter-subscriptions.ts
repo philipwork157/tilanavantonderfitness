@@ -1,7 +1,7 @@
 import type { NewsletterSubscribeRequest } from '@tilana/contracts/newsletter';
 import { newsletterSubscribers, newsletterTokens, type NewsletterTokenPurpose } from '@tilana/db/schema';
 import { and, eq, gt, isNull } from 'drizzle-orm';
-import { getDatabase } from '../utils/database';
+import { getDatabase } from '@server/utils/database';
 
 const CONFIRMATION_TTL_MS = 48 * 60 * 60 * 1000;
 const UNSUBSCRIBE_TTL_MS = 10 * 365 * 24 * 60 * 60 * 1000;

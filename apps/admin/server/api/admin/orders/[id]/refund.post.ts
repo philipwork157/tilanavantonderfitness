@@ -1,7 +1,7 @@
 import { adminPaymentRefundRequestSchema } from '@tilana/contracts/payments';
-import { initiatePaystackRefund, PaystackRefundError } from '../../../../services/paystack';
-import { requireAdminMutation } from '../../../../utils/admin-mutation';
-import { readZodBody, requireRouteDatabaseId } from '../../../../utils/route-validation';
+import { initiatePaystackRefund, PaystackRefundError } from '@server/services/paystack';
+import { requireAdminMutation } from '@server/utils/admin-mutation';
+import { readZodBody, requireRouteDatabaseId } from '@server/utils/route-validation';
 
 export default defineEventHandler(async (event) => {
   const session = await requireAdminMutation(event);

@@ -20,8 +20,8 @@ import {
   type PaymentRefundStatus,
 } from '@tilana/db/schema';
 import { and, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
-import { getDatabase } from '../utils/database';
-import { getCatalogueStorageConfiguration } from '../utils/r2';
+import { getDatabase } from '@server/utils/database';
+import { getCatalogueStorageConfiguration } from '@server/utils/r2';
 import { isCheckoutPriceCurrent } from './catalogue-policy';
 import {
   getTerminalCheckoutResolution,

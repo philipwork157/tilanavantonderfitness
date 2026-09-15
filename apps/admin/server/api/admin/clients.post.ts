@@ -1,8 +1,8 @@
 import { adminClientCreateRequestSchema } from '@tilana/contracts/clients';
-import { createManualClient } from '../../services/client-management';
-import { throwClientManagementRouteError } from '../../utils/client-route';
-import { requireAdminMutation } from '../../utils/admin-mutation';
-import { readZodBody } from '../../utils/route-validation';
+import { createManualClient } from '@server/services/client-management';
+import { throwClientManagementRouteError } from '@server/utils/client-route';
+import { requireAdminMutation } from '@server/utils/admin-mutation';
+import { readZodBody } from '@server/utils/route-validation';
 
 export default defineEventHandler(async (event) => {
   const session = await requireAdminMutation(event);

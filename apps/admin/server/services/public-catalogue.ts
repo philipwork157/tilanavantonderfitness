@@ -4,8 +4,8 @@ import type {
 } from '@tilana/contracts/catalogue';
 import { programFiles, programMedia, programs, programVolumes } from '@tilana/db/schema';
 import { and, asc, eq, inArray, isNotNull } from 'drizzle-orm';
-import { getDatabase } from '../utils/database';
-import { getCatalogueStorageConfiguration } from '../utils/r2';
+import { getDatabase } from '@server/utils/database';
+import { getCatalogueStorageConfiguration } from '@server/utils/r2';
 import { publicObjectUrl } from './catalogue-policy';
 
 export async function listPublicCataloguePrograms(): Promise<PublicCatalogueProgram[]> {

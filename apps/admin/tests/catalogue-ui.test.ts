@@ -6,7 +6,7 @@ import {
   normaliseCatalogueAccent,
   shouldMoveIncompleteProgramToDraft,
   slugifyCatalogueValue,
-} from '../app/utils/catalogue.ts';
+} from '@app/utils/catalogue.ts';
 
 describe('catalogue UI helpers', () => {
   it('creates stable catalogue slugs from human names', () => {

@@ -1,8 +1,8 @@
 import { adminProgramMediaUploadRequestSchema } from '@tilana/contracts/catalogue';
-import { initiateProgramMediaUpload } from '../../../../../services/program-storage';
-import { requireAdminCatalogueMutation } from '../../../../../utils/admin-catalogue-request';
-import { throwCatalogueRouteError } from '../../../../../utils/catalogue-route';
-import { readZodBody, requireRouteDatabaseId } from '../../../../../utils/route-validation';
+import { initiateProgramMediaUpload } from '@server/services/program-storage';
+import { requireAdminCatalogueMutation } from '@server/utils/admin-catalogue-request';
+import { throwCatalogueRouteError } from '@server/utils/catalogue-route';
+import { readZodBody, requireRouteDatabaseId } from '@server/utils/route-validation';
 
 export default defineEventHandler(async (event) => {
   const session = await requireAdminCatalogueMutation(event);

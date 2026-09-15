@@ -1,5 +1,5 @@
-import { mapCatalogueServiceError } from '../services/program-catalogue';
-import { mapCatalogueStorageError } from '../services/program-storage';
+import { mapCatalogueServiceError } from '@server/services/program-catalogue';
+import { mapCatalogueStorageError } from '@server/services/program-storage';
 
 export function throwCatalogueRouteError(error: unknown): never {
   const mapped = mapCatalogueStorageError(error) ?? mapCatalogueServiceError(error);

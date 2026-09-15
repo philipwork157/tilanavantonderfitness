@@ -2,7 +2,7 @@
 import {
   catalogueAccentOptions,
   normaliseCatalogueAccent,
-} from '../utils/catalogue';
+} from '@app/utils/catalogue';
 
 const model = defineModel<string>({ required: true });
 

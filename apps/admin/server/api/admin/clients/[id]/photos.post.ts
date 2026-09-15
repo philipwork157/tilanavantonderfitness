@@ -3,11 +3,11 @@ import {
   addCheckinPhoto,
   ClientNotFoundError,
   getCheckinForClient,
-} from '../../../../services/coaching';
-import { requireAdminMutation } from '../../../../utils/admin-mutation';
-import { parseDatabaseId } from '../../../../utils/database-id';
-import { requireRouteDatabaseId } from '../../../../utils/route-validation';
-import { createSignedPhotoUrl, uploadClientPhoto } from '../../../../utils/supabase-storage';
+} from '@server/services/coaching';
+import { requireAdminMutation } from '@server/utils/admin-mutation';
+import { parseDatabaseId } from '@server/utils/database-id';
+import { requireRouteDatabaseId } from '@server/utils/route-validation';
+import { createSignedPhotoUrl, uploadClientPhoto } from '@server/utils/supabase-storage';
 
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
 const EXTENSION: Record<string, string> = {

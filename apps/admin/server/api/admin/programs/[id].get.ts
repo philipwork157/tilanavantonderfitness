@@ -1,6 +1,6 @@
-import { getAdminProgram } from '../../../services/program-catalogue';
-import { requireAdmin } from '../../../utils/admin-auth';
-import { requireRouteDatabaseId } from '../../../utils/route-validation';
+import { getAdminProgram } from '@server/services/program-catalogue';
+import { requireAdmin } from '@server/utils/admin-auth';
+import { requireRouteDatabaseId } from '@server/utils/route-validation';
 
 export default defineEventHandler(async (event) => {
   await requireAdmin(event);

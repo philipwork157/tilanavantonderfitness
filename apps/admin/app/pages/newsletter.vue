@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { formatAdminDate } from '../utils/format';
-import { requestErrorMessage } from '../utils/request-error';
+import { formatAdminDate } from '@app/utils/format';
+import { requestErrorMessage } from '@app/utils/request-error';
 
 definePageMeta({ layout: 'dashboard' });
 

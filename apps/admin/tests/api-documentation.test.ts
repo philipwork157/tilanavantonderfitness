@@ -3,7 +3,7 @@ import { describe, it } from 'vitest';
 import {
   documentedApiEndpointCount,
   getAdminOpenApiDocument,
-} from '../server/services/api-documentation.ts';
+} from '@server/services/api-documentation.ts';
 
 describe('admin API documentation', () => {
   it('publishes a complete OpenAPI document with unique operations', () => {

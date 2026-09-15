@@ -1,6 +1,6 @@
 import { catalogueSlugSchema } from '@tilana/contracts/catalogue';
-import { getPublicCatalogueProgram } from '../../../services/public-catalogue';
-import { applyPublicCatalogueHeaders } from '../../../utils/public-catalogue';
+import { getPublicCatalogueProgram } from '@server/services/public-catalogue';
+import { applyPublicCatalogueHeaders } from '@server/utils/public-catalogue';
 
 export default defineEventHandler(async (event) => {
   applyPublicCatalogueHeaders(event);

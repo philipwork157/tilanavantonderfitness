@@ -4,7 +4,7 @@ import {
   emailTextWithLineBreaks,
   escapeEmailHtml,
   singleLineEmailText,
-} from '../server/email-templates/html.ts';
+} from '@server/email-templates/html.ts';
 
 describe('shared email HTML helpers', () => {
   it('escapes user-controlled HTML characters', () => {

@@ -13,14 +13,14 @@ import {
   programVolumes,
 } from '@tilana/db/schema';
 import { and, eq, ne, sql } from 'drizzle-orm';
-import { getDatabase } from '../utils/database';
+import { getDatabase } from '@server/utils/database';
 import {
   createSignedCatalogueUpload,
   ensureCatalogueUploadConfigured,
   getCatalogueStorageConfiguration,
   inspectCatalogueObject,
   R2_UPLOAD_URL_TTL_SECONDS,
-} from '../utils/r2';
+} from '@server/utils/r2';
 import {
   buildProgramFileObjectKey,
   buildProgramMediaObjectKey,

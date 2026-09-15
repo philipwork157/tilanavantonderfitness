@@ -1,6 +1,6 @@
-import { ClientNotFoundError, getClientCoachingOverview } from '../../../../services/coaching';
-import { requireAdmin } from '../../../../utils/admin-auth';
-import { requireRouteDatabaseId } from '../../../../utils/route-validation';
+import { ClientNotFoundError, getClientCoachingOverview } from '@server/services/coaching';
+import { requireAdmin } from '@server/utils/admin-auth';
+import { requireRouteDatabaseId } from '@server/utils/route-validation';
 
 export default defineEventHandler(async (event) => {
   await requireAdmin(event);

@@ -4,7 +4,7 @@ import { describe, it } from 'vitest';
 import {
   createPaystackEventKey,
   isValidPaystackWebhookSignature,
-} from '../server/utils/paystack-webhook.ts';
+} from '@server/utils/paystack-webhook.ts';
 
 describe('Paystack webhook request boundary', () => {
   const secret = 'sk_test_webhook_unit_test';

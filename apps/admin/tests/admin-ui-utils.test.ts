@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'vitest';
-import { formatAdminDate, formatAdminDateTime } from '../app/utils/format.ts';
-import { requestErrorMessage } from '../app/utils/request-error.ts';
+import { formatAdminDate, formatAdminDateTime } from '@app/utils/format.ts';
+import { requestErrorMessage } from '@app/utils/request-error.ts';
 
 describe('shared admin UI utilities', () => {
   it('formats dates consistently in the Johannesburg timezone', () => {

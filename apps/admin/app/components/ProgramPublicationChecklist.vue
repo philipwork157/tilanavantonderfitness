@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AdminCataloguePublicationIssue } from '../types/catalogue';
+import type { AdminCataloguePublicationIssue } from '@app/types/catalogue';
 
 defineProps<{
   ready: boolean;

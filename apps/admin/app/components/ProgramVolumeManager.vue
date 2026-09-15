@@ -2,11 +2,11 @@
 import type {
   AdminCatalogueFile,
   AdminCatalogueVolume,
-} from '../types/catalogue';
+} from '@app/types/catalogue';
 import {
   formatCatalogueFileSize,
   formatCatalogueMoney,
-} from '../utils/catalogue';
+} from '@app/utils/catalogue';
 
 defineProps<{
   volumes: AdminCatalogueVolume[];

@@ -1,6 +1,6 @@
 import type { ContactFormRequest } from '@tilana/contracts/contact';
-import { renderContactNotificationEmail } from '../email-templates/contact-notification';
-import { getServerEmail } from '../utils/email';
+import { renderContactNotificationEmail } from '@server/email-templates/contact-notification';
+import { getServerEmail } from '@server/utils/email';
 
 type ContactNotificationInput = Pick<
   ContactFormRequest,

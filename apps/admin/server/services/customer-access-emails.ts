@@ -1,5 +1,5 @@
-import { renderCustomerAccessEmail } from '../email-templates/customer-access';
-import { getServerEmail } from '../utils/email';
+import { renderCustomerAccessEmail } from '@server/email-templates/customer-access';
+import { getServerEmail } from '@server/utils/email';
 
 function isCustomerAccessDevelopmentEnvironment(): boolean {
   return process.env.NODE_ENV !== 'production'

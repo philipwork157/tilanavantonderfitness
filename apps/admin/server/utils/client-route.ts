@@ -2,12 +2,12 @@ import {
   ClientEmailExistsError,
   ClientNotEditableError,
   ProgramVolumeUnavailableError,
-} from '../services/client-management';
+} from '@server/services/client-management';
 import {
   CheckinDateExistsError,
   ClientNotFoundError,
   MissingHealthProfileError,
-} from '../services/coaching';
+} from '@server/services/coaching';
 
 export function throwClientManagementRouteError(error: unknown): never {
   if (

@@ -1,6 +1,6 @@
-import { sendNewsletterCampaign } from '../../../../../services/newsletter-campaigns';
-import { requireAdminMutation } from '../../../../../utils/admin-mutation';
-import { requireRouteDatabaseId } from '../../../../../utils/route-validation';
+import { sendNewsletterCampaign } from '@server/services/newsletter-campaigns';
+import { requireAdminMutation } from '@server/utils/admin-mutation';
+import { requireRouteDatabaseId } from '@server/utils/route-validation';
 
 export default defineEventHandler(async (event) => {
   await requireAdminMutation(event);

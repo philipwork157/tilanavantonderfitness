@@ -1,8 +1,8 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
+import BaseLayout from '@web/layouts/BaseLayout.astro';
 import { Dumbbell, Footprints, PersonStanding, Sprout } from '@lucide/astro';
 import { Image } from 'astro:assets';
-import heroImage from '../assets/tilana-home.jpg';
+import heroImage from '@web/assets/tilana-home.jpg';
 ---
 <BaseLayout title="Strength, Movement & Healthy Habits">
   <section class="hero"><div class="container hero-grid"><div class="hero-copy"><p class="eyebrow">Realistic strength for every body</p><h1 class="display"><span class="hero-line">Move better.</span><span class="hero-line">Feel stronger.</span><span class="hero-line script">Live healthier.</span></h1><p class="lede">Whether you are a woman or a man, lasting strength is built through purposeful movement and maintainable systems that work in real life. There is no perfection to chase and no quick fix to sell - only practical habits, steady progress, and a lifelong investment in moving well, feeling capable, and living with greater confidence.</p><div class="actions"><a class="button button-primary" href="/program">Explore the programs</a><a class="button button-secondary" href="/about">Meet Tilana</a></div></div><div class="hero-visual"><Image src={heroImage} alt="Tilana van Tonder smiling with her arms crossed" widths={[432, 768, 1023]} sizes="(max-width: 48rem) 92vw, 27rem" loading="eager" fetchpriority="high" /></div></div></section>

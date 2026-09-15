@@ -1,7 +1,7 @@
 import { newsletterCampaignInputSchema } from '@tilana/contracts/newsletter';
-import { saveNewsletterCampaign } from '../../../../services/newsletter-campaigns';
-import { requireAdminMutation } from '../../../../utils/admin-mutation';
-import { readZodBody, requireRouteDatabaseId } from '../../../../utils/route-validation';
+import { saveNewsletterCampaign } from '@server/services/newsletter-campaigns';
+import { requireAdminMutation } from '@server/utils/admin-mutation';
+import { readZodBody, requireRouteDatabaseId } from '@server/utils/route-validation';
 
 export default defineEventHandler(async (event) => {
   const session = await requireAdminMutation(event);

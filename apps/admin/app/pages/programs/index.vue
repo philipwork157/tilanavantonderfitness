@@ -3,14 +3,14 @@ import { adminProgramCreateRequestSchema } from '@tilana/contracts/catalogue';
 import type {
   AdminCatalogueProgram,
   AdminCatalogueProgramsResponse,
-} from '../../types/catalogue';
+} from '@app/types/catalogue';
 import {
   catalogueErrorMessage,
   catalogueStatusColor,
   catalogueStatusLabels,
   formatCatalogueMoney,
   slugifyCatalogueValue,
-} from '../../utils/catalogue';
+} from '@app/utils/catalogue';
 
 definePageMeta({ layout: 'dashboard' });
 

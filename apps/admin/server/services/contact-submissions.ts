@@ -1,6 +1,6 @@
 import type { ContactFormRequest } from '@tilana/contracts/contact';
 import { contactSubmissions } from '@tilana/db/schema';
-import { getDatabase } from '../utils/database';
+import { getDatabase } from '@server/utils/database';
 
 type CreateContactSubmissionInput = Pick<
   ContactFormRequest,

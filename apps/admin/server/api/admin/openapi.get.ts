@@ -1,5 +1,5 @@
-import { getAdminOpenApiDocument } from '../../services/api-documentation';
-import { requireAdmin } from '../../utils/admin-auth';
+import { getAdminOpenApiDocument } from '@server/services/api-documentation';
+import { requireAdmin } from '@server/utils/admin-auth';
 
 export default defineEventHandler(async (event) => {
   await requireAdmin(event);

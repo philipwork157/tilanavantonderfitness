@@ -1,8 +1,8 @@
 import { adminProgramVolumeUpdateRequestSchema } from '@tilana/contracts/catalogue';
-import { updateProgramVolume } from '../../../services/program-catalogue';
-import { requireAdminCatalogueMutation } from '../../../utils/admin-catalogue-request';
-import { throwCatalogueRouteError } from '../../../utils/catalogue-route';
-import { readZodBody, requireRouteDatabaseId } from '../../../utils/route-validation';
+import { updateProgramVolume } from '@server/services/program-catalogue';
+import { requireAdminCatalogueMutation } from '@server/utils/admin-catalogue-request';
+import { throwCatalogueRouteError } from '@server/utils/catalogue-route';
+import { readZodBody, requireRouteDatabaseId } from '@server/utils/route-validation';
 
 export default defineEventHandler(async (event) => {
   const session = await requireAdminCatalogueMutation(event);

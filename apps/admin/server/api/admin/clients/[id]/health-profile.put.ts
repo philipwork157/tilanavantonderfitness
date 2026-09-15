@@ -1,8 +1,8 @@
 import { healthProfileUpsertSchema } from '@tilana/contracts/coaching';
-import { upsertHealthProfile } from '../../../../services/coaching';
-import { throwCoachingRouteError } from '../../../../utils/client-route';
-import { requireAdminMutation } from '../../../../utils/admin-mutation';
-import { readZodBody, requireRouteDatabaseId } from '../../../../utils/route-validation';
+import { upsertHealthProfile } from '@server/services/coaching';
+import { throwCoachingRouteError } from '@server/utils/client-route';
+import { requireAdminMutation } from '@server/utils/admin-mutation';
+import { readZodBody, requireRouteDatabaseId } from '@server/utils/route-validation';
 
 export default defineEventHandler(async (event) => {
   const session = await requireAdminMutation(event);

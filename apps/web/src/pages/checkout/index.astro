@@ -1,6 +1,6 @@
 ---
 import PageHero from '@tilana/ui-astro/PageHero.astro';
-import BaseLayout from '../../layouts/BaseLayout.astro';
+import BaseLayout from '@web/layouts/BaseLayout.astro';
 
 const catalogueApiBaseUrl = (
   import.meta.env.PUBLIC_CATALOGUE_API_BASE_URL
@@ -87,7 +87,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     rememberPendingBasket,
     removeFromBasket,
     writeBasket,
-  } from '../../scripts/basket';
+  } from '@web/scripts/basket';
 
   type ApiMessage = { authorizationUrl?: string; reference?: string; statusMessage?: string; message?: string };
 

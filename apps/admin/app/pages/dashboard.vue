@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { AdminDashboardPeriod } from '@tilana/contracts/dashboard';
-import { formatCatalogueMoney } from '../utils/catalogue';
+import { formatCatalogueMoney } from '@app/utils/catalogue';
 
 definePageMeta({ layout: 'dashboard' });
 

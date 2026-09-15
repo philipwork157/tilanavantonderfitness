@@ -1,6 +1,6 @@
-import { getServerEmail } from '../utils/email';
+import { getServerEmail } from '@server/utils/email';
 import type { NewsletterCampaignInput } from '@tilana/contracts/newsletter';
-import { escapeEmailHtml } from '../email-templates/html';
+import { escapeEmailHtml } from '@server/email-templates/html';
 
 /** Fly dev builds still use NODE_ENV=production, so the Fly app identity is part of the safety check. */
 export function isNewsletterDevelopmentEnvironment(): boolean {

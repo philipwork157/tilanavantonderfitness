@@ -1,5 +1,5 @@
 import { newsletterTokenSchema } from '@tilana/contracts/newsletter';
-import { confirmNewsletterSubscription } from '../../services/newsletter-subscriptions';
+import { confirmNewsletterSubscription } from '@server/services/newsletter-subscriptions';
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();

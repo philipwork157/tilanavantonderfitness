@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { contactInterestLabels } from '@tilana/contracts/contact';
-import { formatAdminDateTime } from '../utils/format';
+import { formatAdminDateTime } from '@app/utils/format';
 
 definePageMeta({ layout: 'dashboard' });
 

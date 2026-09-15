@@ -7,9 +7,9 @@ import {
 } from '@tilana/contracts/clients';
 import {
   formatCatalogueMoney as formatZar,
-} from '../../utils/catalogue';
+} from '@app/utils/catalogue';
 import { adminPaymentRefundRequestSchema } from '@tilana/contracts/payments';
-import { formatAdminDate } from '../../utils/format';
+import { formatAdminDate } from '@app/utils/format';
 
 definePageMeta({ layout: 'dashboard' });
 

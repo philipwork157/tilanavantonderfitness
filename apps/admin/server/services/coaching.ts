@@ -11,8 +11,8 @@ import {
   clients,
 } from '@tilana/db/schema';
 import { and, desc, eq, inArray } from 'drizzle-orm';
-import { getDatabase } from '../utils/database';
-import { createSignedPhotoUrl } from '../utils/supabase-storage';
+import { getDatabase } from '@server/utils/database';
+import { createSignedPhotoUrl } from '@server/utils/supabase-storage';
 
 export class ClientNotFoundError extends Error {
   constructor() {

@@ -1,8 +1,8 @@
-import { processPaystackEvent } from '../../services/paystack';
+import { processPaystackEvent } from '@server/services/paystack';
 import {
   createPaystackEventKey,
   isValidPaystackWebhookSignature,
-} from '../../utils/paystack-webhook';
+} from '@server/utils/paystack-webhook';
 
 export default defineEventHandler(async (event) => {
   const secretKey = String(useRuntimeConfig(event).paystackSecretKey || '').trim();

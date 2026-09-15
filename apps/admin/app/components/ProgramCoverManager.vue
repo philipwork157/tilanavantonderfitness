@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { AdminCatalogueMedia } from '../types/catalogue';
-import { formatCatalogueFileSize } from '../utils/catalogue';
-import { formatAdminDate } from '../utils/format';
+import type { AdminCatalogueMedia } from '@app/types/catalogue';
+import { formatCatalogueFileSize } from '@app/utils/catalogue';
+import { formatAdminDate } from '@app/utils/format';
 
 defineProps<{
   activeCover: AdminCatalogueMedia | null;

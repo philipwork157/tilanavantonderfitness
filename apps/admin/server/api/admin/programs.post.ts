@@ -1,8 +1,8 @@
 import { adminProgramCreateRequestSchema } from '@tilana/contracts/catalogue';
-import { createProgram } from '../../services/program-catalogue';
-import { requireAdminCatalogueMutation } from '../../utils/admin-catalogue-request';
-import { throwCatalogueRouteError } from '../../utils/catalogue-route';
-import { readZodBody } from '../../utils/route-validation';
+import { createProgram } from '@server/services/program-catalogue';
+import { requireAdminCatalogueMutation } from '@server/utils/admin-catalogue-request';
+import { throwCatalogueRouteError } from '@server/utils/catalogue-route';
+import { readZodBody } from '@server/utils/route-validation';
 
 export default defineEventHandler(async (event) => {
   const session = await requireAdminCatalogueMutation(event);

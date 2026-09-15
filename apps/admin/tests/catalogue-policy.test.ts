@@ -11,7 +11,7 @@ import {
   publicObjectUrl,
   requiresPurchasedVolumeSlugRedirect,
   verifyUploadedObject,
-} from '../server/services/catalogue-policy.ts';
+} from '@server/services/catalogue-policy.ts';
 
 describe('catalogue publication policy', () => {
   it('explains every requirement missing from an incomplete program', () => {

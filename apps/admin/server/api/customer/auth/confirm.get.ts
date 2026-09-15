@@ -1,5 +1,5 @@
-import { linkVerifiedCustomerAccount } from '../../../utils/customer-auth';
-import { createSupabaseAuthClient } from '../../../utils/supabase-auth';
+import { linkVerifiedCustomerAccount } from '@server/utils/customer-auth';
+import { createSupabaseAuthClient } from '@server/utils/supabase-auth';
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);

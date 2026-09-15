@@ -9,7 +9,7 @@ import {
   readBasket,
   rememberPendingBasket,
   writeBasket,
-} from '../src/scripts/basket.ts';
+} from '@web/scripts/basket.ts';
 
 let values: Map<string, string>;
 

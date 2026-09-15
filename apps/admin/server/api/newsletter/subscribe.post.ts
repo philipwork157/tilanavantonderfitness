@@ -1,7 +1,7 @@
 import { newsletterSubscribeRequestSchema, newsletterValidationMessages, type NewsletterFormField } from '@tilana/contracts/newsletter';
-import { applyContactCors, enforceContactRateLimit, getContactRequestIp, verifyContactTurnstile } from '../../utils/contact-security';
-import { startNewsletterSubscription } from '../../services/newsletter-subscriptions';
-import { sendNewsletterConfirmation } from '../../services/newsletter-emails';
+import { applyContactCors, enforceContactRateLimit, getContactRequestIp, verifyContactTurnstile } from '@server/utils/contact-security';
+import { startNewsletterSubscription } from '@server/services/newsletter-subscriptions';
+import { sendNewsletterConfirmation } from '@server/services/newsletter-emails';
 
 export default defineEventHandler(async (event) => {
   applyContactCors(event);

@@ -8,9 +8,9 @@ import {
   enforceContactRateLimit,
   getContactRequestIp,
   verifyContactTurnstile,
-} from '../utils/contact-security';
-import { createContactSubmission } from '../services/contact-submissions';
-import { sendContactSubmissionNotification } from '../services/contact-notifications';
+} from '@server/utils/contact-security';
+import { createContactSubmission } from '@server/services/contact-submissions';
+import { sendContactSubmissionNotification } from '@server/services/contact-notifications';
 
 const MAX_REQUEST_BYTES = 20_000;
 

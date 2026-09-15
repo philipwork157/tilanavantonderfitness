@@ -1,6 +1,12 @@
+import { fileURLToPath } from 'node:url';
+
 export default defineNuxtConfig({
   extends: ['@tilana/ui-nuxt'],
   modules: ['@nuxt/eslint'],
+  alias: {
+    '@app': fileURLToPath(new URL('./app', import.meta.url)),
+    '@server': fileURLToPath(new URL('./server', import.meta.url)),
+  },
   compatibilityDate: '2026-08-19',
   telemetry: false,
   runtimeConfig: {

@@ -3,8 +3,8 @@ import type {
   AdminCatalogueMedia,
   AdminCatalogueProgram,
   AdminCatalogueVolume,
-} from '../types/catalogue';
-import { formatCatalogueMoney } from '../utils/catalogue';
+} from '@app/types/catalogue';
+import { formatCatalogueMoney } from '@app/utils/catalogue';
 
 defineProps<{
   program: AdminCatalogueProgram;

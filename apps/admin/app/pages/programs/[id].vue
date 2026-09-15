@@ -16,7 +16,7 @@ import type {
   AdminCataloguePublicationResponse,
   AdminCatalogueUploadReservation,
   AdminCatalogueVolume,
-} from '../../types/catalogue';
+} from '@app/types/catalogue';
 import {
   catalogueErrorMessage,
   catalogueStatusColor,
@@ -26,7 +26,7 @@ import {
   shouldMoveIncompleteProgramToDraft,
   slugifyCatalogueValue,
   uploadCatalogueObject,
-} from '../../utils/catalogue';
+} from '@app/utils/catalogue';
 
 definePageMeta({ layout: 'dashboard' });
 

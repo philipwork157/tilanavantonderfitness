@@ -1,7 +1,7 @@
 import type { AdminDashboardPeriod } from '@tilana/contracts/dashboard';
 import { clients, contactSubmissions, newsletterSubscribers, paymentRefunds, payments } from '@tilana/db/schema';
 import { and, count, desc, eq, gte, inArray, lte } from 'drizzle-orm';
-import { getDatabase } from '../utils/database';
+import { getDatabase } from '@server/utils/database';
 
 const JOHANNESBURG_TIME_ZONE = 'Africa/Johannesburg';
 const STALE_PAYMENT_MINUTES = 30;

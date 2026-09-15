@@ -1,11 +1,11 @@
 import { customerMagicLinkRequestSchema } from '@tilana/contracts/checkout';
 import { clients, orders } from '@tilana/db/schema';
 import { and, eq, sql } from 'drizzle-orm';
-import { enforceLoginRateLimit, enforceSameOrigin } from '../../../utils/auth-security';
-import { getDatabase } from '../../../utils/database';
-import { readZodBody } from '../../../utils/route-validation';
-import { getSupabaseAdminClient } from '../../../utils/supabase-admin';
-import { sendCustomerAccessEmail } from '../../../services/customer-access-emails';
+import { enforceLoginRateLimit, enforceSameOrigin } from '@server/utils/auth-security';
+import { getDatabase } from '@server/utils/database';
+import { readZodBody } from '@server/utils/route-validation';
+import { getSupabaseAdminClient } from '@server/utils/supabase-admin';
+import { sendCustomerAccessEmail } from '@server/services/customer-access-emails';
 
 export default defineEventHandler(async (event) => {
   enforceSameOrigin(event);

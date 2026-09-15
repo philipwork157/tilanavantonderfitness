@@ -1,4 +1,4 @@
-import type { AdminCatalogueProgramStatus } from '../types/catalogue';
+import type { AdminCatalogueProgramStatus } from '@app/types/catalogue';
 import { requestErrorMessage } from './request-error';
 
 export const catalogueStatusLabels: Record<AdminCatalogueProgramStatus, string> = {

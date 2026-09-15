@@ -11,7 +11,7 @@ import {
   programVolumes,
 } from '@tilana/db/schema';
 import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
-import { getDatabase } from '../utils/database';
+import { getDatabase } from '@server/utils/database';
 import { shouldGrantManualProgramAccess } from './client-access-policy';
 
 export class ClientEmailExistsError extends Error {

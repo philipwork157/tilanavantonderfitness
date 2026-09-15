@@ -2,7 +2,7 @@
 import BrandMark from '@tilana/ui-astro/BrandMark.astro';
 import ThemeToggle from '@tilana/ui-astro/ThemeToggle.astro';
 import { ShoppingBasket } from '@lucide/astro';
-import { site } from '../data/site';
+import { site } from '@web/data/site';
 const currentPath = Astro.url.pathname;
 const isCurrentPage = (href: string) =>
   currentPath === href || (href !== '/' && currentPath.startsWith(href));
@@ -100,7 +100,7 @@ const isCurrentPage = (href: string) =>
 </style>
 
 <script>
-  import { BASKET_CHANGE_EVENT, BASKET_STORAGE_KEY, readBasket } from '../scripts/basket';
+  import { BASKET_CHANGE_EVENT, BASKET_STORAGE_KEY, readBasket } from '@web/scripts/basket';
 
   const mobileNavigation = document.querySelector<HTMLDetailsElement>('[data-mobile-nav]');
   const mobileNavigationToggle = mobileNavigation?.querySelector<HTMLElement>('[data-mobile-nav-toggle]');

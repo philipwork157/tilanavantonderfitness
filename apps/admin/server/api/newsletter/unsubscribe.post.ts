@@ -1,6 +1,6 @@
 import { newsletterTokenSchema } from '@tilana/contracts/newsletter';
-import { unsubscribeFromNewsletter } from '../../services/newsletter-subscriptions';
-import { applyContactCors } from '../../utils/contact-security';
+import { unsubscribeFromNewsletter } from '@server/services/newsletter-subscriptions';
+import { applyContactCors } from '@server/utils/contact-security';
 
 export default defineEventHandler(async (event) => {
   applyContactCors(event);

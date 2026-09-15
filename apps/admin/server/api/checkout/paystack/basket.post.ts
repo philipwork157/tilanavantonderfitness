@@ -1,6 +1,6 @@
 import { basketCheckoutRequestSchema } from '@tilana/contracts/checkout';
-import { initializePaystackBasketCheckout } from '../../../services/paystack';
-import { prepareCheckoutRequest } from '../../../utils/checkout-request';
+import { initializePaystackBasketCheckout } from '@server/services/paystack';
+import { prepareCheckoutRequest } from '@server/utils/checkout-request';
 
 export default defineEventHandler(async (event) => {
   const body = await prepareCheckoutRequest(

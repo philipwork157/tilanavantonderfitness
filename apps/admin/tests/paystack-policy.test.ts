@@ -5,7 +5,7 @@ import {
   isPaymentAlreadyFulfilled,
   isPaystackEnvironmentMatch,
   isProgramAccessCurrent,
-} from '../server/services/paystack-policy.ts';
+} from '@server/services/paystack-policy.ts';
 
 describe('Paystack lifecycle policy', () => {
   it('requires the provider environment to be present and match exactly', () => {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'vitest';
-import { groupDistinctCatalogueCustomers } from '../server/services/catalogue-reporting-policy.ts';
+import { groupDistinctCatalogueCustomers } from '@server/services/catalogue-reporting-policy.ts';
 
 describe('catalogue customer reporting policy', () => {
   it('counts one customer once per volume and once across a program', () => {

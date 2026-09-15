@@ -1,7 +1,7 @@
 import type { NewsletterCampaignInput } from '@tilana/contracts/newsletter';
 import { newsletterCampaignDeliveries, newsletterCampaigns, newsletterCampaignTestDeliveries, newsletterSubscribers } from '@tilana/db/schema';
 import { and, count, desc, eq, max, ne } from 'drizzle-orm';
-import { getDatabase } from '../utils/database';
+import { getDatabase } from '@server/utils/database';
 import { isNewsletterDevelopmentEnvironment, sendNewsletterCampaignEmail } from './newsletter-emails';
 import { createNewsletterUnsubscribeToken } from './newsletter-subscriptions';
 
