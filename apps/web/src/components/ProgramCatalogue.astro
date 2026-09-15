@@ -244,6 +244,9 @@ const catalogueApiBaseUrl = (
   .catalogue-rail { display: grid; gap: 1.25rem; grid-auto-columns: clamp(20rem, 28vw, 25rem); grid-auto-flow: column; overflow-x: auto; overscroll-behavior-inline: contain; padding: 0.4rem 0 1.25rem; scroll-snap-type: x mandatory; scrollbar-width: none; }
   .catalogue-rail::-webkit-scrollbar { display: none; }
   .catalogue-card { --card-accent: var(--terracotta); display: flex; min-height: 38rem; flex-direction: column; padding: 0; scroll-snap-align: start; }
+  .catalogue-rail > .catalogue-card,
+  .catalogue-rail > .catalogue-card:hover,
+  .catalogue-rail > .catalogue-card:focus-within { box-shadow: none !important; filter: none; }
   .catalogue-card.accent-sage { --card-accent: var(--sage); }
   .catalogue-card.accent-caramel { --card-accent: var(--caramel); }
   .catalogue-cover { display: block; width: 100%; height: 13rem; object-fit: cover; }
