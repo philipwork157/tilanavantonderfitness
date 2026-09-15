@@ -56,14 +56,15 @@ The customer-facing email should link to `/account/programs`. The Nuxt server ve
 
 For example, R400 is stored as `40000`. If Nourish Volume 1 later costs R500, the old `order_items.unit_price_cents` remains `40000`, so purchase history stays accurate.
 
-For the initial customer checkout, the public website should offer a direct
-“Buy this program” action rather than requiring a basket. Guest checkout creates
-or reuses the unique `clients` record by email and links the purchase through
-integer IDs. The buyer authenticates with a passwordless email after payment,
-at which point the verified Supabase identity is linked through
-`users -> clients -> program_access`. The Nuxt server must calculate the price
-from `program_volumes`, initialize Paystack, and return only the hosted checkout
-URL or access code to the browser.
+The public website provides a browser-side basket for up to ten different
+programme volumes, with a maximum quantity of one for each digital product.
+Guest checkout creates or reuses the unique `clients` record by email and links
+every order item through integer IDs. The buyer authenticates with a passwordless
+email after payment, at which point the verified Supabase identity is linked
+through `users -> clients -> program_access`. The Nuxt server must resolve every
+slug, validate the displayed prices, calculate the total from `program_volumes`,
+initialize Paystack, and return only the hosted checkout URL or access code to
+the browser. The basket never supplies an authoritative price or total.
 
 The Paystack callback is a user-interface return path, not proof of payment.
 Only a server-verified successful payment with the expected reference, amount,

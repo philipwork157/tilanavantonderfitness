@@ -48,6 +48,7 @@ const catalogueApiBaseUrl = (
     </div>
 
     <div class="catalogue-rail" data-catalogue-rail aria-label="Available programs" tabindex="0" hidden></div>
+    <p class="basket-feedback" data-basket-feedback role="status" aria-live="polite"></p>
     {showAllLink && <a class="button button-dark catalogue-all-link" href="/program">Explore all programs</a>}
   </div>
 </section>
@@ -58,6 +59,7 @@ const catalogueApiBaseUrl = (
     type PublicCatalogueProgram,
     type PublicCatalogueVolume,
   } from '@tilana/contracts/catalogue';
+  import { BASKET_CHANGE_EVENT, addToBasket, readBasket } from '../scripts/basket';
 
   const priceFormatter = new Intl.NumberFormat('en-ZA', {
     style: 'currency',
@@ -88,11 +90,22 @@ const catalogueApiBaseUrl = (
     row.append(copy);
 
     if (volume.isAvailable) {
-      const link = element('a', 'button button-primary');
-      link.href = `/checkout?programme=${encodeURIComponent(volume.slug)}`;
-      link.textContent = 'Buy now';
-      link.setAttribute('aria-label', `Buy ${volume.name}`);
-      row.append(link);
+      const button = element('button', 'button button-primary basket-add');
+      button.type = 'button';
+      button.dataset.basketSlug = volume.slug;
+      button.textContent = readBasket().includes(volume.slug) ? 'In basket' : 'Add to basket';
+      button.disabled = readBasket().includes(volume.slug);
+      button.setAttribute('aria-label', `Add ${volume.name} to basket`);
+      button.addEventListener('click', () => {
+        const basket = addToBasket(volume.slug);
+        const feedback = row.closest('[data-program-catalogue]')?.querySelector<HTMLElement>('[data-basket-feedback]');
+        if (feedback) {
+          feedback.textContent = basket.includes(volume.slug)
+            ? `${volume.name} added to your basket.`
+            : 'Your basket can hold up to ten programmes.';
+        }
+      });
+      row.append(button);
     } else {
       const unavailable = element('span', 'volume-unavailable');
       unavailable.textContent = 'Unavailable';
@@ -200,6 +213,16 @@ const catalogueApiBaseUrl = (
     root.querySelector('[data-catalogue-retry]')?.addEventListener('click', () => loadCatalogue(root));
     loadCatalogue(root);
   });
+
+  const syncBasketButtons = () => {
+    const basket = new Set(readBasket());
+    document.querySelectorAll<HTMLButtonElement>('[data-basket-slug]').forEach((button) => {
+      const inBasket = basket.has(button.dataset.basketSlug ?? '');
+      button.disabled = inBasket;
+      button.textContent = inBasket ? 'In basket' : 'Add to basket';
+    });
+  };
+  window.addEventListener(BASKET_CHANGE_EVENT, syncBasketButtons);
 </script>
 
 <style is:global>
@@ -234,8 +257,10 @@ const catalogueApiBaseUrl = (
   .catalogue-volume strong { overflow: hidden; color: var(--ink); font-size: 0.75rem; text-overflow: ellipsis; white-space: nowrap; }
   .catalogue-volume span { color: var(--caramel); font-size: 0.72rem; font-weight: 750; }
   .catalogue-volume .button { min-height: 2.6rem; flex: none; padding: 0.65rem 1rem; font-size: 0.78rem; }
+  .catalogue-volume .basket-add:disabled { color: var(--ink); background: color-mix(in srgb, var(--sage) 75%, var(--white)); opacity: 0.78; cursor: default; box-shadow: none; transform: none; }
   .catalogue-volume .volume-unavailable { color: var(--ink); opacity: 0.6; }
   .catalogue-all-link { display: flex; width: fit-content; margin: 2rem auto 0; }
+  .basket-feedback { min-height: 1.2rem; margin: 0.75rem 0 0; color: var(--caramel); font-size: 0.78rem; font-weight: 700; text-align: center; }
   .catalogue-section [hidden] { display: none !important; }
   @media (max-width: 72rem) { .catalogue-rail { grid-auto-columns: minmax(19rem, 42vw); } }
   @media (max-width: 48rem) {

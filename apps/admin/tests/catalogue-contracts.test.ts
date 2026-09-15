@@ -8,7 +8,7 @@ import {
   CATALOGUE_IMAGE_MAX_BYTES,
   CATALOGUE_PDF_MAX_BYTES,
 } from '@tilana/contracts/catalogue';
-import { checkoutRequestSchema } from '@tilana/contracts/checkout';
+import { basketCheckoutRequestSchema, checkoutRequestSchema } from '@tilana/contracts/checkout';
 import { adminClientCreateRequestSchema } from '@tilana/contracts/clients';
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
@@ -83,6 +83,28 @@ describe('catalogue API contracts', () => {
       volumeSlug: undefined,
       programmeKey: 'reconnect-volume-1',
     }).success, false);
+  });
+
+  it('accepts up to ten unique basket items and rejects duplicate programmes', () => {
+    const request = {
+      items: [
+        { volumeSlug: 'reconnect-volume-1', expectedPriceCents: 39_900 },
+        { volumeSlug: 'strong-volume-1', expectedPriceCents: 45_000 },
+      ],
+      firstName: 'Tilana',
+      lastName: 'van Tonder',
+      email: 'tilana@example.com',
+      phone: '',
+      consent: true,
+      website: '',
+      turnstileToken: '',
+    };
+    assert.equal(basketCheckoutRequestSchema.safeParse(request).success, true);
+    assert.equal(basketCheckoutRequestSchema.safeParse({
+      ...request,
+      items: [request.items[0], request.items[0]],
+    }).success, false);
+    assert.equal(basketCheckoutRequestSchema.safeParse({ ...request, items: [] }).success, false);
   });
 
   it('links manual client assignments to unique positive integer volume IDs', () => {

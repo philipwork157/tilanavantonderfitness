@@ -6,45 +6,50 @@ const catalogueApiBaseUrl = (
   import.meta.env.PUBLIC_CATALOGUE_API_BASE_URL
   ?? 'http://127.0.0.1:3001/api/public'
 ).replace(/\/+$/, '');
-const checkoutApiUrl = import.meta.env.PUBLIC_CHECKOUT_API_URL ?? 'http://127.0.0.1:3001/api/checkout/paystack';
+const checkoutApiUrl = (
+  import.meta.env.PUBLIC_CHECKOUT_API_URL
+  ?? 'http://127.0.0.1:3001/api/checkout/paystack'
+).replace(/\/+$/, '');
 const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 ---
 
-<BaseLayout title="Secure program checkout" description="Buy a Tilana van Tonder program securely through Paystack." showNewsletter={false}>
-  <PageHero eyebrow="Secure checkout" title="Start your" script="next chapter." intro="Choose a program volume, pay once, and access it through your customer account." />
+<BaseLayout title="Your programme basket" description="Buy Tilana van Tonder programmes securely through Paystack." showNewsletter={false}>
+  <PageHero eyebrow="Your basket" title="Choose more." script="Pay once." intro="Review your programmes, enter your details, and complete one secure payment." />
 
   <section
     class="section checkout-section"
     data-checkout
     data-catalogue-api-url={`${catalogueApiBaseUrl}/program-volumes`}
-    data-checkout-api-url={checkoutApiUrl}
+    data-checkout-api-url={`${checkoutApiUrl}/basket`}
     aria-busy="true"
   >
     <div class="container">
       <div class="checkout-state" data-checkout-loading role="status">
         <span class="state-icon" aria-hidden="true">•••</span>
-        <div><h2>Loading your program</h2><p>Confirming the latest volume and price.</p></div>
+        <div><h2>Loading your basket</h2><p>Confirming the latest programmes and prices.</p></div>
       </div>
 
       <div class="checkout-state checkout-error" data-checkout-error role="alert" hidden>
         <span class="state-icon" aria-hidden="true">!</span>
-        <div><h2 data-error-title>Checkout is unavailable</h2><p data-error-copy>Please return to the programs page and choose an available volume.</p></div>
+        <div><h2 data-error-title>Your basket is empty</h2><p data-error-copy>Add a programme before continuing to payment.</p></div>
         <div class="state-actions">
           <button type="button" class="button button-secondary" data-checkout-retry hidden>Try again</button>
-          <a class="button button-dark" href="/program">View programs</a>
+          <a class="button button-dark" href="/program">Browse programmes</a>
         </div>
       </div>
 
       <div class="checkout-grid" data-checkout-content hidden>
         <aside class="order-card">
-          <p class="eyebrow" data-program-name>Your program</p>
-          <h2 data-volume-name></h2>
-          <p data-volume-description>Your price is confirmed securely by the server before Paystack opens.</p>
-          <div class="price"><span>Once-off payment</span><strong data-volume-price></strong></div>
+          <div class="order-heading">
+            <div><p class="eyebrow">Your selection</p><h2 data-basket-heading>Your basket</h2></div>
+            <a href="/program">Add another</a>
+          </div>
+          <div class="basket-items" data-basket-items></div>
+          <div class="price"><span>Total once-off payment</span><strong data-basket-total></strong></div>
           <ul>
-            <li>Secure Paystack checkout</li>
+            <li>One secure Paystack payment</li>
             <li>No account needed before payment</li>
-            <li>Your purchase is linked when you verify your email</li>
+            <li>Every purchased programme is linked when you verify your email</li>
           </ul>
         </aside>
 
@@ -58,10 +63,10 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
           <label>Phone number <small>(optional)</small><input name="phone" type="tel" autocomplete="tel" maxlength="30" /></label>
           <label class="consent">
             <input name="consent" type="checkbox" required />
-            <span>I agree to the <a href="/privacy">privacy policy</a> and understand this is a digital program providing general education, not clinical care.</span>
+            <span>I agree to the <a href="/privacy">privacy policy</a> and understand these are digital programmes providing general education, not clinical care.</span>
           </label>
           {turnstileSiteKey && <div class="cf-turnstile" data-sitekey={turnstileSiteKey} data-action="checkout" data-theme="auto"></div>}
-          <button class="button button-primary" type="submit"><span>Continue to secure payment</span></button>
+          <button class="button button-primary" type="submit"><span>Pay securely for my programmes</span></button>
           <p class="form-status" data-form-status role="status" aria-live="polite"></p>
         </form>
       </div>
@@ -75,9 +80,16 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     publicCatalogueVolumeResponseSchema,
     type PublicCatalogueVolumeDetail,
   } from '@tilana/contracts/catalogue';
-  import { checkoutRequestSchema } from '@tilana/contracts/checkout';
+  import { basketCheckoutRequestSchema } from '@tilana/contracts/checkout';
+  import {
+    addToBasket,
+    readBasket,
+    rememberPendingBasket,
+    removeFromBasket,
+    writeBasket,
+  } from '../../scripts/basket';
 
-  type ApiMessage = { authorizationUrl?: string; statusMessage?: string; message?: string };
+  type ApiMessage = { authorizationUrl?: string; reference?: string; statusMessage?: string; message?: string };
 
   const priceFormatter = new Intl.NumberFormat('en-ZA', {
     style: 'currency',
@@ -91,11 +103,14 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
   const errorCopy = root?.querySelector<HTMLElement>('[data-error-copy]');
   const retry = root?.querySelector<HTMLButtonElement>('[data-checkout-retry]');
   const content = root?.querySelector<HTMLElement>('[data-checkout-content]');
+  const itemsContainer = root?.querySelector<HTMLElement>('[data-basket-items]');
+  const heading = root?.querySelector<HTMLElement>('[data-basket-heading]');
+  const total = root?.querySelector<HTMLElement>('[data-basket-total]');
   const form = root?.querySelector<HTMLFormElement>('[data-checkout-form]');
   const status = form?.querySelector<HTMLElement>('[data-form-status]');
   const button = form?.querySelector<HTMLButtonElement>('button[type="submit"]');
   const buttonLabel = button?.querySelector<HTMLElement>('span');
-  let selectedVolume: PublicCatalogueVolumeDetail | null = null;
+  let selectedVolumes: PublicCatalogueVolumeDetail[] = [];
 
   function showError(title: string, copy: string, canRetry: boolean) {
     if (!root || !errorPanel || !errorTitle || !errorCopy) return;
@@ -112,62 +127,102 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     return response.json().catch(() => null) as Promise<ApiMessage | null>;
   }
 
-  async function loadVolume() {
+  function renderBasket() {
+    if (!root || !itemsContainer || !heading || !total) return;
+    if (!selectedVolumes.length) {
+      showError('Your basket is empty', 'Add a programme before continuing to payment.', false);
+      return;
+    }
+
+    const rows = selectedVolumes.map((volume) => {
+      const row = document.createElement('article');
+      row.className = 'basket-item';
+      const details = document.createElement('div');
+      const programName = document.createElement('span');
+      programName.textContent = volume.program.name;
+      const volumeName = document.createElement('strong');
+      volumeName.textContent = volume.name;
+      details.append(programName, volumeName);
+      const actions = document.createElement('div');
+      const price = document.createElement('strong');
+      price.textContent = priceFormatter.format(volume.priceCents / 100);
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.textContent = 'Remove';
+      remove.setAttribute('aria-label', `Remove ${volume.name} from basket`);
+      remove.addEventListener('click', () => {
+        removeFromBasket(volume.slug);
+        selectedVolumes = selectedVolumes.filter(item => item.slug !== volume.slug);
+        renderBasket();
+      });
+      actions.append(price, remove);
+      row.append(details, actions);
+      return row;
+    });
+    itemsContainer.replaceChildren(...rows);
+    const count = selectedVolumes.length;
+    heading.textContent = `${count} ${count === 1 ? 'programme' : 'programmes'}`;
+    const totalCents = selectedVolumes.reduce((sum, volume) => sum + volume.priceCents, 0);
+    total.textContent = priceFormatter.format(totalCents / 100);
+    errorPanel?.setAttribute('hidden', '');
+    content?.removeAttribute('hidden');
+    root.setAttribute('aria-busy', 'false');
+  }
+
+  async function fetchVolume(slug: string): Promise<PublicCatalogueVolumeDetail | null> {
+    if (!root) return null;
+    const response = await fetch(`${root.dataset.catalogueApiUrl}/${encodeURIComponent(slug)}`, {
+      headers: { Accept: 'application/json' },
+    });
+    const body: unknown = await response.json().catch(() => null);
+    const parsed = publicCatalogueVolumeResponseSchema.safeParse(body);
+    if (!response.ok || !parsed.success || !parsed.data.volume.isAvailable) return null;
+    return parsed.data.volume;
+  }
+
+  async function loadBasket() {
     if (!root) return;
-    selectedVolume = null;
     root.setAttribute('aria-busy', 'true');
     loading?.removeAttribute('hidden');
     errorPanel?.setAttribute('hidden', '');
     content?.setAttribute('hidden', '');
 
-    const parsedSlug = catalogueSlugSchema.safeParse(new URLSearchParams(window.location.search).get('programme'));
-    if (!parsedSlug.success) {
-      showError('Choose a program first', 'Return to the programs page and select the volume you would like to buy.', false);
+    const querySlug = new URLSearchParams(window.location.search).get('programme');
+    const parsedQuerySlug = catalogueSlugSchema.safeParse(querySlug);
+    if (parsedQuerySlug.success) addToBasket(parsedQuerySlug.data);
+    const slugs = readBasket();
+    if (!slugs.length) {
+      showError('Your basket is empty', 'Browse the programme collection and add anything you would like to purchase.', false);
       return;
     }
 
     try {
-      const response = await fetch(`${root.dataset.catalogueApiUrl}/${encodeURIComponent(parsedSlug.data)}`, {
-        headers: { Accept: 'application/json' },
-      });
-      const body: unknown = await response.json().catch(() => null);
-      const parsed = publicCatalogueVolumeResponseSchema.safeParse(body);
-      if (!response.ok || !parsed.success) throw new Error('The selected program could not be loaded.');
-      if (!parsed.data.volume.isAvailable) {
-        showError('This volume is not available yet', 'Please choose another available volume from the programs page.', false);
+      const volumes = await Promise.all(slugs.map(fetchVolume));
+      selectedVolumes = volumes.filter((volume): volume is PublicCatalogueVolumeDetail => volume !== null);
+      if (selectedVolumes.length !== slugs.length) writeBasket(selectedVolumes.map(volume => volume.slug));
+      loading?.setAttribute('hidden', '');
+      if (!selectedVolumes.length) {
+        showError('Your programmes are unavailable', 'The programmes in your basket are no longer available. Please choose from the current collection.', false);
         return;
       }
-
-      selectedVolume = parsed.data.volume;
-      const programName = root.querySelector<HTMLElement>('[data-program-name]');
-      const volumeName = root.querySelector<HTMLElement>('[data-volume-name]');
-      const description = root.querySelector<HTMLElement>('[data-volume-description]');
-      const price = root.querySelector<HTMLElement>('[data-volume-price]');
-      if (programName) programName.textContent = selectedVolume.program.name;
-      if (volumeName) volumeName.textContent = selectedVolume.name;
-      if (description) {
-        description.textContent = selectedVolume.description
-          ?? 'Your price is confirmed securely by the server before Paystack opens.';
-      }
-      if (price) price.textContent = priceFormatter.format(selectedVolume.priceCents / 100);
-      loading?.setAttribute('hidden', '');
-      content?.removeAttribute('hidden');
-      root.setAttribute('aria-busy', 'false');
+      renderBasket();
     } catch {
-      showError('Program could not be loaded', 'Please try again, or return to the programs page and choose another volume.', true);
+      showError('Basket could not be loaded', 'Please try again in a moment.', true);
     }
   }
 
-  retry?.addEventListener('click', () => void loadVolume());
-  void loadVolume();
+  retry?.addEventListener('click', () => void loadBasket());
+  void loadBasket();
 
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    if (!root || !form || !status || !button || !buttonLabel || !selectedVolume) return;
+    if (!root || !form || !status || !button || !buttonLabel || !selectedVolumes.length) return;
     const data = new FormData(form);
-    const parsed = checkoutRequestSchema.safeParse({
-      volumeSlug: selectedVolume.slug,
-      expectedPriceCents: selectedVolume.priceCents,
+    const parsed = basketCheckoutRequestSchema.safeParse({
+      items: selectedVolumes.map(volume => ({
+        volumeSlug: volume.slug,
+        expectedPriceCents: volume.priceCents,
+      })),
       firstName: data.get('firstName'),
       lastName: data.get('lastName'),
       email: data.get('email'),
@@ -195,19 +250,20 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         body: JSON.stringify(parsed.data),
       });
       const body = await readJson(response);
-      if (!response.ok || !body?.authorizationUrl) {
+      if (!response.ok || !body?.authorizationUrl || !body.reference) {
         if (response.status === 409) {
-          await loadVolume();
-          throw new Error(body?.statusMessage ?? body?.message ?? 'The program changed. Please review it before paying.');
+          await loadBasket();
+          throw new Error(body?.statusMessage ?? body?.message ?? 'Your basket changed. Please review it before paying.');
         }
         throw new Error(body?.statusMessage ?? body?.message ?? 'Checkout could not be started.');
       }
+      rememberPendingBasket(body.reference, selectedVolumes.map(volume => volume.slug));
       window.location.assign(body.authorizationUrl);
     } catch (checkoutError) {
       status.textContent = checkoutError instanceof Error ? checkoutError.message : 'Checkout could not be started.';
       status.dataset.state = 'error';
       button.disabled = false;
-      buttonLabel.textContent = 'Continue to secure payment';
+      buttonLabel.textContent = 'Pay securely for my programmes';
       (window as Window & { turnstile?: { reset: () => void } }).turnstile?.reset();
     }
   });
@@ -215,7 +271,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
 <style>
   .checkout-section { min-height: 42rem; background: var(--cream); }
-  .checkout-grid { display: grid; align-items: start; gap: clamp(2rem, 6vw, 5rem); grid-template-columns: 0.85fr 1.15fr; }
+  .checkout-grid { display: grid; align-items: start; gap: clamp(2rem, 6vw, 5rem); grid-template-columns: 0.95fr 1.05fr; }
   .checkout-state { display: flex; min-height: 12rem; align-items: center; gap: 1rem; padding: clamp(1.5rem, 4vw, 2.5rem); border: 1px dashed var(--color-border); border-radius: var(--radius-lg); background: var(--white); }
   .checkout-state .state-icon { display: grid; width: 3rem; height: 3rem; flex: none; place-items: center; border-radius: 1rem; color: var(--ink); background: var(--sage); font-weight: 800; letter-spacing: 0.08em; }
   .checkout-error .state-icon { background: var(--terracotta); }
@@ -225,12 +281,20 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
   .state-actions { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-left: auto; }
   .order-card, .checkout-form { padding: clamp(1.5rem, 4vw, 2.5rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
   .order-card { background: var(--sage); }
-  .order-card h2 { margin: 0.7rem 0 1rem; font-family: var(--font-heading); font-size: clamp(2rem, 4vw, 3rem); }
-  .order-card p { line-height: 1.7; }
+  .order-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
+  .order-heading h2 { margin: 0.45rem 0 0; font-family: var(--font-heading); font-size: clamp(1.8rem, 4vw, 2.6rem); }
+  .order-heading > a { flex: none; padding-bottom: 0.35rem; color: var(--chocolate); font-size: 0.72rem; font-weight: 750; text-decoration: underline; text-underline-offset: 0.2rem; }
+  .basket-items { display: grid; margin-top: 1.5rem; border-top: 1px solid rgb(15 14 19 / 15%); }
+  :global(.basket-item) { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 1rem; border-bottom: 1px solid rgb(15 14 19 / 15%); }
+  :global(.basket-item > div) { display: grid; gap: 0.2rem; }
+  :global(.basket-item > div:last-child) { justify-items: end; }
+  :global(.basket-item span) { color: var(--chocolate); font-size: 0.68rem; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; }
+  :global(.basket-item strong) { color: var(--ink); font-size: 0.82rem; }
+  :global(.basket-item button) { padding: 0; border: 0; color: var(--chocolate); background: transparent; font: inherit; font-size: 0.68rem; text-decoration: underline; cursor: pointer; }
   .order-card ul { display: grid; gap: 0.65rem; margin: 1.5rem 0 0; padding-left: 1.2rem; font-size: 0.78rem; }
-  .price { display: grid; gap: 0.25rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgb(15 14 19 / 15%); }
-  .price span { font-size: 0.7rem; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; }
-  .price strong { font-family: var(--font-heading); font-size: 2.4rem; }
+  .price { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-top: 1.5rem; }
+  .price span { max-width: 10rem; font-size: 0.7rem; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; }
+  .price strong { font-family: var(--font-heading); font-size: clamp(2rem, 4vw, 2.6rem); }
   .checkout-form { position: relative; display: grid; gap: 1.2rem; background: var(--white); }
   .checkout-form label:not(.consent) { display: grid; gap: 0.45rem; color: var(--ink); font-size: 0.75rem; font-weight: 700; }
   .checkout-form input:not([type="checkbox"]) { width: 100%; padding: 0.9rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--ink); background: var(--cream); font: inherit; }
@@ -251,5 +315,6 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
   @media (max-width: 30rem) {
     .name-grid { grid-template-columns: 1fr; }
     .state-actions .button { width: 100%; }
+    :global(.basket-item) { align-items: flex-start; }
   }
 </style>

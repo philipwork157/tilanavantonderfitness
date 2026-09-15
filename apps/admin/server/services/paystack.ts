@@ -1,4 +1,9 @@
-import type { CheckoutRequest, CheckoutResponse, CheckoutStatusResponse } from '@tilana/contracts/checkout';
+import type {
+  BasketCheckoutRequest,
+  CheckoutRequest,
+  CheckoutResponse,
+  CheckoutStatusResponse,
+} from '@tilana/contracts/checkout';
 import type { AdminPaymentRefundRequest } from '@tilana/contracts/payments';
 import type { Database } from '@tilana/db/server';
 import {
@@ -86,7 +91,12 @@ function makePaymentReference(): string {
   return `TVT-${Date.now()}-${crypto.randomUUID()}`;
 }
 
-async function getOrCreateClient(transaction: DatabaseTransaction, input: CheckoutRequest) {
+type CheckoutCustomer = Pick<
+  BasketCheckoutRequest,
+  'firstName' | 'lastName' | 'email' | 'phone'
+>;
+
+async function getOrCreateClient(transaction: DatabaseTransaction, input: CheckoutCustomer) {
   const email = input.email.trim().toLowerCase();
   let [client] = await transaction
     .select({ id: clients.id })
@@ -164,6 +174,19 @@ async function getPurchasableVolume(
 }
 
 export async function initializePaystackCheckout(input: CheckoutRequest): Promise<CheckoutResponse> {
+  return initializePaystackBasketCheckout({
+    items: [{ volumeSlug: input.volumeSlug, expectedPriceCents: input.expectedPriceCents }],
+    firstName: input.firstName,
+    lastName: input.lastName,
+    email: input.email,
+    phone: input.phone,
+    consent: input.consent,
+    website: input.website,
+    turnstileToken: input.turnstileToken,
+  });
+}
+
+export async function initializePaystackBasketCheckout(input: BasketCheckoutRequest): Promise<CheckoutResponse> {
   const config = useRuntimeConfig();
   const secretKey = String(config.paystackSecretKey || '').trim();
   const callbackUrl = String(config.paystackCallbackUrl || '').trim();
@@ -176,9 +199,17 @@ export async function initializePaystackCheckout(input: CheckoutRequest): Promis
   const database = getDatabase();
   const checkout = await database.transaction(async (transaction) => {
     const customer = await getOrCreateClient(transaction, input);
-    const volume = await getPurchasableVolume(transaction, input.volumeSlug);
-    if (!isCheckoutPriceCurrent(input.expectedPriceCents, volume.priceCents)) {
-      throw createError({ statusCode: 409, statusMessage: 'The program price has changed. Please refresh before paying.' });
+    const volumes = [];
+    for (const item of input.items) {
+      const volume = await getPurchasableVolume(transaction, item.volumeSlug);
+      if (!isCheckoutPriceCurrent(item.expectedPriceCents, volume.priceCents)) {
+        throw createError({ statusCode: 409, statusMessage: 'A programme price has changed. Please review your basket before paying.' });
+      }
+      volumes.push(volume);
+    }
+    const totalCents = volumes.reduce((total, volume) => total + volume.priceCents, 0);
+    if (!Number.isSafeInteger(totalCents) || totalCents <= 0 || totalCents > 2_147_483_647) {
+      throw createError({ statusCode: 409, statusMessage: 'The basket total is not valid.' });
     }
     const orderNumber = makeOrderNumber();
     const reference = makePaymentReference();
@@ -190,15 +221,15 @@ export async function initializePaystackCheckout(input: CheckoutRequest): Promis
         clientId: customer.id,
         customerEmail: customer.email,
         status: 'pending',
-        currency: volume.currency,
-        subtotalCents: volume.priceCents,
-        totalCents: volume.priceCents,
+        currency: 'ZAR',
+        subtotalCents: totalCents,
+        totalCents,
       })
       .returning({ id: orders.id });
 
     if (!order) throw new Error('The order could not be created.');
 
-    await transaction.insert(orderItems).values({
+    await transaction.insert(orderItems).values(volumes.map(volume => ({
       orderId: order.id,
       clientId: customer.id,
       programVolumeId: volume.id,
@@ -206,7 +237,7 @@ export async function initializePaystackCheckout(input: CheckoutRequest): Promis
       quantity: 1,
       unitPriceCents: volume.priceCents,
       lineTotalCents: volume.priceCents,
-    });
+    })));
 
     const [payment] = await transaction
       .insert(payments)
@@ -215,13 +246,13 @@ export async function initializePaystackCheckout(input: CheckoutRequest): Promis
         provider: 'paystack',
         providerReference: reference,
         environment: environment as 'test' | 'live',
-        amountCents: volume.priceCents,
-        currency: volume.currency,
+        amountCents: totalCents,
+        currency: 'ZAR',
       })
       .returning({ id: payments.id });
 
     if (!payment) throw new Error('The payment attempt could not be created.');
-    return { orderId: order.id, paymentId: payment.id, reference, email: customer.email, volume };
+    return { orderId: order.id, paymentId: payment.id, reference, email: customer.email, volumes, totalCents };
   });
 
   try {
@@ -230,14 +261,15 @@ export async function initializePaystackCheckout(input: CheckoutRequest): Promis
       headers: { Authorization: `Bearer ${secretKey}` },
       body: {
         email: checkout.email,
-        amount: String(checkout.volume.priceCents),
-        currency: checkout.volume.currency,
+        amount: String(checkout.totalCents),
+        currency: 'ZAR',
         reference: checkout.reference,
         callback_url: callbackUrl,
         metadata: {
           order_id: checkout.orderId,
           payment_id: checkout.paymentId,
-          program_volume_id: checkout.volume.id,
+          program_volume_ids: checkout.volumes.map(volume => volume.id),
+          item_count: checkout.volumes.length,
         },
       },
     });

@@ -21,8 +21,8 @@ than replaced:
   authorization, and Paystack integration.
 - The Astro application remains a static public website and reads published
   catalogue data from a safe, read-only Nuxt API in the browser.
-- Checkout remains a direct single-program purchase. A basket is not required
-  for the first version.
+- Checkout initially remained a direct single-program purchase. The later basket
+  enhancement supports up to ten unique programme volumes in one verified payment.
 - Cloudflare R2 stores public marketing media and private purchased documents in
   separate buckets.
 - Every application table keeps an auto-incrementing integer primary key, and
@@ -647,7 +647,6 @@ production builds, and development/production public-environment validation.
 
 ## Out of scope for the first release
 
-- Shopping basket and multi-program checkout UI.
 - Coupons, subscriptions, instalments, bundles, or regional pricing.
 - Drag-and-drop page building.
 - Video hosting or streaming.

@@ -31,6 +31,7 @@ const endpoints: ApiEndpointDefinition[] = [
   { method: 'get', path: '/api/public/program-volumes/{slug}', tag: 'Public catalogue', summary: 'Get a purchasable volume by checkout slug', security: 'public' },
 
   { method: 'post', path: '/api/checkout/paystack', tag: 'Checkout', summary: 'Start a Paystack checkout', description: 'Creates the pending order from the authoritative database price and returns the hosted Paystack authorization URL.', security: 'public', requestSchema: 'CheckoutRequest' },
+  { method: 'post', path: '/api/checkout/paystack/basket', tag: 'Checkout', summary: 'Start a multi-programme Paystack checkout', description: 'Validates every unique programme and current price, creates one order with multiple immutable line items, and returns the hosted Paystack authorization URL.', security: 'public', requestSchema: 'BasketCheckoutRequest' },
   { method: 'get', path: '/api/checkout/status', tag: 'Checkout', summary: 'Read checkout verification status', security: 'public', query: [{ name: 'reference', description: 'Paystack checkout reference.', required: true }] },
   { method: 'post', path: '/api/webhooks/paystack', tag: 'Checkout', summary: 'Receive signed Paystack events', description: 'Paystack signature verification and idempotent reconciliation make this endpoint the payment source of truth.', security: 'paystack', successDescription: 'Event accepted or safely ignored as a duplicate.' },
 
@@ -234,6 +235,19 @@ export function getAdminOpenApiDocument() {
           required: ['volumeSlug', 'expectedPriceCents', 'firstName', 'lastName', 'email', 'consent'],
           properties: {
             volumeSlug: { type: 'string', example: 'beginner-volume-1' }, expectedPriceCents: { type: 'integer', minimum: 1, example: 39900 },
+            firstName: { type: 'string', maxLength: 100 }, lastName: { type: 'string', maxLength: 100 }, email: { type: 'string', format: 'email' },
+            phone: { type: 'string', maxLength: 30 }, consent: { type: 'boolean', const: true }, website: { type: 'string', description: 'Honeypot field. Leave empty.' },
+            turnstileToken: { type: 'string', description: 'Cloudflare Turnstile token when required.' },
+          },
+        },
+        BasketCheckoutRequest: {
+          type: 'object',
+          required: ['items', 'firstName', 'lastName', 'email', 'consent'],
+          properties: {
+            items: {
+              type: 'array', minItems: 1, maxItems: 10,
+              items: { type: 'object', required: ['volumeSlug', 'expectedPriceCents'], properties: { volumeSlug: { type: 'string', example: 'beginner-volume-1' }, expectedPriceCents: { type: 'integer', minimum: 1, maximum: 100000000 } } },
+            },
             firstName: { type: 'string', maxLength: 100 }, lastName: { type: 'string', maxLength: 100 }, email: { type: 'string', format: 'email' },
             phone: { type: 'string', maxLength: 30 }, consent: { type: 'boolean', const: true }, website: { type: 'string', description: 'Honeypot field. Leave empty.' },
             turnstileToken: { type: 'string', description: 'Cloudflare Turnstile token when required.' },

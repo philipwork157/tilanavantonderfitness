@@ -18,6 +18,8 @@ const accountUrl = import.meta.env.PUBLIC_ACCOUNT_URL ?? 'http://127.0.0.1:3001/
 </BaseLayout>
 
 <script>
+  import { clearPaidBasket } from '../../scripts/basket';
+
   const root = document.querySelector<HTMLElement>('[data-payment-status]');
   const title = root?.querySelector<HTMLElement>('[data-status-title]');
   const copy = root?.querySelector<HTMLElement>('[data-status-copy]');
@@ -42,6 +44,7 @@ const accountUrl = import.meta.env.PUBLIC_ACCOUNT_URL ?? 'http://127.0.0.1:3001/
         const response = await fetch(`${root.dataset.apiUrl}?reference=${encodeURIComponent(reference)}`);
         const result = await response.json() as { status?: string; orderNumber?: string };
         if (result.status === 'succeeded') {
+          clearPaidBasket(reference);
           show('Payment received', `Thank you. Your order ${result.orderNumber ?? ''} is confirmed and access is linked to your email address.`);
           if (accountLink) accountLink.hidden = false;
           return;

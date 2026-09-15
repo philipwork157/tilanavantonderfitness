@@ -112,12 +112,14 @@ See `docs/database-design.md` for the detailed domain model.
 
 Customers do not need to create an account before buying a program. The flow is:
 
-1. The public website sends the selected database volume slug and guest contact details
-   to the Nuxt checkout API.
-2. The server validates the request and reads the authoritative price from
-   `program_volumes`; it never trusts a browser-supplied price.
+1. The public website sends one to ten unique database volume slugs, displayed-price
+   snapshots, and guest contact details to the Nuxt basket checkout API. The legacy
+   direct checkout endpoint remains available for a single volume.
+2. The server validates every requested volume and reads all authoritative prices
+   from `program_volumes`; it never trusts browser-supplied prices or totals.
 3. A transaction creates or reuses the case-insensitive `clients` record and
-   inserts an integer-linked pending `order`, `order_item`, and `payment`.
+   inserts an integer-linked pending `order`, one immutable `order_item` per
+   programme, and a payment for the server-calculated total.
 4. The server initializes Paystack with its secret key and returns only the
    hosted authorization URL/reference to the browser.
 5. The Paystack callback only controls the customer-facing completion screen.
