@@ -23,6 +23,12 @@ import { and, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { getDatabase } from '../utils/database';
 import { getCatalogueStorageConfiguration } from '../utils/r2';
 import { isCheckoutPriceCurrent } from './catalogue-policy';
+import {
+  getTerminalCheckoutResolution,
+  isPaymentAlreadyFulfilled,
+  isPaystackEnvironmentMatch,
+  isProgramAccessCurrent,
+} from './paystack-policy';
 
 type DatabaseTransaction = Parameters<Parameters<Database['transaction']>[0]>[0];
 
@@ -397,11 +403,12 @@ async function ensureAccessForItem(
       eq(programAccess.status, 'active'),
     ))
     .limit(1);
-  if (activeAccess && (!activeAccess.expiresAt || activeAccess.expiresAt > new Date())) return;
+  const now = new Date();
+  if (activeAccess && isProgramAccessCurrent(activeAccess.expiresAt, now)) return;
   if (activeAccess) {
     await transaction
       .update(programAccess)
-      .set({ status: 'expired', updatedAt: new Date() })
+      .set({ status: 'expired', updatedAt: now })
       .where(eq(programAccess.id, activeAccess.id));
   }
 
@@ -531,7 +538,7 @@ async function processChargeSuccess(
     || providerStatus !== 'success'
     || amount !== payment.amountCents
     || currency !== payment.currency
-    || environment !== payment.environment
+    || !isPaystackEnvironmentMatch(environment, payment.environment)
   ) {
     await markPaymentEvent(
       transaction,
@@ -542,7 +549,7 @@ async function processChargeSuccess(
     return;
   }
 
-  if (['succeeded', 'partially_refunded', 'refunded', 'reversed'].includes(payment.status)) {
+  if (isPaymentAlreadyFulfilled(payment.status)) {
     await markPaymentEvent(transaction, eventId, 'ignored', 'The successful payment was already processed.');
     return;
   }
@@ -595,8 +602,8 @@ async function processRefundEvent(
     || !amount
     || amount > payment.amountCents
     || currency !== payment.currency
-    || environment !== payment.environment
-    || !['succeeded', 'partially_refunded', 'refunded', 'reversed'].includes(payment.status)
+    || !isPaystackEnvironmentMatch(environment, payment.environment)
+    || !isPaymentAlreadyFulfilled(payment.status)
   ) {
     await markPaymentEvent(
       transaction,
@@ -873,7 +880,7 @@ export async function initiatePaystackRefund(
     || !validStatuses.includes(providerStatus as PaymentRefundStatus)
     || responseAmount !== input.amountCents
     || responseCurrency !== reservation.payment.currency
-    || responseEnvironment !== reservation.payment.environment
+    || !isPaystackEnvironmentMatch(responseEnvironment, reservation.payment.environment)
   ) {
     await updateRequestedRefundStatus(reservation.refundId, 'needs-attention', 'refund_response_invalid');
     throw new PaystackRefundError(
@@ -1039,37 +1046,28 @@ export async function verifyPaystackCheckout(reference: string): Promise<void> {
     return;
   }
 
-  const terminalStatus = providerStatus === 'failed'
-    ? 'failed'
-    : providerStatus === 'abandoned'
-      ? 'abandoned'
-      : providerStatus === 'reversed'
-        ? 'reversed'
-        : null;
+  const terminal = getTerminalCheckoutResolution(providerStatus);
   await database.transaction(async (transaction) => {
     const now = new Date();
     await transaction
       .update(payments)
       .set({
-        ...(terminalStatus && { status: terminalStatus }),
-        ...(terminalStatus === 'reversed' && { refundedAmountCents: payment.amountCents }),
+        ...(terminal && { status: terminal.paymentStatus }),
+        ...(terminal?.fullyRefunded && { refundedAmountCents: payment.amountCents }),
         providerStatus: providerStatus || 'verification_pending',
-        failureMessage: terminalStatus ? response.message : null,
+        failureMessage: terminal ? response.message : null,
         updatedAt: now,
       })
       .where(eq(payments.id, payment.id));
 
-    if (terminalStatus === 'failed' || terminalStatus === 'abandoned') {
+    if (terminal) {
       await transaction
         .update(orders)
-        .set({ status: 'cancelled', updatedAt: now })
-        .where(and(eq(orders.id, payment.orderId), eq(orders.status, 'pending')));
-    } else if (terminalStatus === 'reversed') {
-      await transaction
-        .update(orders)
-        .set({ status: 'refunded', updatedAt: now })
-        .where(eq(orders.id, payment.orderId));
-      await revokeOrderAccess(transaction, payment.orderId);
+        .set({ status: terminal.orderStatus, updatedAt: now })
+        .where(terminal.orderStatus === 'cancelled'
+          ? and(eq(orders.id, payment.orderId), eq(orders.status, 'pending'))
+          : eq(orders.id, payment.orderId));
+      if (terminal.revokeAccess) await revokeOrderAccess(transaction, payment.orderId);
     }
   });
 }

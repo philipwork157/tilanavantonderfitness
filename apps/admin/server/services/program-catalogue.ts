@@ -20,6 +20,7 @@ import {
 import { and, asc, desc, eq, exists, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import { getDatabase } from '../utils/database';
 import { getCatalogueStorageConfiguration } from '../utils/r2';
+import { groupDistinctCatalogueCustomers } from './catalogue-reporting-policy';
 import {
   getCataloguePublicationIssues,
   getProgramVolumeAuditEvents,
@@ -303,33 +304,10 @@ export async function listAdminPrograms() {
   }
   const salesByVolume = new Map(salesRows.map(row => [row.volumeId, row]));
   const programIdByVolume = new Map(volumeRows.map(volume => [volume.id, volume.programId]));
-  const buyersByVolume = new Map<number, Set<number>>();
-  const buyersByProgram = new Map<number, Set<number>>();
-  const accessByVolume = new Map<number, Set<number>>();
-  const accessByProgram = new Map<number, Set<number>>();
-  for (const purchaser of purchaserRows) {
-    if (!purchaser.volumeId) continue;
-    const programId = programIdByVolume.get(purchaser.volumeId);
-    const volumeBuyers = buyersByVolume.get(purchaser.volumeId) ?? new Set<number>();
-    volumeBuyers.add(purchaser.clientId);
-    buyersByVolume.set(purchaser.volumeId, volumeBuyers);
-    if (programId) {
-      const programBuyers = buyersByProgram.get(programId) ?? new Set<number>();
-      programBuyers.add(purchaser.clientId);
-      buyersByProgram.set(programId, programBuyers);
-    }
-  }
-  for (const access of accessRows) {
-    const programId = programIdByVolume.get(access.volumeId);
-    const volumeAccess = accessByVolume.get(access.volumeId) ?? new Set<number>();
-    volumeAccess.add(access.clientId);
-    accessByVolume.set(access.volumeId, volumeAccess);
-    if (programId) {
-      const programAccess = accessByProgram.get(programId) ?? new Set<number>();
-      programAccess.add(access.clientId);
-      accessByProgram.set(programId, programAccess);
-    }
-  }
+  const { byVolume: buyersByVolume, byProgram: buyersByProgram } =
+    groupDistinctCatalogueCustomers(purchaserRows, programIdByVolume);
+  const { byVolume: accessByVolume, byProgram: accessByProgram } =
+    groupDistinctCatalogueCustomers(accessRows, programIdByVolume);
 
   return programRows.map(program => {
     const volumes = volumeRows

@@ -8,8 +8,10 @@
     "start": "ASTRO_TELEMETRY_DISABLED=1 astro dev --host 127.0.0.1 --port 4321",
     "build": "pnpm typecheck && astro build && node scripts/prepare-sites.mjs",
     "preview": "astro preview",
-    "lint": "eslint \"src/**/*.{astro,js,ts}\" \"scripts/**/*.mjs\" \"worker/**/*.js\" \"*.{js,mjs,ts}\" --max-warnings 0",
+    "lint": "eslint \"src/**/*.{astro,js,ts}\" \"scripts/**/*.mjs\" \"tests/**/*.ts\" \"worker/**/*.js\" \"*.{js,mjs,ts}\" --max-warnings 0",
     "lint:fix": "pnpm lint --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "astro check",
     "check": "pnpm lint && pnpm typecheck"
   },
@@ -30,6 +32,7 @@
     "eslint-plugin-astro": "^3.1.0",
     "globals": "^17.11.0",
     "typescript": "^6.0.0",
-    "typescript-eslint": "^8.67.0"
+    "typescript-eslint": "^8.67.0",
+    "vitest": "^5.0.0"
   }
 }

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { describe, it, mock } from 'node:test';
+import { describe, it, vi } from 'vitest';
 import { authorizeCatalogueMutation } from '../server/utils/catalogue-authorization.ts';
 
 describe('admin catalogue mutation authorization', () => {
@@ -16,8 +16,8 @@ describe('admin catalogue mutation authorization', () => {
       },
     };
     const result = await authorizeCatalogueMutation({}, {
-      enforceSameOrigin: mock.fn(() => { calls.push('origin'); }),
-      requireAdmin: mock.fn(async () => { calls.push('admin'); return session; }),
+      enforceSameOrigin: vi.fn(() => { calls.push('origin'); }),
+      requireAdmin: vi.fn(async () => { calls.push('admin'); return session; }),
     });
 
     assert.deepEqual(calls, ['origin', 'admin']);
@@ -25,11 +25,11 @@ describe('admin catalogue mutation authorization', () => {
   });
 
   it('does not attempt authentication after a rejected origin', async () => {
-    const requireAdmin = mock.fn(async () => ({ id: 1 }));
+    const requireAdmin = vi.fn(async () => ({ id: 1 }));
     await assert.rejects(authorizeCatalogueMutation({}, {
-      enforceSameOrigin: mock.fn(() => { throw new Error('origin rejected'); }),
+      enforceSameOrigin: vi.fn(() => { throw new Error('origin rejected'); }),
       requireAdmin,
     }), /origin rejected/);
-    assert.equal(requireAdmin.mock.callCount(), 0);
+    assert.equal(requireAdmin.mock.calls.length, 0);
   });
 });

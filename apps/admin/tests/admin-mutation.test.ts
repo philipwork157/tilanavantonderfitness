@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { describe, it, mock } from 'node:test';
+import { describe, it, vi } from 'vitest';
 import { authorizeAdminMutation } from '../server/utils/admin-mutation-authorization.ts';
 
 describe('admin mutation authorization', () => {
@@ -7,8 +7,8 @@ describe('admin mutation authorization', () => {
     const calls: string[] = [];
     const session = { user: { id: 11 } };
     const result = await authorizeAdminMutation({}, {
-      enforceSameOrigin: mock.fn(() => { calls.push('origin'); }),
-      requireAdmin: mock.fn(async () => { calls.push('admin'); return session; }),
+      enforceSameOrigin: vi.fn(() => { calls.push('origin'); }),
+      requireAdmin: vi.fn(async () => { calls.push('admin'); return session; }),
     });
 
     assert.deepEqual(calls, ['origin', 'admin']);
@@ -16,11 +16,11 @@ describe('admin mutation authorization', () => {
   });
 
   it('stops before session lookup when the origin is rejected', async () => {
-    const requireAdmin = mock.fn(async () => ({ user: { id: 11 } }));
+    const requireAdmin = vi.fn(async () => ({ user: { id: 11 } }));
     await assert.rejects(authorizeAdminMutation({}, {
-      enforceSameOrigin: mock.fn(() => { throw new Error('origin rejected'); }),
+      enforceSameOrigin: vi.fn(() => { throw new Error('origin rejected'); }),
       requireAdmin,
     }), /origin rejected/);
-    assert.equal(requireAdmin.mock.callCount(), 0);
+    assert.equal(requireAdmin.mock.calls.length, 0);
   });
 });

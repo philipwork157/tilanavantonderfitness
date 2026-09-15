@@ -11,7 +11,7 @@ import {
 import { basketCheckoutRequestSchema, checkoutRequestSchema } from '@tilana/contracts/checkout';
 import { adminClientCreateRequestSchema } from '@tilana/contracts/clients';
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import { describe, it } from 'vitest';
 
 describe('catalogue API contracts', () => {
   it('rejects empty program patches and malformed slugs', () => {
