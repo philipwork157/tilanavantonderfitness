@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { contactInterestLabels } from '@tilana/contracts/contact';
+import { formatAdminDateTime } from '../utils/format';
 
 definePageMeta({ layout: 'dashboard' });
 
@@ -36,14 +37,6 @@ const filteredSubmissions = computed(() => {
     return matchesStatus && matchesSearch;
   });
 });
-
-function formatDate(value: string | Date) {
-  return new Intl.DateTimeFormat('en-ZA', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-    timeZone: 'Africa/Johannesburg',
-  }).format(new Date(value));
-}
 
 function statusColor(statusValue: string): 'primary' | 'info' | 'success' | 'neutral' {
   if (statusValue === 'new') return 'primary';
@@ -100,11 +93,12 @@ useSeoMeta({ title: 'Contact enquiries | Tilana Admin', robots: 'noindex, nofoll
       description="Please check the database connection and try again."
     />
 
-    <div v-else-if="!filteredSubmissions.length" class="empty-results">
-      <span><UIcon name="i-lucide-search-x" /></span>
-      <h2>No matching enquiries</h2>
-      <p>Change the search or status filter to see more results.</p>
-    </div>
+    <AdminEmptyState
+      v-else-if="!filteredSubmissions.length"
+      icon="i-lucide-search-x"
+      title="No matching enquiries"
+      description="Change the search or status filter to see more results."
+    />
 
     <UCard v-else class="enquiries-table-card" :ui="{ body: 'p-0 sm:p-0' }">
       <UTable :data="filteredSubmissions" :columns="columns" class="enquiries-table">
@@ -127,7 +121,7 @@ useSeoMeta({ title: 'Contact enquiries | Tilana Admin', robots: 'noindex, nofoll
           <UBadge :color="statusColor(row.original.status)" variant="subtle">{{ row.original.status }}</UBadge>
         </template>
         <template #createdAt-cell="{ row }">
-          <span class="cell-muted">{{ formatDate(row.original.createdAt) }}</span>
+          <span class="cell-muted">{{ formatAdminDateTime(row.original.createdAt) }}</span>
         </template>
         <template #actions-cell="{ row }">
           <div class="enquiry-actions">
@@ -266,31 +260,6 @@ h1 {
 .cell-muted { color: var(--ui-text-muted); font-size: 0.68rem; white-space: nowrap; }
 
 .enquiry-actions { display: flex; align-items: center; justify-content: end; gap: 0.35rem; }
-
-.empty-results {
-  display: grid;
-  min-height: 20rem;
-  place-items: center;
-  align-content: center;
-  padding: 2rem;
-  border: 1px dashed var(--color-border);
-  border-radius: 2rem;
-  text-align: center;
-}
-
-.empty-results span {
-  display: grid;
-  width: 4.5rem;
-  aspect-ratio: 1;
-  place-items: center;
-  border-radius: 1.4rem;
-  color: var(--caramel);
-  background: var(--sage);
-  font-size: 1.5rem;
-}
-
-.empty-results h2 { margin: 1rem 0 0; color: var(--ink); font-family: var(--font-heading); }
-.empty-results p { margin: 0.4rem 0 0; font-size: 0.75rem; }
 
 @media (max-width: 42rem) {
   .contacts-heading { align-items: center; }

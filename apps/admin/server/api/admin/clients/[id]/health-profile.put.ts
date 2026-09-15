@@ -1,30 +1,18 @@
 import { healthProfileUpsertSchema } from '@tilana/contracts/coaching';
-import { ClientNotFoundError, upsertHealthProfile } from '../../../../services/coaching';
+import { upsertHealthProfile } from '../../../../services/coaching';
+import { throwCoachingRouteError } from '../../../../utils/client-route';
 import { requireAdminMutation } from '../../../../utils/admin-mutation';
-import { parseDatabaseId } from '../../../../utils/database-id';
+import { readZodBody, requireRouteDatabaseId } from '../../../../utils/route-validation';
 
 export default defineEventHandler(async (event) => {
   const session = await requireAdminMutation(event);
-  const clientId = parseDatabaseId(getRouterParam(event, 'id'));
-  if (clientId === null) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid client identifier.' });
-  }
-
-  const parsed = healthProfileUpsertSchema.safeParse(await readBody(event));
-  if (!parsed.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: parsed.error.issues[0]?.message ?? 'Please check the health details.',
-    });
-  }
+  const clientId = requireRouteDatabaseId(event, 'client');
+  const body = await readZodBody(event, healthProfileUpsertSchema, 'Please check the health details.');
 
   try {
-    const profile = await upsertHealthProfile(clientId, parsed.data, session.user.id);
+    const profile = await upsertHealthProfile(clientId, body, session.user.id);
     return { ok: true, profile };
   } catch (error) {
-    if (error instanceof ClientNotFoundError) {
-      throw createError({ statusCode: 404, statusMessage: error.message });
-    }
-    throw error;
+    throwCoachingRouteError(error);
   }
 });

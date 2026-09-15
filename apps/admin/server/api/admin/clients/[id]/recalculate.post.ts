@@ -1,17 +1,13 @@
 import {
-  ClientNotFoundError,
-  MissingHealthProfileError,
   recalculateNutrition,
 } from '../../../../services/coaching';
+import { throwCoachingRouteError } from '../../../../utils/client-route';
 import { requireAdminMutation } from '../../../../utils/admin-mutation';
-import { parseDatabaseId } from '../../../../utils/database-id';
+import { requireRouteDatabaseId } from '../../../../utils/route-validation';
 
 export default defineEventHandler(async (event) => {
   const session = await requireAdminMutation(event);
-  const clientId = parseDatabaseId(getRouterParam(event, 'id'));
-  if (clientId === null) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid client identifier.' });
-  }
+  const clientId = requireRouteDatabaseId(event, 'client');
 
   try {
     const target = await recalculateNutrition(clientId, session.user.id);
@@ -23,12 +19,6 @@ export default defineEventHandler(async (event) => {
     }
     return { ok: true, target };
   } catch (error) {
-    if (error instanceof ClientNotFoundError) {
-      throw createError({ statusCode: 404, statusMessage: error.message });
-    }
-    if (error instanceof MissingHealthProfileError) {
-      throw createError({ statusCode: 409, statusMessage: error.message });
-    }
-    throw error;
+    throwCoachingRouteError(error);
   }
 });

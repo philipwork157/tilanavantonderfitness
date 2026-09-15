@@ -1,19 +1,22 @@
 import { adminLoginRequestSchema } from '@tilana/contracts/auth';
 import { clearLoginRateLimit, enforceLoginRateLimit, enforceSameOrigin } from '../../utils/auth-security';
 import { findAdminUser } from '../../utils/admin-auth';
+import { readZodBody } from '../../utils/route-validation';
 import { createSupabaseAuthClient } from '../../utils/supabase-auth';
 
 export default defineEventHandler(async (event) => {
   enforceSameOrigin(event);
   enforceLoginRateLimit(event);
 
-  const parsed = adminLoginRequestSchema.safeParse(await readBody(event));
-  if (!parsed.success) {
-    throw createError({ statusCode: 400, statusMessage: 'Enter a valid email address and password.' });
-  }
+  const body = await readZodBody(
+    event,
+    adminLoginRequestSchema,
+    'Enter a valid email address and password.',
+    { exposeIssueMessage: false },
+  );
 
   const supabase = createSupabaseAuthClient(event);
-  const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
+  const { data, error } = await supabase.auth.signInWithPassword(body);
 
   if (error || !data.user) {
     throw createError({ statusCode: 401, statusMessage: 'The email address or password is incorrect.' });

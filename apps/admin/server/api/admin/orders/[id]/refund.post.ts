@@ -1,25 +1,15 @@
 import { adminPaymentRefundRequestSchema } from '@tilana/contracts/payments';
 import { initiatePaystackRefund, PaystackRefundError } from '../../../../services/paystack';
 import { requireAdminMutation } from '../../../../utils/admin-mutation';
-import { parseDatabaseId } from '../../../../utils/database-id';
+import { readZodBody, requireRouteDatabaseId } from '../../../../utils/route-validation';
 
 export default defineEventHandler(async (event) => {
   const session = await requireAdminMutation(event);
-  const orderId = parseDatabaseId(getRouterParam(event, 'id'));
-  if (orderId === null) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid order identifier.' });
-  }
-
-  const parsed = adminPaymentRefundRequestSchema.safeParse(await readBody(event));
-  if (!parsed.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: parsed.error.issues[0]?.message ?? 'Please check the refund details.',
-    });
-  }
+  const orderId = requireRouteDatabaseId(event, 'order');
+  const body = await readZodBody(event, adminPaymentRefundRequestSchema, 'Please check the refund details.');
 
   try {
-    const refund = await initiatePaystackRefund(orderId, parsed.data, session.user.id);
+    const refund = await initiatePaystackRefund(orderId, body, session.user.id);
     setResponseStatus(event, 202);
     return { ok: true, refund };
   } catch (error) {

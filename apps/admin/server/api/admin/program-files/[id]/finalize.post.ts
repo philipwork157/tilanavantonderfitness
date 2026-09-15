@@ -2,17 +2,15 @@ import { adminProgramFileUploadFinalizeRequestSchema } from '@tilana/contracts/c
 import { finalizeProgramFileUpload } from '../../../../services/program-storage';
 import { requireAdminCatalogueMutation } from '../../../../utils/admin-catalogue-request';
 import { throwCatalogueRouteError } from '../../../../utils/catalogue-route';
-import { parseDatabaseId } from '../../../../utils/database-id';
+import { readZodBody, requireRouteDatabaseId } from '../../../../utils/route-validation';
 
 export default defineEventHandler(async (event) => {
   const session = await requireAdminCatalogueMutation(event);
-  const fileId = parseDatabaseId(getRouterParam(event, 'id'));
-  if (fileId === null) throw createError({ statusCode: 400, statusMessage: 'Invalid file identifier.' });
-  const parsed = adminProgramFileUploadFinalizeRequestSchema.safeParse((await readBody(event)) ?? {});
-  if (!parsed.success) throw createError({ statusCode: 400, statusMessage: 'The finalize request is invalid.' });
+  const fileId = requireRouteDatabaseId(event, 'file');
+  const body = await readZodBody(event, adminProgramFileUploadFinalizeRequestSchema, 'The finalize request is invalid.', { defaultToEmptyObject: true });
   try {
     return {
-      file: await finalizeProgramFileUpload(fileId, session.user.id, parsed.data.replaceFileId),
+      file: await finalizeProgramFileUpload(fileId, session.user.id, body.replaceFileId),
     };
   } catch (error) {
     throwCatalogueRouteError(error);

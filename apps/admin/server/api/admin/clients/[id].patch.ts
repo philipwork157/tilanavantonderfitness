@@ -1,42 +1,19 @@
 import { adminClientUpdateRequestSchema } from '@tilana/contracts/clients';
-import {
-  ClientEmailExistsError,
-  ClientNotEditableError,
-  ProgramVolumeUnavailableError,
-  updateManualClient,
-} from '../../../services/client-management';
+import { updateManualClient } from '../../../services/client-management';
+import { throwClientManagementRouteError } from '../../../utils/client-route';
 import { requireAdminMutation } from '../../../utils/admin-mutation';
-import { parseDatabaseId } from '../../../utils/database-id';
+import { readZodBody, requireRouteDatabaseId } from '../../../utils/route-validation';
 
 export default defineEventHandler(async (event) => {
   const session = await requireAdminMutation(event);
-  const clientId = parseDatabaseId(getRouterParam(event, 'id'));
-  if (clientId === null) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid client identifier.' });
-  }
-
-  const parsed = adminClientUpdateRequestSchema.safeParse(await readBody(event));
-  if (!parsed.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: parsed.error.issues[0]?.message ?? 'Please check the client details.',
-    });
-  }
+  const clientId = requireRouteDatabaseId(event, 'client');
+  const body = await readZodBody(event, adminClientUpdateRequestSchema, 'Please check the client details.');
 
   try {
-    const client = await updateManualClient(clientId, parsed.data, session.user.id);
+    const client = await updateManualClient(clientId, body, session.user.id);
     if (!client) throw createError({ statusCode: 404, statusMessage: 'Client not found.' });
     return { ok: true, client };
   } catch (error) {
-    if (error instanceof ClientEmailExistsError) {
-      throw createError({ statusCode: 409, statusMessage: error.message });
-    }
-    if (error instanceof ClientNotEditableError) {
-      throw createError({ statusCode: 409, statusMessage: error.message });
-    }
-    if (error instanceof ProgramVolumeUnavailableError) {
-      throw createError({ statusCode: 409, statusMessage: error.message });
-    }
-    throw error;
+    throwClientManagementRouteError(error);
   }
 });

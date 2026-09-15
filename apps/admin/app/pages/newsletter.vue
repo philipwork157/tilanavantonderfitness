@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { formatAdminDate } from '../utils/format';
+import { requestErrorMessage } from '../utils/request-error';
+
 definePageMeta({ layout: 'dashboard' });
 
 interface Campaign {
@@ -85,14 +88,6 @@ const filteredSubscribers = computed(() => {
   });
 });
 
-function formatDate(value: string | Date | null) {
-  if (!value) return '—';
-  return new Intl.DateTimeFormat('en-ZA', {
-    dateStyle: 'medium',
-    timeZone: 'Africa/Johannesburg',
-  }).format(new Date(value));
-}
-
 function statusColor(value: string): 'success' | 'warning' | 'neutral' | 'error' {
   if (value === 'subscribed') return 'success';
   if (value === 'pending') return 'warning';
@@ -105,14 +100,6 @@ function campaignStatusColor(value: string): 'success' | 'warning' | 'neutral' |
   if (value === 'sending' || value === 'draft') return 'warning';
   if (value === 'failed' || value === 'partially_failed') return 'error';
   return 'neutral';
-}
-
-function readableError(value: unknown, fallback: string) {
-  if (value && typeof value === 'object') {
-    const error = value as { data?: { statusMessage?: string }; statusMessage?: string; message?: string };
-    return error.data?.statusMessage || error.statusMessage || error.message || fallback;
-  }
-  return fallback;
 }
 
 function campaignPayload() {
@@ -132,7 +119,7 @@ async function saveCampaign() {
     await refreshCampaigns();
     return response.campaign.id;
   } catch (value) {
-    campaignError.value = readableError(value, 'The campaign could not be saved.');
+    campaignError.value = requestErrorMessage(value, 'The campaign could not be saved.');
     return null;
   } finally {
     savingCampaign.value = false;
@@ -149,7 +136,7 @@ async function sendTest() {
     await $fetch(`/api/admin/newsletter/campaigns/${id}/test`, { method: 'POST' });
     campaignNotice.value = 'Test email sent to Tilana. Check the inbox before sending to subscribers.';
   } catch (value) {
-    campaignError.value = readableError(value, 'The test email could not be sent.');
+    campaignError.value = requestErrorMessage(value, 'The test email could not be sent.');
   } finally {
     testingCampaign.value = false;
   }
@@ -169,7 +156,7 @@ async function sendCampaign() {
       : `Campaign complete: ${result.sentCount} sent${result.failedCount ? `, ${result.failedCount} failed` : ''}.`;
     await refreshCampaigns();
   } catch (value) {
-    campaignError.value = readableError(value, 'The campaign could not be sent.');
+    campaignError.value = requestErrorMessage(value, 'The campaign could not be sent.');
   } finally {
     sendingCampaign.value = false;
   }
@@ -290,8 +277,8 @@ useSeoMeta({ title: 'Newsletter | Tilana Admin', robots: 'noindex, nofollow' });
           <UBadge :color="campaignStatusColor(campaign.status)" variant="subtle">{{ campaign.status.replace('_', ' ') }}</UBadge>
           <dl>
             <div><dt>Delivery</dt><dd>{{ campaign.status === 'draft' ? 'Not sent' : `${campaign.sentCount}/${campaign.recipientCount} sent` }}</dd></div>
-            <div><dt>Tests</dt><dd>{{ campaign.testSentCount }} sent<span v-if="campaign.lastTestSentAt"> · {{ formatDate(campaign.lastTestSentAt) }}</span></dd></div>
-            <div><dt>Created</dt><dd>{{ formatDate(campaign.createdAt) }}</dd></div>
+            <div><dt>Tests</dt><dd>{{ campaign.testSentCount }} sent<span v-if="campaign.lastTestSentAt"> · {{ formatAdminDate(campaign.lastTestSentAt) }}</span></dd></div>
+            <div><dt>Created</dt><dd>{{ formatAdminDate(campaign.createdAt) }}</dd></div>
           </dl>
           <UButton
             v-if="campaign.status === 'draft'"
@@ -374,11 +361,12 @@ useSeoMeta({ title: 'Newsletter | Tilana Admin', robots: 'noindex, nofollow' });
       description="Please check the database connection and try again."
     />
 
-    <div v-else-if="!filteredSubscribers.length" class="empty-results">
-      <span><UIcon name="i-lucide-mail-x" /></span>
-      <h2>{{ counts.total ? 'No matching subscribers' : 'No signups yet' }}</h2>
-      <p>{{ counts.total ? 'Change the search or status filter to see more.' : 'Signups from the website footer will appear here.' }}</p>
-    </div>
+    <AdminEmptyState
+      v-else-if="!filteredSubscribers.length"
+      icon="i-lucide-mail-x"
+      :title="counts.total ? 'No matching subscribers' : 'No signups yet'"
+      :description="counts.total ? 'Change the search or status filter to see more.' : 'Signups from the website footer will appear here.'"
+    />
 
     <UCard v-else class="subscriber-table-card" :ui="{ body: 'p-0 sm:p-0' }">
       <UTable :data="filteredSubscribers" :columns="columns" class="subscriber-table">
@@ -397,10 +385,10 @@ useSeoMeta({ title: 'Newsletter | Tilana Admin', robots: 'noindex, nofollow' });
           </UBadge>
         </template>
         <template #consentedAt-cell="{ row }">
-          <span class="cell-muted">{{ formatDate(row.original.consentedAt) }}</span>
+          <span class="cell-muted">{{ formatAdminDate(row.original.consentedAt) }}</span>
         </template>
         <template #confirmedAt-cell="{ row }">
-          <span class="cell-muted">{{ formatDate(row.original.confirmedAt) }}</span>
+          <span class="cell-muted">{{ formatAdminDate(row.original.confirmedAt) }}</span>
         </template>
       </UTable>
     </UCard>
@@ -580,29 +568,6 @@ h1 {
   white-space: nowrap;
 }
 .cell-muted { color: var(--ui-text-muted); font-size: 0.72rem; }
-
-.empty-results {
-  display: grid;
-  min-height: 20rem;
-  place-items: center;
-  align-content: center;
-  padding: 2rem;
-  border: 1px dashed var(--color-border);
-  border-radius: 2rem;
-  text-align: center;
-}
-.empty-results span {
-  display: grid;
-  width: 4.5rem;
-  aspect-ratio: 1;
-  place-items: center;
-  border-radius: 1.4rem;
-  color: var(--caramel);
-  background: var(--sage);
-  font-size: 1.5rem;
-}
-.empty-results h2 { margin: 1rem 0 0; color: var(--ink); font-family: var(--font-heading); }
-.empty-results p { margin: 0.4rem 0 0; font-size: 0.75rem; }
 
 @media (max-width: 68rem) {
   .newsletter-stats { grid-template-columns: 1fr; }

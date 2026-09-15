@@ -1,13 +1,10 @@
 import { ClientNotFoundError, getClientCoachingOverview } from '../../../../services/coaching';
 import { requireAdmin } from '../../../../utils/admin-auth';
-import { parseDatabaseId } from '../../../../utils/database-id';
+import { requireRouteDatabaseId } from '../../../../utils/route-validation';
 
 export default defineEventHandler(async (event) => {
   await requireAdmin(event);
-  const clientId = parseDatabaseId(getRouterParam(event, 'id'));
-  if (clientId === null) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid client identifier.' });
-  }
+  const clientId = requireRouteDatabaseId(event, 'client');
 
   try {
     return await getClientCoachingOverview(clientId);

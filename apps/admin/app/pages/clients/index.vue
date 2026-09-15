@@ -9,6 +9,7 @@ import {
   formatCatalogueMoney as formatZar,
 } from '../../utils/catalogue';
 import { adminPaymentRefundRequestSchema } from '@tilana/contracts/payments';
+import { formatAdminDate } from '../../utils/format';
 
 definePageMeta({ layout: 'dashboard' });
 
@@ -353,13 +354,6 @@ async function submitRefund() {
   }
 }
 
-function formatDate(value: string | Date) {
-  return new Intl.DateTimeFormat('en-ZA', {
-    dateStyle: 'medium',
-    timeZone: 'Africa/Johannesburg',
-  }).format(new Date(value));
-}
-
 function statusColor(value: string): 'success' | 'warning' | 'error' | 'neutral' {
   if (value === 'paid') return 'success';
   if (value === 'pending') return 'warning';
@@ -648,7 +642,7 @@ useSeoMeta({ title: 'Clients | Tilana Admin', robots: 'noindex, nofollow' });
             </div>
           </template>
           <template #createdAt-cell="{ row }">
-            <span class="date-added">{{ formatDate(row.original.createdAt) }}</span>
+            <span class="date-added">{{ formatAdminDate(row.original.createdAt) }}</span>
           </template>
           <template #actions-cell="{ row }">
             <div class="client-actions">

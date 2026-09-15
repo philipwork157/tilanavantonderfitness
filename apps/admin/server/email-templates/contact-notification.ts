@@ -2,6 +2,11 @@ import {
   contactInterestLabels,
   type ContactFormRequest,
 } from '@tilana/contracts/contact';
+import {
+  emailTextWithLineBreaks,
+  escapeEmailHtml,
+  singleLineEmailText,
+} from './html';
 
 export type ContactNotificationTemplateInput = Pick<
   ContactFormRequest,
@@ -11,23 +16,6 @@ export type ContactNotificationTemplateInput = Pick<
   submittedAt: Date;
 };
 
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
-function toSingleLine(value: string): string {
-  return value.replace(/[\r\n]+/g, ' ').trim();
-}
-
-function withHtmlLineBreaks(value: string): string {
-  return escapeHtml(value).replace(/\r?\n/g, '<br>');
-}
-
 /** Builds the branded HTML and plain-text versions of a contact notification. */
 export function renderContactNotificationEmail(input: ContactNotificationTemplateInput) {
   const interest = contactInterestLabels[input.interest];
@@ -36,7 +24,7 @@ export function renderContactNotificationEmail(input: ContactNotificationTemplat
     timeStyle: 'short',
     timeZone: 'Africa/Johannesburg',
   }).format(input.submittedAt);
-  const safeName = toSingleLine(input.name);
+  const safeName = singleLineEmailText(input.name);
   const firstName = safeName.split(/\s+/)[0] || safeName;
   const subject = `New ${interest} enquiry from ${safeName}`;
 
@@ -63,7 +51,7 @@ export function renderContactNotificationEmail(input: ContactNotificationTemplat
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>${escapeHtml(subject)}</title>
+    <title>${escapeEmailHtml(subject)}</title>
     <style>
       @media only screen and (max-width: 640px) {
         .email-shell { padding: 20px 10px !important; }
@@ -78,7 +66,7 @@ export function renderContactNotificationEmail(input: ContactNotificationTemplat
   </head>
   <body style="margin:0;padding:0;background-color:#f6e4d9;color:#0f0e13;font-family:Arial,Helvetica,sans-serif;">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">
-      ${escapeHtml(safeName)} is interested in ${escapeHtml(interest)}. Reply directly from this email.
+      ${escapeEmailHtml(safeName)} is interested in ${escapeEmailHtml(interest)}. Reply directly from this email.
     </div>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background-color:#f6e4d9;">
       <tr>
@@ -88,7 +76,7 @@ export function renderContactNotificationEmail(input: ContactNotificationTemplat
               <td class="email-header" style="padding:38px 40px;background-color:#d5a27f;">
                 <p style="margin:0 0 18px;color:#614635;font-size:12px;line-height:1.4;font-weight:700;letter-spacing:2px;text-transform:uppercase;">New website enquiry</p>
                 <h1 class="email-title" style="margin:0;color:#0f0e13;font-family:Georgia,'Times New Roman',serif;font-size:44px;line-height:1.08;font-weight:500;">A new conversation<br>has started.</h1>
-                <p style="margin:18px 0 0;color:#614635;font-family:Georgia,'Times New Roman',serif;font-size:20px;line-height:1.5;font-style:italic;">${escapeHtml(safeName)} would love to hear from you.</p>
+                <p style="margin:18px 0 0;color:#614635;font-family:Georgia,'Times New Roman',serif;font-size:20px;line-height:1.5;font-style:italic;">${escapeEmailHtml(safeName)} would love to hear from you.</p>
               </td>
             </tr>
             <tr>
@@ -98,19 +86,19 @@ export function renderContactNotificationEmail(input: ContactNotificationTemplat
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse;">
                   <tr>
                     <td class="detail-label" width="35%" style="padding:11px 0;border-bottom:1px solid #ead7ca;color:#a87e63;font-size:13px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;">Name</td>
-                    <td class="detail-value" width="65%" style="padding:11px 0;border-bottom:1px solid #ead7ca;color:#0f0e13;font-size:15px;font-weight:700;text-align:right;">${escapeHtml(safeName)}</td>
+                    <td class="detail-value" width="65%" style="padding:11px 0;border-bottom:1px solid #ead7ca;color:#0f0e13;font-size:15px;font-weight:700;text-align:right;">${escapeEmailHtml(safeName)}</td>
                   </tr>
                   <tr>
                     <td class="detail-label" width="35%" style="padding:11px 0;border-bottom:1px solid #ead7ca;color:#a87e63;font-size:13px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;">Email</td>
-                    <td class="detail-value" width="65%" style="padding:11px 0;border-bottom:1px solid #ead7ca;font-size:15px;text-align:right;"><a href="mailto:${escapeHtml(input.email)}" style="color:#614635;text-decoration:underline;">${escapeHtml(input.email)}</a></td>
+                    <td class="detail-value" width="65%" style="padding:11px 0;border-bottom:1px solid #ead7ca;font-size:15px;text-align:right;"><a href="mailto:${escapeEmailHtml(input.email)}" style="color:#614635;text-decoration:underline;">${escapeEmailHtml(input.email)}</a></td>
                   </tr>
                   <tr>
                     <td class="detail-label" width="35%" style="padding:11px 0;border-bottom:1px solid #ead7ca;color:#a87e63;font-size:13px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;">Interested in</td>
-                    <td class="detail-value" width="65%" style="padding:11px 0;border-bottom:1px solid #ead7ca;color:#0f0e13;font-size:15px;font-weight:700;text-align:right;">${escapeHtml(interest)}</td>
+                    <td class="detail-value" width="65%" style="padding:11px 0;border-bottom:1px solid #ead7ca;color:#0f0e13;font-size:15px;font-weight:700;text-align:right;">${escapeEmailHtml(interest)}</td>
                   </tr>
                   <tr>
                     <td class="detail-label" width="35%" style="padding:11px 0;color:#a87e63;font-size:13px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;">Received</td>
-                    <td class="detail-value" width="65%" style="padding:11px 0;color:#614635;font-size:15px;text-align:right;">${escapeHtml(submittedAt)}</td>
+                    <td class="detail-value" width="65%" style="padding:11px 0;color:#614635;font-size:15px;text-align:right;">${escapeEmailHtml(submittedAt)}</td>
                   </tr>
                 </table>
 
@@ -118,7 +106,7 @@ export function renderContactNotificationEmail(input: ContactNotificationTemplat
                   <tr>
                     <td style="padding:25px 26px;">
                       <p style="margin:0 0 10px;color:#614635;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Their message</p>
-                      <p style="margin:0;color:#0f0e13;font-family:Georgia,'Times New Roman',serif;font-size:19px;line-height:1.65;">${withHtmlLineBreaks(input.message)}</p>
+                      <p style="margin:0;color:#0f0e13;font-family:Georgia,'Times New Roman',serif;font-size:19px;line-height:1.65;">${emailTextWithLineBreaks(input.message)}</p>
                     </td>
                   </tr>
                 </table>
@@ -126,12 +114,12 @@ export function renderContactNotificationEmail(input: ContactNotificationTemplat
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;">
                   <tr>
                     <td align="center" style="padding:2px 0 26px;">
-                      <a class="reply-button" href="mailto:${escapeHtml(input.email)}?subject=${encodeURIComponent(`Re: your ${interest} enquiry`)}" style="display:inline-block;padding:17px 30px;background-color:#0f0e13;border-radius:999px;color:#fffaf7;font-size:15px;font-weight:700;text-decoration:none;">Reply to ${escapeHtml(firstName)}</a>
+                      <a class="reply-button" href="mailto:${escapeEmailHtml(input.email)}?subject=${encodeURIComponent(`Re: your ${interest} enquiry`)}" style="display:inline-block;padding:17px 30px;background-color:#0f0e13;border-radius:999px;color:#fffaf7;font-size:15px;font-weight:700;text-decoration:none;">Reply to ${escapeEmailHtml(firstName)}</a>
                     </td>
                   </tr>
                 </table>
 
-                <p style="margin:0;text-align:center;color:#a87e63;font-size:11px;line-height:1.6;">Enquiry reference: ${escapeHtml(String(input.submissionId))}</p>
+                <p style="margin:0;text-align:center;color:#a87e63;font-size:11px;line-height:1.6;">Enquiry reference: ${escapeEmailHtml(String(input.submissionId))}</p>
               </td>
             </tr>
             <tr>

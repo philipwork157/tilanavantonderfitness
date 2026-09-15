@@ -1,14 +1,6 @@
 import { getServerEmail } from '../utils/email';
 import type { NewsletterCampaignInput } from '@tilana/contracts/newsletter';
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
+import { escapeEmailHtml } from '../email-templates/html';
 
 /** Fly dev builds still use NODE_ENV=production, so the Fly app identity is part of the safety check. */
 export function isNewsletterDevelopmentEnvironment(): boolean {
@@ -53,7 +45,7 @@ export async function sendNewsletterConfirmation(email: string, token: string) {
     '',
     'This link expires in 48 hours. If you did not request this, you can ignore this email.',
   ].join('\n');
-  const html = `<!doctype html><html lang="en"><body style="margin:0;background:#f6e4d9;color:#0f0e13;font-family:Arial,sans-serif"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 16px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;overflow:hidden;border:1px solid #d5a27f;border-radius:24px;background:#fff">${developmentNotice ? `<tr><td style="padding:12px 24px;background:#0f0e13;color:#fffaf7;font-size:12px;text-align:center">${escapeHtml(developmentNotice)}</td></tr>` : ''}<tr><td style="padding:32px;background:#c9d2b3"><p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">One last step</p><h1 style="margin:0;font-family:Georgia,serif;font-size:34px">Confirm your subscription</h1></td></tr><tr><td style="padding:32px"><p style="margin:0 0 24px;line-height:1.7">Please confirm that you would like to receive occasional training guidance, programme updates, and practical healthy habits from Tilana.</p><p style="margin:0 0 24px"><a href="${confirmUrl}" style="display:inline-block;padding:14px 22px;border-radius:999px;background:#d5a27f;color:#0f0e13;font-weight:700;text-decoration:none">Confirm my subscription</a></p><p style="margin:0;color:#614635;font-size:12px;line-height:1.6">This link expires in 48 hours. If you did not request this, simply ignore this email.</p></td></tr></table></td></tr></table></body></html>`;
+  const html = `<!doctype html><html lang="en"><body style="margin:0;background:#f6e4d9;color:#0f0e13;font-family:Arial,sans-serif"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 16px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;overflow:hidden;border:1px solid #d5a27f;border-radius:24px;background:#fff">${developmentNotice ? `<tr><td style="padding:12px 24px;background:#0f0e13;color:#fffaf7;font-size:12px;text-align:center">${escapeEmailHtml(developmentNotice)}</td></tr>` : ''}<tr><td style="padding:32px;background:#c9d2b3"><p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">One last step</p><h1 style="margin:0;font-family:Georgia,serif;font-size:34px">Confirm your subscription</h1></td></tr><tr><td style="padding:32px"><p style="margin:0 0 24px;line-height:1.7">Please confirm that you would like to receive occasional training guidance, programme updates, and practical healthy habits from Tilana.</p><p style="margin:0 0 24px"><a href="${confirmUrl}" style="display:inline-block;padding:14px 22px;border-radius:999px;background:#d5a27f;color:#0f0e13;font-weight:700;text-decoration:none">Confirm my subscription</a></p><p style="margin:0;color:#614635;font-size:12px;line-height:1.6">This link expires in 48 hours. If you did not request this, simply ignore this email.</p></td></tr></table></td></tr></table></body></html>`;
 
   const { sender, from } = getServerEmail({ email: fromEmail, name: 'Tilana van Tonder' });
   return sender.send({
@@ -79,12 +71,12 @@ export async function sendNewsletterCampaignEmail(options: {
   const delivery = getNewsletterRecipient(intendedRecipient, test);
   const subject = `${delivery.redirected ? '[TEST] ' : ''}${campaign.subject}`;
   const safe = {
-    subject: escapeHtml(campaign.subject),
-    previewText: escapeHtml(campaign.previewText),
-    blogTitle: escapeHtml(campaign.blogTitle),
-    introduction: escapeHtml(campaign.introduction).replaceAll('\n', '<br>'),
-    blogUrl: escapeHtml(campaign.blogUrl),
-    unsubscribeUrl: escapeHtml(unsubscribeUrl),
+    subject: escapeEmailHtml(campaign.subject),
+    previewText: escapeEmailHtml(campaign.previewText),
+    blogTitle: escapeEmailHtml(campaign.blogTitle),
+    introduction: escapeEmailHtml(campaign.introduction).replaceAll('\n', '<br>'),
+    blogUrl: escapeEmailHtml(campaign.blogUrl),
+    unsubscribeUrl: escapeEmailHtml(unsubscribeUrl),
   };
   const text = [
     campaign.blogTitle,

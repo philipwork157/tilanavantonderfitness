@@ -1,7 +1,3 @@
-import { applyPublicCatalogueHeaders } from '../../utils/public-catalogue';
+import { handlePublicCatalogueOptions } from '../../utils/public-catalogue';
 
-export default defineEventHandler((event) => {
-  applyPublicCatalogueHeaders(event);
-  setResponseStatus(event, 204);
-  return null;
-});
+export default defineEventHandler(handlePublicCatalogueOptions);

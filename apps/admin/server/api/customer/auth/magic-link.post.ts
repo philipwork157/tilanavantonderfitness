@@ -3,16 +3,21 @@ import { clients, orders } from '@tilana/db/schema';
 import { and, eq, sql } from 'drizzle-orm';
 import { enforceLoginRateLimit, enforceSameOrigin } from '../../../utils/auth-security';
 import { getDatabase } from '../../../utils/database';
+import { readZodBody } from '../../../utils/route-validation';
 import { getSupabaseAdminClient } from '../../../utils/supabase-admin';
 import { sendCustomerAccessEmail } from '../../../services/customer-access-emails';
 
 export default defineEventHandler(async (event) => {
   enforceSameOrigin(event);
   enforceLoginRateLimit(event);
-  const parsed = customerMagicLinkRequestSchema.safeParse(await readBody(event));
-  if (!parsed.success) throw createError({ statusCode: 400, statusMessage: 'Enter a valid email address.' });
+  const body = await readZodBody(
+    event,
+    customerMagicLinkRequestSchema,
+    'Enter a valid email address.',
+    { exposeIssueMessage: false },
+  );
 
-  const email = parsed.data.email.toLowerCase();
+  const email = body.email.toLowerCase();
   const [buyer] = await getDatabase()
     .select({ id: clients.id, firstName: clients.firstName })
     .from(clients)

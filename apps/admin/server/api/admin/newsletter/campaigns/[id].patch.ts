@@ -1,14 +1,14 @@
-import { newsletterCampaignIdSchema, newsletterCampaignInputSchema } from '@tilana/contracts/newsletter';
+import { newsletterCampaignInputSchema } from '@tilana/contracts/newsletter';
 import { saveNewsletterCampaign } from '../../../../services/newsletter-campaigns';
 import { requireAdminMutation } from '../../../../utils/admin-mutation';
+import { readZodBody, requireRouteDatabaseId } from '../../../../utils/route-validation';
 
 export default defineEventHandler(async (event) => {
   const session = await requireAdminMutation(event);
-  const id = newsletterCampaignIdSchema.safeParse(getRouterParam(event, 'id'));
-  const body = newsletterCampaignInputSchema.safeParse(await readBody(event));
-  if (!id.success || !body.success) throw createError({ statusCode: 400, statusMessage: 'Please check the campaign details.' });
+  const campaignId = requireRouteDatabaseId(event, 'campaign');
+  const body = await readZodBody(event, newsletterCampaignInputSchema, 'Please check the campaign details.');
   try {
-    return { campaign: await saveNewsletterCampaign(body.data, session.user.id, id.data) };
+    return { campaign: await saveNewsletterCampaign(body, session.user.id, campaignId) };
   } catch (error) {
     throw createError({ statusCode: 400, statusMessage: error instanceof Error ? error.message : 'Campaign could not be updated.' });
   }

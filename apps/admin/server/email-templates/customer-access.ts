@@ -1,3 +1,5 @@
+import { escapeEmailHtml, singleLineEmailText } from './html';
+
 export interface CustomerAccessEmailTemplateInput {
   firstName: string;
   signInUrl: string;
@@ -5,22 +7,9 @@ export interface CustomerAccessEmailTemplateInput {
   redirectedToDevelopment: boolean;
 }
 
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
-function toSingleLine(value: string): string {
-  return value.replace(/[\r\n]+/g, ' ').trim();
-}
-
 /** Builds the branded HTML and plain-text versions of a customer access email. */
 export function renderCustomerAccessEmail(input: CustomerAccessEmailTemplateInput) {
-  const firstName = toSingleLine(input.firstName);
+  const firstName = singleLineEmailText(input.firstName);
   const greeting = firstName ? `Hi ${firstName},` : 'Hello,';
   const developmentNotice = input.redirectedToDevelopment
     ? `Development preview — intended customer: ${input.intendedEmail}`
@@ -45,7 +34,7 @@ export function renderCustomerAccessEmail(input: CustomerAccessEmailTemplateInpu
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>${escapeHtml(subject)}</title>
+    <title>${escapeEmailHtml(subject)}</title>
     <style>
       @media only screen and (max-width: 640px) {
         .email-shell { padding: 20px 10px !important; }
@@ -62,7 +51,7 @@ export function renderCustomerAccessEmail(input: CustomerAccessEmailTemplateInpu
       <tr>
         <td class="email-shell" align="center" style="padding:40px 16px;">
           <table class="email-card" role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;background-color:#fffaf7;border:1px solid #e0c3ae;border-radius:28px;overflow:hidden;box-shadow:0 18px 50px rgba(97,70,53,.14);">
-            ${developmentNotice ? `<tr><td style="padding:12px 24px;background-color:#0f0e13;color:#fffaf7;font-size:12px;line-height:1.5;text-align:center;">${escapeHtml(developmentNotice)}</td></tr>` : ''}
+            ${developmentNotice ? `<tr><td style="padding:12px 24px;background-color:#0f0e13;color:#fffaf7;font-size:12px;line-height:1.5;text-align:center;">${escapeEmailHtml(developmentNotice)}</td></tr>` : ''}
             <tr>
               <td class="email-header" style="padding:38px 40px;background-color:#c9d2b3;">
                 <p style="margin:0 0 18px;color:#614635;font-size:12px;line-height:1.4;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Your program library</p>
@@ -71,12 +60,12 @@ export function renderCustomerAccessEmail(input: CustomerAccessEmailTemplateInpu
             </tr>
             <tr>
               <td class="email-content" style="padding:38px 40px;">
-                <p style="margin:0 0 16px;color:#0f0e13;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.5;">${escapeHtml(greeting)}</p>
+                <p style="margin:0 0 16px;color:#0f0e13;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.5;">${escapeEmailHtml(greeting)}</p>
                 <p style="margin:0 0 28px;color:#614635;font-size:16px;line-height:1.75;">Use the secure, one-time link below to sign in and access the programs connected to your purchase.</p>
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;">
                   <tr>
                     <td align="center" style="padding:0 0 30px;">
-                      <a class="access-button" href="${escapeHtml(input.signInUrl)}" style="display:inline-block;padding:17px 30px;background-color:#0f0e13;border-radius:999px;color:#fffaf7;font-size:15px;font-weight:700;text-decoration:none;">Access my programs&nbsp; →</a>
+                      <a class="access-button" href="${escapeEmailHtml(input.signInUrl)}" style="display:inline-block;padding:17px 30px;background-color:#0f0e13;border-radius:999px;color:#fffaf7;font-size:15px;font-weight:700;text-decoration:none;">Access my programs&nbsp; →</a>
                     </td>
                   </tr>
                 </table>

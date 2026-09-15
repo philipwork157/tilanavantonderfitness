@@ -212,6 +212,8 @@ Use pnpm from the repository root:
 ```text
 pnpm dev             # public and admin development servers
 pnpm dev:stop        # stop managed development servers
+pnpm test            # run every Vitest suite through Turborepo
+pnpm test:coverage   # run tests and write per-workspace coverage reports
 pnpm check           # lint and typecheck every workspace
 pnpm build:web       # public production build
 pnpm build:admin     # admin/API production build
@@ -220,6 +222,10 @@ pnpm db:generate     # generate a Drizzle migration
 pnpm db:check        # validate migration metadata/schema consistency
 pnpm db:apply        # apply committed migrations
 ```
+
+For a focused run, use `pnpm --filter @tilana/admin test` or
+`pnpm --filter @tilana/web test`. During development, use the matching
+`test:watch` script in either workspace.
 
 Use `pnpm dev:stop` before replacing a managed Astro development process. Do not
 silently rewrite an applied migration; create a new forward migration. Review

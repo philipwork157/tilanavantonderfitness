@@ -1,13 +1,5 @@
 import type { AdminCatalogueProgramStatus } from '../types/catalogue';
-
-interface CatalogueRequestError {
-  data?: {
-    statusMessage?: string;
-    data?: { issues?: Array<{ message?: string }> };
-  };
-  statusMessage?: string;
-  message?: string;
-}
+import { requestErrorMessage } from './request-error';
 
 export const catalogueStatusLabels: Record<AdminCatalogueProgramStatus, string> = {
   draft: 'Draft',
@@ -69,13 +61,7 @@ export function slugifyCatalogueValue(value: string): string {
 }
 
 export function catalogueErrorMessage(value: unknown, fallback: string): string {
-  if (!value || typeof value !== 'object') return fallback;
-  const error = value as CatalogueRequestError;
-  return error.data?.data?.issues?.[0]?.message
-    || error.data?.statusMessage
-    || error.statusMessage
-    || error.message
-    || fallback;
+  return requestErrorMessage(value, fallback);
 }
 
 export async function uploadCatalogueObject(

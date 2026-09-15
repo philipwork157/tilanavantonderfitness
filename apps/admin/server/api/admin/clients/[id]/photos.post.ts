@@ -6,6 +6,7 @@ import {
 } from '../../../../services/coaching';
 import { requireAdminMutation } from '../../../../utils/admin-mutation';
 import { parseDatabaseId } from '../../../../utils/database-id';
+import { requireRouteDatabaseId } from '../../../../utils/route-validation';
 import { createSignedPhotoUrl, uploadClientPhoto } from '../../../../utils/supabase-storage';
 
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -18,10 +19,7 @@ const EXTENSION: Record<string, string> = {
 
 export default defineEventHandler(async (event) => {
   await requireAdminMutation(event);
-  const clientId = parseDatabaseId(getRouterParam(event, 'id'));
-  if (clientId === null) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid client identifier.' });
-  }
+  const clientId = requireRouteDatabaseId(event, 'client');
 
   const form = await readMultipartFormData(event);
   if (!form) throw createError({ statusCode: 400, statusMessage: 'No photo was uploaded.' });

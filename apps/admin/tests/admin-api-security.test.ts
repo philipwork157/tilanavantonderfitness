@@ -6,7 +6,7 @@ import { describe, it } from 'vitest';
 
 const apiDirectory = fileURLToPath(new URL('../server/api/', import.meta.url));
 const mutationRoutePattern = /\.(?:post|patch|put|delete)\.ts$/;
-const approvedProtectionPattern = /(?:requireAdminMutation|requireAdminCatalogueMutation|enforceSameOrigin|applyContactCors|x-paystack-signature)/;
+const approvedProtectionPattern = /(?:requireAdminMutation|requireAdminCatalogueMutation|enforceSameOrigin|applyContactCors|prepareCheckoutRequest|x-paystack-signature)/;
 
 async function listTypeScriptFiles(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true });

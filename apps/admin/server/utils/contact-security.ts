@@ -44,6 +44,12 @@ export function applyContactCors(event: Parameters<typeof getHeader>[0]): string
   return origin;
 }
 
+export function handleContactOptions(event: Parameters<typeof getHeader>[0]): null {
+  applyContactCors(event);
+  setResponseStatus(event, 204);
+  return null;
+}
+
 export function getContactRequestIp(event: Parameters<typeof getHeader>[0]): string {
   return (
     getHeader(event, 'cf-connecting-ip') ||

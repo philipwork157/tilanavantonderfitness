@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AdminDashboardPeriod } from '@tilana/contracts/dashboard';
+import { formatCatalogueMoney } from '../utils/catalogue';
 
 definePageMeta({ layout: 'dashboard' });
 
@@ -67,14 +68,6 @@ const paymentAlerts = computed(() => [
 ]);
 const totalPaymentAlerts = computed(() => paymentAlerts.value.reduce((total, item) => total + item.value, 0));
 
-function formatMoney(cents: number) {
-  return new Intl.NumberFormat('en-ZA', {
-    style: 'currency',
-    currency: 'ZAR',
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
-}
-
 useSeoMeta({ title: 'Dashboard | Tilana Admin', robots: 'noindex, nofollow' });
 </script>
 
@@ -139,7 +132,7 @@ useSeoMeta({ title: 'Dashboard | Tilana Admin', robots: 'noindex, nofollow' });
           <div class="sales-summary">
             <div>
               <span>Net sales</span>
-              <strong>{{ formatMoney(data?.sales.totalCents ?? 0) }}</strong>
+              <strong>{{ formatCatalogueMoney(data?.sales.totalCents ?? 0) }}</strong>
             </div>
             <div>
               <span>Successful sales</span>

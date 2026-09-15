@@ -1,38 +1,19 @@
 import { checkinCreateSchema } from '@tilana/contracts/coaching';
-import {
-  CheckinDateExistsError,
-  ClientNotFoundError,
-  createCheckin,
-} from '../../../../services/coaching';
+import { createCheckin } from '../../../../services/coaching';
+import { throwCoachingRouteError } from '../../../../utils/client-route';
 import { requireAdminMutation } from '../../../../utils/admin-mutation';
-import { parseDatabaseId } from '../../../../utils/database-id';
+import { readZodBody, requireRouteDatabaseId } from '../../../../utils/route-validation';
 
 export default defineEventHandler(async (event) => {
   const session = await requireAdminMutation(event);
-  const clientId = parseDatabaseId(getRouterParam(event, 'id'));
-  if (clientId === null) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid client identifier.' });
-  }
-
-  const parsed = checkinCreateSchema.safeParse(await readBody(event));
-  if (!parsed.success) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: parsed.error.issues[0]?.message ?? 'Please check the check-in details.',
-    });
-  }
+  const clientId = requireRouteDatabaseId(event, 'client');
+  const body = await readZodBody(event, checkinCreateSchema, 'Please check the check-in details.');
 
   try {
-    const result = await createCheckin(clientId, parsed.data, session.user.id);
+    const result = await createCheckin(clientId, body, session.user.id);
     setResponseStatus(event, 201);
     return { ok: true, ...result };
   } catch (error) {
-    if (error instanceof ClientNotFoundError) {
-      throw createError({ statusCode: 404, statusMessage: error.message });
-    }
-    if (error instanceof CheckinDateExistsError) {
-      throw createError({ statusCode: 409, statusMessage: error.message });
-    }
-    throw error;
+    throwCoachingRouteError(error);
   }
 });

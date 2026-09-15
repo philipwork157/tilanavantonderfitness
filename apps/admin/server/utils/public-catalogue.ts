@@ -25,3 +25,9 @@ export function applyPublicCatalogueHeaders(event: Parameters<typeof getHeader>[
     Vary: 'Origin',
   });
 }
+
+export function handlePublicCatalogueOptions(event: Parameters<typeof getHeader>[0]): null {
+  applyPublicCatalogueHeaders(event);
+  setResponseStatus(event, 204);
+  return null;
+}
