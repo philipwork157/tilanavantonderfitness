@@ -2,21 +2,60 @@
 
 Date: 17 September 2026
 
-Reviewed revision: `4f1a2247cc51560a5c065ae02cc0ae217a12cd3f`
+Original reviewed revision: `4f1a2247cc51560a5c065ae02cc0ae217a12cd3f`
+
+Remediation update: 17 September 2026 — PAY-01 implemented and verified locally.
 
 **Recommendation: do not enable live payments yet.** The basic architecture is
-sound, but payment reconciliation and refund matching contain reproducible
-defects. Invoicing is not implemented, and the existing test suite does not
-execute the main payment service. Passing builds alone do not establish payment
-correctness.
+sound, but refund matching, recovery, and other launch requirements remain
+unresolved. PAY-01's stale-verification race is now fixed and covered by real
+PostgreSQL tests. Invoicing is not implemented, and other critical payment
+paths still need tests. Passing builds alone do not establish payment correctness.
 
 This audit covers the Astro catalogue, basket, checkout and return page; Nuxt
 checkout, webhooks, refunds, customer authentication and downloads; admin
 purchase reporting and file lifecycle; Drizzle schemas, relevant migrations,
-and deployment workflows. It records issues and proposed fixes. Application
-code, migrations, deployment settings, and live data were not changed.
+and deployment workflows. The original audit changed documentation only.
+The subsequent PAY-01 remediation changes verification code and tests as
+documented below; migrations, deployment settings, and live data are unchanged.
 
-## Evidence and limits
+## Production readiness checklist
+
+Check an item only after its fix and acceptance checks are complete. PAY-01 is
+the first implemented priority; all other findings remain open. A checked code
+fix means locally verified, not deployed. Detailed evidence, conditions, and
+acceptance criteria remain in each finding below.
+
+- [x] **PAY-01 (P1):** Prevent stale verification from overwriting settled payments; validate provider evidence and pass PostgreSQL concurrency tests.
+- [ ] **PAY-02 (P1):** Match refund API responses and webhooks to one refund; test duplicate and reordered events against refund limits.
+- [ ] **PAY-03 (P1):** Make checkout retries idempotent and prevent duplicate payable orders.
+- [ ] **PAY-04 (P1, conditional):** Validate Paystack key/mode agreement and demonstrate test/live database and entitlement isolation.
+- [ ] **PAY-05 (P1):** Implement independent payment/refund recovery and a defined dispute handling process.
+- [ ] **BILL-01 (P1 for complete billing):** Implement invoice creation, issue/delivery, settlement, and refund/credit handling.
+- [ ] **TEST-01 (P1):** Cover the remaining critical payment/API/browser paths and gate deployment on automated tests. PAY-01's new tests are only partial progress here.
+- [ ] **WEB-01 (P2):** Preserve basket items during temporary catalogue errors.
+- [ ] **WEB-02 (P2):** Keep the submitted basket and pending checkout references consistent during edits/retries.
+- [ ] **WEB-03 (P2):** Display partial/full refund and reversal statuses accurately on the return page.
+- [ ] **ACCESS-01 (P2):** Send post-payment access instructions automatically with durable delivery retries.
+- [ ] **ACCESS-02 (P2):** Respect entitlement start times and preserve access across overlapping purchase/manual grants.
+- [ ] **ACCESS-03 (P2):** Prevent archived/unpublished programs from losing files owed to existing buyers.
+- [ ] **DB-01 (P2):** Enforce invoice/order customer consistency with a forward migration and database tests.
+- [ ] **DB-02 (P2):** Separate customer profile edits from immutable paid-order history and financial corrections.
+- [ ] **SEC-01 (P2):** Add shared abuse controls, trusted ingress identity, verification throttling, and email recipient cooldowns.
+- [ ] **SEC-02 (P2):** Minimize retained provider data and define a tested retention/access policy.
+
+### Launch validation (separate from code fixes)
+
+- [ ] Run the complete two-volume checkout in an isolated Paystack test environment and verify payment/order/items/access/admin reports.
+- [ ] Verify closed-browser fulfillment, repeat login, and unauthorized download denial.
+- [ ] Verify partial/full refunds, duplicate/reordered webhooks, and recovery from a missed event.
+- [ ] Confirm intended-production migrations, RLS/grants, composite constraints, and refund-overage trigger.
+- [ ] Test order-line totals, payment/order currency consistency, and settled snapshot immutability; document and enforce the required database/application boundaries.
+- [ ] Confirm production-only secrets, database, private buckets, trusted proxy configuration, and Paystack webhook delivery.
+- [ ] Confirm email configuration and actual delivery/retry behavior.
+- [ ] Record launch evidence and perform the explicitly authorized go-live smoke test in [deployment.md](../deployment.md).
+
+## Original audit evidence and limits
 
 - `pnpm test:coverage`: **66 existing tests passed**, across 17 files. Admin
   statement coverage was **9.82%**; `server/services/paystack.ts`, payment API
@@ -129,7 +168,7 @@ configuration.
 
 | ID | Priority | Finding |
 | --- | --- | --- |
-| PAY-01 | P1 | Stale verification can overwrite a successful/refunded payment |
+| PAY-01 | P1 — fixed locally | Stale verification can overwrite a successful/refunded payment |
 | PAY-02 | P1 | Refund API responses and webhooks do not reliably match the same refund |
 | PAY-03 | P1 | Checkout retries create independent payable orders |
 | PAY-04 | P1, conditional | Key/environment mismatch and test entitlements are not isolated by code |
@@ -149,7 +188,9 @@ configuration.
 
 ### PAY-01 — stale verification can overwrite settled state
 
-**Evidence:** [paystack.ts](../../apps/admin/server/services/paystack.ts), lines
+**Status: completed locally, 17 September 2026.** Not yet deployed.
+
+**Original evidence:** [paystack.ts](../../apps/admin/server/services/paystack.ts), lines
 1022–1071, especially 1024–1029 and 1052–1061.
 
 The verifier reads `pending` before awaiting Paystack. Its non-success branch
@@ -173,6 +214,25 @@ monotonic transition rules for settled states.
 **Acceptance:** deterministic overlapping verification/success/refund tests
 plus a real PostgreSQL concurrency test. No stale response may downgrade a
 settled payment, change its refund totals, or recreate revoked access.
+
+**Implemented remediation:**
+
+- [x] Validate the successful verification envelope and required transaction fields with a shared Zod contract; require reference, integer-cent amount, currency, and environment to match the stored payment before any write.
+- [x] Make non-success writes conditional on `payments.status = 'pending'` inside the transaction and require an updated row before changing orders/access. PostgreSQL rechecks this predicate after waiting on a concurrent update; see [Read Committed behavior](https://www.postgresql.org/docs/current/transaction-iso.html#XACT-READ-COMMITTED).
+- [x] Keep success reconciliation on the existing locked, idempotent webhook fulfillment path.
+- [x] Add 18 unit tests for invalid/mismatched evidence, already-settled payments, and provider failures.
+- [x] Add and run 29 PostgreSQL integration tests using the actual repository migrations: normal verification, repeated success, a matrix of stale responses after success/partial refund/full refund/reversal, an actual uncommitted webhook row-lock overlap, later success after failure, and atomic rollback.
+
+Tests are in [unit tests](../../apps/admin/tests/paystack-verification.test.ts)
+and [PostgreSQL tests](../../apps/admin/tests/paystack-verification.integration.test.ts).
+See [test instructions](../../apps/admin/tests/README.md) to rerun them. The
+integration run used a disposable local PostgreSQL 18 cluster and mocked
+provider responses; it did not contact Paystack or test deployed Supabase
+authentication/RLS policies. The ordinary suite now has **84 passing tests**;
+the opt-in database suite has **29 passing tests**. Broader test coverage and CI
+gates remain tracked under TEST-01. `pnpm check`, `pnpm build:admin`, and
+`pnpm build:web` also passed after the code change (both production builds ran
+uncached). Existing admin dependency annotation and bundle warnings remain.
 
 ### PAY-02 — refund identity is inconsistent across response and webhook
 

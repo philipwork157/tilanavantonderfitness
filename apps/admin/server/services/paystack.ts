@@ -4,7 +4,7 @@ import type {
   CheckoutResponse,
   CheckoutStatusResponse,
 } from '@tilana/contracts/checkout';
-import type { AdminPaymentRefundRequest } from '@tilana/contracts/payments';
+import { paystackVerificationResponseSchema, type AdminPaymentRefundRequest } from '@tilana/contracts/payments';
 import type { Database } from '@tilana/db/server';
 import {
   clients,
@@ -40,12 +40,6 @@ interface PaystackInitializeResponse {
     access_code: string;
     reference: string;
   };
-}
-
-interface PaystackVerifyResponse {
-  status: boolean;
-  message: string;
-  data?: PaystackEvent['data'];
 }
 
 interface PaystackRefundResponse {
@@ -1022,7 +1016,13 @@ export async function getPaystackCheckoutStatus(reference: string): Promise<Chec
 export async function verifyPaystackCheckout(reference: string): Promise<void> {
   const database = getDatabase();
   const [payment] = await database
-    .select({ id: payments.id, orderId: payments.orderId, status: payments.status, amountCents: payments.amountCents })
+    .select({
+      id: payments.id,
+      status: payments.status,
+      amountCents: payments.amountCents,
+      currency: payments.currency,
+      environment: payments.environment,
+    })
     .from(payments)
     .where(and(eq(payments.provider, 'paystack'), eq(payments.providerReference, reference)))
     .limit(1);
@@ -1031,13 +1031,24 @@ export async function verifyPaystackCheckout(reference: string): Promise<void> {
   const secretKey = String(useRuntimeConfig().paystackSecretKey || '').trim();
   if (!secretKey) return;
 
-  const response = await $fetch<PaystackVerifyResponse>(
+  const rawResponse = await $fetch<unknown>(
     `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
     { headers: { Authorization: `Bearer ${secretKey}` } },
   );
-  const providerStatus = stringValue(response.data?.status);
+  const parsed = paystackVerificationResponseSchema.safeParse(rawResponse);
+  if (
+    !parsed.success
+    || parsed.data.data.reference !== reference
+    || parsed.data.data.amount !== payment.amountCents
+    || parsed.data.data.currency !== payment.currency
+    || !isPaystackEnvironmentMatch(parsed.data.data.domain, payment.environment)
+  ) {
+    throw createError({ statusCode: 502, statusMessage: 'Payment verification returned invalid or mismatched evidence.' });
+  }
+  const response = parsed.data;
+  const providerStatus = response.data.status;
 
-  if (response.status && response.data && providerStatus === 'success') {
+  if (providerStatus === 'success') {
     const transactionId = identifierValue(response.data.id) || reference;
     await processPaystackEvent(
       { event: 'charge.success', data: response.data },
@@ -1049,7 +1060,11 @@ export async function verifyPaystackCheckout(reference: string): Promise<void> {
   const terminal = getTerminalCheckoutResolution(providerStatus);
   await database.transaction(async (transaction) => {
     const now = new Date();
-    await transaction
+    // The provider request ran outside the transaction. A webhook may have
+    // settled this payment meanwhile; PostgreSQL rechecks this predicate after
+    // waiting for a concurrent row lock. Only the winning update owns the
+    // corresponding order/access transition, within the same transaction.
+    const [updatedPayment] = await transaction
       .update(payments)
       .set({
         ...(terminal && { status: terminal.paymentStatus }),
@@ -1058,16 +1073,19 @@ export async function verifyPaystackCheckout(reference: string): Promise<void> {
         failureMessage: terminal ? response.message : null,
         updatedAt: now,
       })
-      .where(eq(payments.id, payment.id));
+      .where(and(eq(payments.id, payment.id), eq(payments.status, 'pending')))
+      .returning({ orderId: payments.orderId });
+
+    if (!updatedPayment) return;
 
     if (terminal) {
       await transaction
         .update(orders)
         .set({ status: terminal.orderStatus, updatedAt: now })
         .where(terminal.orderStatus === 'cancelled'
-          ? and(eq(orders.id, payment.orderId), eq(orders.status, 'pending'))
-          : eq(orders.id, payment.orderId));
-      if (terminal.revokeAccess) await revokeOrderAccess(transaction, payment.orderId);
+          ? and(eq(orders.id, updatedPayment.orderId), eq(orders.status, 'pending'))
+          : eq(orders.id, updatedPayment.orderId));
+      if (terminal.revokeAccess) await revokeOrderAccess(transaction, updatedPayment.orderId);
     }
   });
 }
