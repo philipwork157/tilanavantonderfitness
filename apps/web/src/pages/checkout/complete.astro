@@ -19,6 +19,8 @@ const accountUrl = import.meta.env.PUBLIC_ACCOUNT_URL ?? 'http://127.0.0.1:3001/
 
 <script>
   import { clearPaidBasket } from '@web/scripts/basket';
+  import { clearCompletedCheckoutIntent } from '@web/scripts/checkout-intent';
+  import { readCheckoutStatus } from '@web/scripts/checkout-status';
 
   const root = document.querySelector<HTMLElement>('[data-payment-status]');
   const title = root?.querySelector<HTMLElement>('[data-status-title]');
@@ -42,7 +44,7 @@ const accountUrl = import.meta.env.PUBLIC_ACCOUNT_URL ?? 'http://127.0.0.1:3001/
     for (let attempt = 0; attempt < 10; attempt += 1) {
       try {
         const response = await fetch(`${root.dataset.apiUrl}?reference=${encodeURIComponent(reference)}`);
-        const result = await response.json() as { status?: string; orderNumber?: string };
+        const result = await readCheckoutStatus(response);
         if (result.status === 'succeeded') {
           clearPaidBasket(reference);
           show('Payment received', `Thank you. Your order ${result.orderNumber ?? ''} is confirmed and access is linked to your email address.`);
@@ -50,6 +52,9 @@ const accountUrl = import.meta.env.PUBLIC_ACCOUNT_URL ?? 'http://127.0.0.1:3001/
           return;
         }
         if (result.status && !['pending'].includes(result.status)) {
+          // Retire only a confirmed terminal intent. A pending/uncertain attempt
+          // stays reserved, while deliberate later purchases can use a new key.
+          await clearCompletedCheckoutIntent(reference);
           show('Payment not completed', 'No successful payment was recorded. You can return to the programs page and try again.');
           return;
         }

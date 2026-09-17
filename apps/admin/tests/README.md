@@ -37,9 +37,12 @@ connections afterward but **does not delete the database or its test data**;
 use a new empty database for every run and discard the disposable instance when
 finished. A failed migration also requires a new empty database on the next run.
 
-The PAY-01 suite was verified on PostgreSQL 18. It includes a deterministic
+The payment integration suite was verified on PostgreSQL 18. It includes a deterministic
 row-lock test that holds a real webhook transaction before commit and verifies
-that a concurrent stale verification cannot overwrite it. These tests do not
+that a concurrent stale verification cannot overwrite it, PAY-02 refund
+identity/reordering cases, and PAY-03 durable checkout intent/concurrency cases.
+The checkout cases share this entry point's empty database and actual migrations.
+These tests do not
 exercise live Paystack requests, HTTP signature handling, full Supabase auth,
 deployed RLS/grants, email delivery, or browser checkout. Those remain separate
 launch requirements in the [readiness audit](../../../docs/audits/2026-09-17-paystack-production-readiness.md).

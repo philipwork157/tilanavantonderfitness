@@ -43,6 +43,8 @@ describe('Paystack verification evidence boundary', () => {
     ['missing environment', { status: true, message: 'Verified', data: { ...evidence, domain: undefined } }],
     ['string amount', { status: true, message: 'Verified', data: { ...evidence, amount: '10000' } }],
     ['missing transaction status', { status: true, message: 'Verified', data: { ...evidence, status: undefined } }],
+    ['internal checkout claim marker', { status: true, message: 'Verified', data: { ...evidence, status: 'initialization_reserved' } }],
+    ['unsupported transaction status', { status: true, message: 'Verified', data: { ...evidence, status: 'constructor' } }],
     ['success for another reference', { status: true, message: 'Verified', data: { ...evidence, status: 'success', reference: 'another-payment' } }],
   ])('rejects %s without opening a write transaction', async (_label, response) => {
     const transaction = arrangePayment();

@@ -1,4 +1,5 @@
 import { catalogueSlugSchema } from '@tilana/contracts/catalogue';
+import { clearCompletedCheckoutIntent } from './checkout-intent';
 
 export const BASKET_STORAGE_KEY = 'tilana-programme-basket';
 export const PENDING_BASKET_STORAGE_KEY = 'tilana-pending-programme-basket';
@@ -55,6 +56,7 @@ export function rememberPendingBasket(reference: string, slugs: string[]): void 
 }
 
 export function clearPaidBasket(reference: string): void {
+  void clearCompletedCheckoutIntent(reference);
   try {
     const value = JSON.parse(localStorage.getItem(PENDING_BASKET_STORAGE_KEY) ?? 'null') as unknown;
     if (!value || typeof value !== 'object') return;

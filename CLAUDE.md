@@ -158,11 +158,19 @@ Customers do not need to create an account before buying a program. The flow is:
    direct checkout endpoint remains available for a single volume.
 2. The server validates every requested volume and reads all authoritative prices
    from `program_volumes`; it never trusts browser-supplied prices or totals.
-3. A transaction creates or reuses the case-insensitive `clients` record and
+3. Both checkout contracts require an unpredictable `idempotencyKey`. The
+   browser persists one key per normalized customer/basket fingerprint and
+   reuses it across retries/reloads. A transaction serializes the key and
+   reuses its pending order/payment, rejecting changed details under that key.
+   A new reservation creates or reuses the case-insensitive `clients` record and
    inserts an integer-linked pending `order`, one immutable `order_item` per
    programme, and a payment for the server-calculated total.
-4. The server initializes Paystack with its secret key and returns only the
-   hosted authorization URL/reference to the browser.
+4. A persisted atomic claim allows one bounded Paystack initialization call.
+   The server returns the saved hosted URL/reference on duplicate requests;
+   settled attempts return to their existing confirmation screen. Timeouts or
+   malformed responses remain uncertain under the same reference and are
+   reconciled by verification/webhooks, never replaced automatically with a
+   new payable order. See `docs/checkout-idempotency.md` for recovery/rollout.
 5. The Paystack callback only controls the customer-facing completion screen.
    It is not proof of payment.
 6. A signed Paystack webhook, or the server verification fallback, must confirm
@@ -197,6 +205,12 @@ in the currently configured environment. It supports full and partial refunds.
    that key.
 6. Signed refund webhooks reconcile `pending`, `processing`, `processed`,
    `failed`, and `needs-attention` states idempotently.
+
+Store the refund API ID and webhook/processor reference separately. Match
+refund evidence to the same payment, currency, amount, and environment.
+An identifier-less event may match an unambiguous existing reservation even
+after its API ID is stored. Ambiguous equal refunds require Paystack review;
+never create another reservation merely because a webhook has no identifier.
 
 A partial processed refund updates `payments.refunded_amount_cents` but leaves
 the order paid and program access active. A fully processed refund marks the

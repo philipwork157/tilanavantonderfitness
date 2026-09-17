@@ -1,5 +1,18 @@
 import { z } from 'zod';
 
+/** Accept only Paystack's hosted HTTPS checkout URL and complete attempt evidence. */
+export const paystackInitializationResponseSchema = z.object({
+  status: z.literal(true),
+  data: z.object({
+    reference: z.string().min(1), access_code: z.string().min(1),
+    authorization_url: z.string().url().refine((value) => {
+      const url = new URL(value);
+      return url.protocol === 'https:' && url.hostname === 'checkout.paystack.com'
+        && !url.username && !url.password && !url.port;
+    }),
+  }),
+});
+
 /** Validate provider evidence before it can change a payment or its order. */
 export const paystackVerificationResponseSchema = z.object({
   status: z.literal(true),
@@ -9,7 +22,8 @@ export const paystackVerificationResponseSchema = z.object({
     amount: z.number().int().positive(),
     currency: z.string().regex(/^[A-Z]{3}$/),
     domain: z.enum(['test', 'live']),
-    status: z.string().min(1),
+    // Keep provider states distinct from internal checkout claim markers.
+    status: z.enum(['abandoned', 'failed', 'ongoing', 'pending', 'processing', 'queued', 'reversed', 'success']),
   }).passthrough(),
 });
 

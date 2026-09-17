@@ -26,6 +26,8 @@ describe('admin API documentation', () => {
     assert.ok(document.paths['/api/public/programs']);
     assert.ok(document.paths['/api/public/program-volumes/{slug}']);
     assert.ok(document.paths['/api/checkout/paystack/basket']);
+    assert.ok(document.components.schemas.CheckoutRequest.required.includes('idempotencyKey'));
+    assert.ok(document.components.schemas.BasketCheckoutRequest.required.includes('idempotencyKey'));
     assert.deepEqual(document.paths['/api/admin/openapi']?.get?.security, [{ adminSession: [] }]);
   });
 });

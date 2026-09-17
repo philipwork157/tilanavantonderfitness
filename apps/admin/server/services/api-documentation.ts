@@ -232,8 +232,9 @@ export function getAdminOpenApiDocument() {
         },
         CheckoutRequest: {
           type: 'object',
-          required: ['volumeSlug', 'expectedPriceCents', 'firstName', 'lastName', 'email', 'consent'],
+          required: ['idempotencyKey', 'volumeSlug', 'expectedPriceCents', 'firstName', 'lastName', 'email', 'consent'],
           properties: {
+            idempotencyKey: { type: 'string', format: 'uuid', description: 'Persist one unpredictable key per intended purchase. Reuse it on retries; changed details require a new key.' },
             volumeSlug: { type: 'string', example: 'beginner-volume-1' }, expectedPriceCents: { type: 'integer', minimum: 1, example: 39900 },
             firstName: { type: 'string', maxLength: 100 }, lastName: { type: 'string', maxLength: 100 }, email: { type: 'string', format: 'email' },
             phone: { type: 'string', maxLength: 30 }, consent: { type: 'boolean', const: true }, website: { type: 'string', description: 'Honeypot field. Leave empty.' },
@@ -242,8 +243,9 @@ export function getAdminOpenApiDocument() {
         },
         BasketCheckoutRequest: {
           type: 'object',
-          required: ['items', 'firstName', 'lastName', 'email', 'consent'],
+          required: ['idempotencyKey', 'items', 'firstName', 'lastName', 'email', 'consent'],
           properties: {
+            idempotencyKey: { type: 'string', format: 'uuid', description: 'Persist one unpredictable key per intended purchase. Reuse it on retries; changed details require a new key.' },
             items: {
               type: 'array', minItems: 1, maxItems: 10,
               items: { type: 'object', required: ['volumeSlug', 'expectedPriceCents'], properties: { volumeSlug: { type: 'string', example: 'beginner-volume-1' }, expectedPriceCents: { type: 'integer', minimum: 1, maximum: 100000000 } } },

@@ -23,6 +23,7 @@ import { and, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
 import { getDatabase } from '@server/utils/database';
 import { getCatalogueStorageConfiguration } from '@server/utils/r2';
 import { isCheckoutPriceCurrent } from './catalogue-policy';
+import { hashCheckoutIntent, resolvePaystackCheckout } from './paystack-checkout-intent';
 import {
   getTerminalCheckoutResolution,
   isPaymentAlreadyFulfilled,
@@ -31,16 +32,6 @@ import {
 } from './paystack-policy';
 
 type DatabaseTransaction = Parameters<Parameters<Database['transaction']>[0]>[0];
-
-interface PaystackInitializeResponse {
-  status: boolean;
-  message: string;
-  data?: {
-    authorization_url: string;
-    access_code: string;
-    reference: string;
-  };
-}
 
 interface PaystackRefundResponse {
   status: boolean;
@@ -175,6 +166,7 @@ async function getPurchasableVolume(
 
 export async function initializePaystackCheckout(input: CheckoutRequest): Promise<CheckoutResponse> {
   return initializePaystackBasketCheckout({
+    idempotencyKey: input.idempotencyKey,
     items: [{ volumeSlug: input.volumeSlug, expectedPriceCents: input.expectedPriceCents }],
     firstName: input.firstName,
     lastName: input.lastName,
@@ -197,7 +189,25 @@ export async function initializePaystackBasketCheckout(input: BasketCheckoutRequ
   }
 
   const database = getDatabase();
+  const { keyHash, requestHash } = hashCheckoutIntent(input);
   const checkout = await database.transaction(async (transaction) => {
+    // Serialize reservation creation across processes before checking the unique
+    // key. The transaction ends before contacting Paystack; no network row lock.
+    await transaction.execute(sql`select pg_advisory_xact_lock(hashtextextended(${keyHash}, 0))`);
+    const [existing] = await transaction.select().from(payments).where(and(
+      eq(payments.provider, 'paystack'), eq(payments.environment, environment as 'test' | 'live'),
+      eq(payments.checkoutIntentKeyHash, keyHash),
+    )).limit(1);
+    if (existing) {
+      if (existing.checkoutRequestHash !== requestHash) {
+        throw createError({ statusCode: 409, statusMessage: 'This checkout key belongs to different details. Please review your basket.' });
+      }
+      const [order] = await transaction.select({ email: orders.customerEmail }).from(orders).where(eq(orders.id, existing.orderId));
+      const items = await transaction.select({ id: orderItems.programVolumeId }).from(orderItems).where(eq(orderItems.orderId, existing.orderId));
+      if (!order?.email || !existing.providerReference) throw new Error('The checkout reservation is incomplete.');
+      return { orderId: existing.orderId, paymentId: existing.id, reference: existing.providerReference,
+        email: order.email, volumeIds: items.map(item => item.id), totalCents: existing.amountCents };
+    }
     const customer = await getOrCreateClient(transaction, input);
     const volumes = [];
     for (const item of input.items) {
@@ -246,68 +256,19 @@ export async function initializePaystackBasketCheckout(input: BasketCheckoutRequ
         provider: 'paystack',
         providerReference: reference,
         environment: environment as 'test' | 'live',
+        checkoutIntentKeyHash: keyHash,
+        checkoutRequestHash: requestHash,
+        providerStatus: 'initialization_reserved',
         amountCents: totalCents,
         currency: 'ZAR',
       })
       .returning({ id: payments.id });
 
     if (!payment) throw new Error('The payment attempt could not be created.');
-    return { orderId: order.id, paymentId: payment.id, reference, email: customer.email, volumes, totalCents };
+    return { orderId: order.id, paymentId: payment.id, reference, email: customer.email, volumeIds: volumes.map(volume => volume.id), totalCents };
   });
 
-  try {
-    const response = await $fetch<PaystackInitializeResponse>('https://api.paystack.co/transaction/initialize', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${secretKey}` },
-      body: {
-        email: checkout.email,
-        amount: String(checkout.totalCents),
-        currency: 'ZAR',
-        reference: checkout.reference,
-        callback_url: callbackUrl,
-        metadata: {
-          order_id: checkout.orderId,
-          payment_id: checkout.paymentId,
-          program_volume_ids: checkout.volumes.map(volume => volume.id),
-          item_count: checkout.volumes.length,
-        },
-      },
-    });
-
-    if (!response.status || !response.data || response.data.reference !== checkout.reference) {
-      throw new Error(response.message || 'Paystack did not initialize checkout.');
-    }
-
-    await database
-      .update(payments)
-      .set({
-        accessCode: response.data.access_code,
-        checkoutUrl: response.data.authorization_url,
-        providerStatus: 'initialized',
-        updatedAt: new Date(),
-      })
-      .where(eq(payments.id, checkout.paymentId));
-
-    return { authorizationUrl: response.data.authorization_url, reference: checkout.reference };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Paystack initialization failed.';
-    await database.transaction(async (transaction) => {
-      const now = new Date();
-      const [failedPayment] = await transaction
-        .update(payments)
-        .set({ status: 'failed', providerStatus: 'initialization_failed', failureMessage: message, updatedAt: now })
-        .where(and(eq(payments.id, checkout.paymentId), eq(payments.status, 'pending')))
-        .returning({ id: payments.id });
-
-      if (failedPayment) {
-        await transaction
-          .update(orders)
-          .set({ status: 'cancelled', updatedAt: now })
-          .where(and(eq(orders.id, checkout.orderId), eq(orders.status, 'pending')));
-      }
-    });
-    throw createError({ statusCode: 502, statusMessage: 'Payment could not be started. Please try again.' });
-  }
+  return resolvePaystackCheckout(database, checkout, { secretKey, callbackUrl }, verifyPaystackCheckout);
 }
 
 function stringValue(value: unknown): string | null {
@@ -1057,7 +1018,7 @@ export async function verifyPaystackCheckout(reference: string): Promise<void> {
 
   const rawResponse = await $fetch<unknown>(
     `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
-    { headers: { Authorization: `Bearer ${secretKey}` } },
+    { timeout: 10_000, retry: 0, headers: { Authorization: `Bearer ${secretKey}` } },
   );
   const parsed = paystackVerificationResponseSchema.safeParse(rawResponse);
   if (

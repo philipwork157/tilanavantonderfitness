@@ -4,6 +4,7 @@ import { initiatePaystackRefund, processPaystackEvent, verifyPaystackCheckout } 
 import { paymentEvents, paymentRefunds, users } from '@tilana/db/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
+import { registerCheckoutCases } from './helpers/paystack-checkout-cases';
 import {
   createBarrier,
   createPaystackTestDatabase,
@@ -15,6 +16,7 @@ import {
 const mocks = vi.hoisted(() => ({ getDatabase: vi.fn() }));
 vi.mock('@server/utils/database', () => mocks);
 let database: Database;
+registerCheckoutCases(() => database);
 
 /** Provider evidence is local fixture data; these tests never call Paystack. */
 function verification(fixture: PaymentFixture, status: string) {

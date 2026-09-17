@@ -1,0 +1,4 @@
+ALTER TABLE "payments" ADD COLUMN "checkout_intent_key_hash" text;--> statement-breakpoint
+ALTER TABLE "payments" ADD COLUMN "checkout_request_hash" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "payments_checkout_intent_unique" ON "payments" USING btree ("provider","environment","checkout_intent_key_hash") WHERE "payments"."checkout_intent_key_hash" is not null;--> statement-breakpoint
+ALTER TABLE "payments" ADD CONSTRAINT "payments_checkout_intent_hashes" CHECK (("payments"."checkout_intent_key_hash" is null and "payments"."checkout_request_hash" is null) or ("payments"."provider" = 'paystack' and "payments"."checkout_intent_key_hash" is not null and "payments"."checkout_intent_key_hash" ~ '^[a-f0-9]{64}$' and "payments"."checkout_request_hash" is not null and "payments"."checkout_request_hash" ~ '^[a-f0-9]{64}$'));

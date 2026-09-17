@@ -81,6 +81,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     type PublicCatalogueVolumeDetail,
   } from '@tilana/contracts/catalogue';
   import { basketCheckoutRequestSchema } from '@tilana/contracts/checkout';
+  import { getCheckoutIntentKey, readCheckoutRecoveryReference, rememberCheckoutIntent } from '@web/scripts/checkout-intent';
   import {
     addToBasket,
     readBasket,
@@ -214,11 +215,13 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
   retry?.addEventListener('click', () => void loadBasket());
   void loadBasket();
 
+  let submitting = false;
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    if (!root || !form || !status || !button || !buttonLabel || !selectedVolumes.length) return;
+    if (submitting || !root || !form || !status || !button || !buttonLabel || !selectedVolumes.length) return;
     const data = new FormData(form);
     const parsed = basketCheckoutRequestSchema.safeParse({
+      idempotencyKey: crypto.randomUUID(),
       items: selectedVolumes.map(volume => ({
         volumeSlug: volume.slug,
         expectedPriceCents: volume.priceCents,
@@ -238,18 +241,28 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       return;
     }
 
+    submitting = true;
     button.disabled = true;
     buttonLabel.textContent = 'Opening Paystack…';
     status.textContent = '';
     delete status.dataset.state;
 
     try {
+      parsed.data.idempotencyKey = await getCheckoutIntentKey(parsed.data);
       const response = await fetch(root.dataset.checkoutApiUrl ?? '', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(parsed.data),
       });
       const body = await readJson(response);
+      const recoveryReference = !response.ok ? readCheckoutRecoveryReference(body) : null;
+      if (recoveryReference) {
+        // Preserve the original purchase while the status endpoint reconciles it.
+        await rememberCheckoutIntent(parsed.data.idempotencyKey, recoveryReference);
+        rememberPendingBasket(recoveryReference, parsed.data.items.map(item => item.volumeSlug));
+        window.location.assign(`/checkout/complete?reference=${encodeURIComponent(recoveryReference)}`);
+        return;
+      }
       if (!response.ok || !body?.authorizationUrl || !body.reference) {
         if (response.status === 409) {
           await loadBasket();
@@ -257,7 +270,8 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         }
         throw new Error(body?.statusMessage ?? body?.message ?? 'Checkout could not be started.');
       }
-      rememberPendingBasket(body.reference, selectedVolumes.map(volume => volume.slug));
+      await rememberCheckoutIntent(parsed.data.idempotencyKey, body.reference);
+      rememberPendingBasket(body.reference, parsed.data.items.map(item => item.volumeSlug));
       window.location.assign(body.authorizationUrl);
     } catch (checkoutError) {
       status.textContent = checkoutError instanceof Error ? checkoutError.message : 'Checkout could not be started.';
@@ -265,6 +279,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       button.disabled = false;
       buttonLabel.textContent = 'Pay securely for my programmes';
       (window as Window & { turnstile?: { reset: () => void } }).turnstile?.reset();
+      submitting = false;
     }
   });
 </script>

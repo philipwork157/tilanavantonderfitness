@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it, vi } from 'vitest';
 import { prepareCheckoutRequest } from '@server/utils/checkout-request.ts';
+import { basketCheckoutRequestSchema } from '@tilana/contracts/checkout';
 
 const security = vi.hoisted(() => ({
   applyContactCors: vi.fn(),
@@ -31,6 +32,15 @@ afterEach(() => {
 });
 
 describe('public checkout request boundary', () => {
+  it('rejects checkout without an intent key before provider or Turnstile work', async () => {
+    vi.stubGlobal('readBody', vi.fn(async () => ({
+      items: [{ volumeSlug: 'strong-volume-1', expectedPriceCents: 10000 }],
+      firstName: 'Test', lastName: 'Customer', email: 'customer@example.test', consent: true,
+    })));
+    await assert.rejects(prepareCheckoutRequest(event, basketCheckoutRequestSchema, 'Invalid checkout.'), { statusCode: 400 });
+    assert.equal(security.enforceContactRateLimit.mock.calls.length, 0);
+    assert.equal(security.verifyContactTurnstile.mock.calls.length, 0);
+  });
   it('applies CORS, rate limiting, and Turnstile before accepting checkout', async () => {
     const body = {
       website: '',

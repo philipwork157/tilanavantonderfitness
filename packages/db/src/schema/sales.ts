@@ -107,6 +107,8 @@ export const payments = pgTable(
     providerReference: text('provider_reference'),
     providerTransactionId: text('provider_transaction_id'),
     providerStatus: text('provider_status'),
+    checkoutIntentKeyHash: text('checkout_intent_key_hash'),
+    checkoutRequestHash: text('checkout_request_hash'),
     environment: text('environment').$type<PaymentEnvironment>(),
     accessCode: text('access_code'),
     checkoutUrl: text('checkout_url'),
@@ -148,6 +150,10 @@ export const payments = pgTable(
     ),
     check('payments_currency_format', sql`${table.currency} ~ '^[A-Z]{3}$'`),
     uniqueIndex('payments_provider_reference_unique').on(table.provider, table.providerReference),
+    uniqueIndex('payments_checkout_intent_unique')
+      .on(table.provider, table.environment, table.checkoutIntentKeyHash)
+      .where(sql`${table.checkoutIntentKeyHash} is not null`),
+    check('payments_checkout_intent_hashes', sql`(${table.checkoutIntentKeyHash} is null and ${table.checkoutRequestHash} is null) or (${table.provider} = 'paystack' and ${table.checkoutIntentKeyHash} is not null and ${table.checkoutIntentKeyHash} ~ '^[a-f0-9]{64}$' and ${table.checkoutRequestHash} is not null and ${table.checkoutRequestHash} ~ '^[a-f0-9]{64}$')`),
     uniqueIndex('payments_provider_transaction_unique')
       .on(table.provider, table.providerTransactionId)
       .where(sql`${table.providerTransactionId} is not null`),

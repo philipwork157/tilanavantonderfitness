@@ -48,6 +48,12 @@ The customer-facing email should link to `/account/programs`. The Nuxt server ve
 - Paystack references, transaction IDs, environment, raw provider status,
   checkout details, channel, fees, and verification time remain on `payments`;
   application logic uses the normalized payment status.
+- Paystack checkout payments store paired SHA-256 intent-key/request hashes.
+  A partial unique constraint on provider, environment, and key hash plus
+  transaction serialization ensures one order/payment per browser intent.
+  The request hash binds normalized customer details and purchased-price
+  snapshots; changing those details under an existing key is rejected. Old
+  payments retain null hashes. No extra UUID columns or application IDs are added.
 - `payment_events` is the idempotency and audit ledger for signed webhooks. Its
   provider event key prevents a retried event from fulfilling an order twice.
 - `payment_refunds` records each full or partial refund independently. Its
@@ -71,6 +77,14 @@ through `users -> clients -> program_access`. The Nuxt server must resolve every
 slug, validate the displayed prices, calculate the total from `program_volumes`,
 initialize Paystack, and return only the hosted checkout URL or access code to
 the browser. The basket never supplies an authoritative price or total.
+
+Duplicate checkout submissions with the same intent reuse the existing
+payment and immutable order lines. Initialization is claimed durably before
+the external request and has a bounded timeout. A lost browser response can
+resume the saved URL. An uncertain provider response leaves the same payment
+pending and requires verification/webhook confirmation or operator review;
+it must not release the intent for another provider initialization. Deliberate
+later purchases use a fresh key. See [checkout-idempotency.md](./checkout-idempotency.md).
 
 The Paystack callback is a user-interface return path, not proof of payment.
 Only a server-verified successful payment with the expected reference, amount,

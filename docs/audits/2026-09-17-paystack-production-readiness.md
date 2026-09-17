@@ -4,31 +4,32 @@ Date: 17 September 2026
 
 Original reviewed revision: `4f1a2247cc51560a5c065ae02cc0ae217a12cd3f`
 
-Remediation update: 17 September 2026 — PAY-01 implemented and verified locally.
+Remediation update: 17 September 2026 — PAY-01, PAY-02, and PAY-03 implemented and verified locally.
 
 **Recommendation: do not enable live payments yet.** The basic architecture is
-sound, but refund matching, recovery, and other launch requirements remain
-unresolved. PAY-01's stale-verification race is now fixed and covered by real
-PostgreSQL tests. Invoicing is not implemented, and other critical payment
+sound, but recovery and other launch requirements remain unresolved. Stale
+verification, refund matching, and checkout intent retries now have local
+fixes and real PostgreSQL tests. Invoicing is not implemented, and other critical payment
 paths still need tests. Passing builds alone do not establish payment correctness.
 
 This audit covers the Astro catalogue, basket, checkout and return page; Nuxt
 checkout, webhooks, refunds, customer authentication and downloads; admin
 purchase reporting and file lifecycle; Drizzle schemas, relevant migrations,
 and deployment workflows. The original audit changed documentation only.
-The subsequent PAY-01 remediation changes verification code and tests as
-documented below; migrations, deployment settings, and live data are unchanged.
+The subsequent remediations change code, tests, and add reviewed forward
+migrations as documented below. Deployed settings/data are unchanged; migrations
+have been applied only to disposable local test databases.
 
 ## Production readiness checklist
 
-Check an item only after its fix and acceptance checks are complete. PAY-01 is
-the first implemented priority; all other findings remain open. A checked code
+Check an item only after its fix and acceptance checks are complete. PAY-01,
+PAY-02, and PAY-03 are implemented; all other findings remain open. A checked code
 fix means locally verified, not deployed. Detailed evidence, conditions, and
 acceptance criteria remain in each finding below.
 
 - [x] **PAY-01 (P1):** Prevent stale verification from overwriting settled payments; validate provider evidence and pass PostgreSQL concurrency tests.
 - [x] **PAY-02 (P1):** Match refund API responses and webhooks to one refund; test duplicate and reordered events against refund limits.
-- [ ] **PAY-03 (P1):** Make checkout retries idempotent and prevent duplicate payable orders.
+- [x] **PAY-03 (P1):** Make checkout retries under the same persistent intent idempotent and prevent duplicate payable orders.
 - [ ] **PAY-04 (P1, conditional):** Validate Paystack key/mode agreement and demonstrate test/live database and entitlement isolation.
 - [ ] **PAY-05 (P1):** Implement independent payment/refund recovery and a defined dispute handling process.
 - [ ] **BILL-01 (P1 for complete billing):** Implement invoice creation, issue/delivery, settlement, and refund/credit handling.
@@ -170,7 +171,7 @@ configuration.
 | --- | --- | --- |
 | PAY-01 | P1 — fixed locally | Stale verification can overwrite a successful/refunded payment |
 | PAY-02 | P1 — fixed locally | Refund API responses and webhooks do not reliably match the same refund |
-| PAY-03 | P1 | Checkout retries create independent payable orders |
+| PAY-03 | P1 — fixed locally | Checkout retries create independent payable orders |
 | PAY-04 | P1, conditional | Key/environment mismatch and test entitlements are not isolated by code |
 | PAY-05 | P1 | Missing recovery for missed/out-of-order events and disputes |
 | BILL-01 | P1 for complete billing | Invoice lifecycle is absent |
@@ -228,8 +229,9 @@ and [PostgreSQL tests](../../apps/admin/tests/paystack-verification.integration.
 See [test instructions](../../apps/admin/tests/README.md) to rerun them. The
 integration run used a disposable local PostgreSQL 18 cluster and mocked
 provider responses; it did not contact Paystack or test deployed Supabase
-authentication/RLS policies. The ordinary suite now has **84 passing tests**;
-the opt-in database suite has **29 passing tests**. Broader test coverage and CI
+authentication/RLS policies. At PAY-01 completion the ordinary suite had
+**84 passing tests** and the opt-in database suite had **29 passing tests**.
+See PAY-03 below for the latest totals. Broader test coverage and CI
 gates remain tracked under TEST-01. `pnpm check`, `pnpm build:admin`, and
 `pnpm build:web` also passed after the code change (both production builds ran
 uncached). Existing admin dependency annotation and bundle warnings remain.
@@ -288,6 +290,34 @@ duplicate and reordered events; full refunds. One real refund must map to one
 local refund throughout its lifecycle.
 
 ### PAY-03 — checkout has no request idempotency or resumable attempt
+
+**Status: completed locally, 17 September 2026.** Not yet deployed.
+
+**Implemented remediation:**
+
+- [x] Require an unpredictable intent token on both single-volume and basket checkout; share request normalization across browser/server and document it in OpenAPI.
+- [x] Persist paired key/request hashes on payments with real uniqueness/hash constraints, serialize reservation creation, and reject changed details under an existing key.
+- [x] Claim initialization durably before network I/O. Concurrent requests and lost-browser-response retries reuse one order/reference/saved hosted URL. Provider initialization and verification use bounded timeouts with automatic retries disabled.
+- [x] Keep ambiguous initialization pending under its existing reference; distinguish explicit rejection, reconcile uncertainty through existing validated verification, and preserve concurrent webhook settlement. Never automatically invent a replacement reference.
+- [x] Persist browser keys across retries/reloads and serialize modern cross-tab storage with Web Locks. Validate recovery references and status responses; retire confirmed terminal intents for deliberate later purchases/retries. Use the submitted item snapshot when remembering checkout.
+- [x] Add 20 real PostgreSQL checkout cases plus unit/contract/browser-helper tests for purchase identity, validation, unsafe URLs, storage failures, recovery, and status evidence.
+
+**Verification:** 124 ordinary tests and 56 opt-in PostgreSQL tests passed;
+lint/type checks, migration checks, and both production builds passed. Provider
+responses were fixtures, not real charges. See [checkout-idempotency.md](../checkout-idempotency.md)
+for behavior, recovery, limitations, and test/rollout instructions. The reviewed
+forward migration is `20260917144154_careful_arachne.sql`; coordinate backend and
+frontend deployment because `idempotencyKey` is now required.
+
+**Limits:** idempotency protects the same intent, not all purchases using an
+email address. Fresh keys represent deliberate separate purchases. Clearing
+browser storage/changing devices loses that browser association; simultaneous
+first creation across tabs requires Web Locks. Pending uncertainty never
+expires into a fresh payable reference automatically. Independent operator/
+provider recovery remains PAY-05, broader CI/browser launch gates remain TEST-01,
+and WEB-02's other in-flight basket/pending-reference behavior remains open.
+
+**Original evidence and acceptance:**
 
 **Evidence:** [paystack.ts](../../apps/admin/server/services/paystack.ts), lines
 195–262 and 298–315; [checkout contract](../../packages/contracts/src/checkout.ts).
@@ -626,9 +656,10 @@ individual nonnegative-amount checks enforce these relationships.
 
 ## Suggested implementation order and launch evidence
 
-1. Fix PAY-01 and PAY-02 with permanent regression tests and PostgreSQL
-   concurrency/constraint tests.
-2. Implement checkout idempotency and independent recovery (PAY-03/PAY-05).
+1. PAY-01/PAY-02 are fixed locally with permanent PostgreSQL regression tests;
+   apply their migrations and verify deployed behavior during coordinated rollout.
+2. PAY-03 intent idempotency is implemented locally. Independent recovery
+   (PAY-05) remains open.
 3. Verify environment isolation and backend configuration checks (PAY-04).
 4. Complete billing, notifications, and historical integrity
    (BILL-01, DB-01, DB-02, ACCESS-01).

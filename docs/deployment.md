@@ -166,6 +166,32 @@ though Paystack rows record their test/live provider environment.
 
 ## Paystack and customer access
 
+### Checkout/refund schema rollout (PAY-02/PAY-03)
+
+Apply the reviewed forward migrations
+`20260917143554_concerned_living_mummy.sql` (refund references) and
+`20260917144154_careful_arachne.sql` (checkout intent hashes/uniqueness) before
+deploying the updated admin service. Review the intended database URL and
+normal migration safeguards first. These migrations have been exercised only
+in a disposable local test database; this task does not apply them to deployed
+environments.
+
+The public checkout and both checkout API contracts now require
+`idempotencyKey`. Coordinate the admin/public rollout with checkout paused
+(for example, keep its Paystack secret unconfigured until both versions are
+deployed). The dev deployment jobs run in parallel and do not coordinate
+database migrations. An older backend ignores the new key; an older frontend
+is rejected by the new backend. Do not accept payment traffic during that
+mixed-version window. Existing payments/webhooks remain valid with null hashes.
+
+Validate retries, lost-response recovery, null-reference refunds, and the
+test/live environment boundary in the isolated test environment before
+reenabling checkout. See [checkout-idempotency.md](./checkout-idempotency.md)
+for uncertain initialization review. Never retry one manually by inventing a
+new reference without resolving the existing provider attempt.
+
+### Provider and customer configuration
+
 Paystack is currently test-only. Configure `NUXT_PAYSTACK_ENVIRONMENT=test` in
 both Fly apps and do not configure an `sk_live_...` key yet. Where test checkout
 should work, configure `NUXT_PAYSTACK_SECRET_KEY` with an `sk_test_...` key and

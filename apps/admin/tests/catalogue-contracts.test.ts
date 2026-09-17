@@ -68,6 +68,7 @@ describe('catalogue API contracts', () => {
   it('starts checkout with a database volume slug and rejects the removed static key field', () => {
     const request = {
       volumeSlug: 'reconnect-volume-2',
+      idempotencyKey: '8b617e23-3095-4610-af55-1179b459581c',
       expectedPriceCents: 39_900,
       firstName: 'Tilana',
       lastName: 'van Tonder',
@@ -91,6 +92,7 @@ describe('catalogue API contracts', () => {
         { volumeSlug: 'reconnect-volume-1', expectedPriceCents: 39_900 },
         { volumeSlug: 'strong-volume-1', expectedPriceCents: 45_000 },
       ],
+      idempotencyKey: '8b617e23-3095-4610-af55-1179b459581c',
       firstName: 'Tilana',
       lastName: 'van Tonder',
       email: 'tilana@example.com',
