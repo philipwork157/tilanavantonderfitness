@@ -13,7 +13,7 @@ describe('admin API documentation', () => {
 
     assert.equal(document.openapi, '3.1.0');
     assert.equal(operations.length, documentedApiEndpointCount);
-    assert.equal(documentedApiEndpointCount, 52);
+    assert.equal(documentedApiEndpointCount, 54);
     assert.equal(new Set(operationIds).size, operationIds.length);
   });
 

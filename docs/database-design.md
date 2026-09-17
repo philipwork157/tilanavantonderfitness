@@ -112,6 +112,16 @@ grants the `customer` role. Private program files are returned as short-lived
 R2 download redirects only after the server checks that integer-linked
 entitlement.
 
+## Payment recovery and disputes
+
+PAY-05 adds `payment_recovery_jobs` (one durable job per integer payment ID,
+due time, expiring/versioned lease, retry count and operator alert state) and
+`payment_disputes` (provider dispute ID, integer payment link, provider outcome
+and amount). Both tables have RLS enabled and restrictive payment foreign keys.
+Disputes do not create ordinary refund reservations. Deferred prerequisite
+events retain `received` status; controlled replay preserves the original event.
+See [recovery operations](./paystack-recovery.md) for policy and activation.
+
 ## Invoices
 
 - `invoices` can reference an order but keeps immutable seller and client billing snapshots.

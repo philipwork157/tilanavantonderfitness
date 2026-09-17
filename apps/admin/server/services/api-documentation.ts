@@ -63,6 +63,8 @@ const endpoints: ApiEndpointDefinition[] = [
   { method: 'post', path: '/api/admin/clients/{id}/photos', tag: 'Admin clients', summary: 'Reserve a client progress-photo upload', security: 'admin', requestSchema: 'GenericRequest', successStatus: '201' },
   { method: 'post', path: '/api/admin/clients/{id}/recalculate', tag: 'Admin clients', summary: 'Recalculate client coaching targets', security: 'admin', requestSchema: 'GenericRequest' },
   { method: 'post', path: '/api/admin/orders/{id}/refund', tag: 'Admin payments', summary: 'Request a full or partial Paystack refund', description: 'Protects against refund overages and keeps ambiguous provider outcomes reserved for review.', security: 'admin', requestSchema: 'RefundRequest' },
+  { method: 'get', path: '/api/admin/payments/recovery', tag: 'Admin payments', summary: 'Review payment recovery jobs and failed or deferred events', security: 'admin' },
+  { method: 'post', path: '/api/admin/payments/recovery', tag: 'Admin payments', summary: 'Enqueue reconciliation or replay stored provider evidence', security: 'admin', requestSchema: 'RecoveryRequest' },
 
   { method: 'get', path: '/api/admin/programs', tag: 'Admin catalogue', summary: 'List all managed programs', security: 'admin' },
   { method: 'post', path: '/api/admin/programs', tag: 'Admin catalogue', summary: 'Create a draft program', security: 'admin', requestSchema: 'ProgramRequest', successStatus: '201' },
@@ -218,6 +220,11 @@ export function getAdminOpenApiDocument() {
         ServerError: { description: 'The operation could not be completed.', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
       },
       schemas: {
+        RecoveryRequest: { oneOf: [
+          { type: 'object', required: ['action', 'paymentId'], additionalProperties: false, properties: { action: { const: 'acknowledge' }, paymentId: { type: 'integer', minimum: 1 } } },
+          { type: 'object', required: ['action', 'paymentId'], additionalProperties: false, properties: { action: { const: 'reconcile' }, paymentId: { type: 'integer', minimum: 1 } } },
+          { type: 'object', required: ['action', 'eventId'], additionalProperties: false, properties: { action: { const: 'replay' }, eventId: { type: 'integer', minimum: 1 } } },
+        ] },
         Error: {
           type: 'object',
           properties: { statusCode: { type: 'integer' }, statusMessage: { type: 'string' } },

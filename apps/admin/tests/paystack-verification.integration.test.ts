@@ -5,6 +5,7 @@ import { paymentEvents, paymentRefunds, users } from '@tilana/db/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { registerCheckoutCases } from './helpers/paystack-checkout-cases';
+import { registerRecoveryCases } from './helpers/payment-recovery-cases';
 import { assertPaystackDatabaseEnvironment } from '@server/utils/paystack-configuration';
 import { linkVerifiedCustomerAccount, requireCustomer } from '@server/utils/customer-auth';
 import type { H3Event } from 'h3';
@@ -16,11 +17,13 @@ import {
   type PaymentFixture,
 } from './helpers/paystack-database';
 
-const mocks = vi.hoisted(() => ({ getDatabase: vi.fn(), createSupabaseAuthClient: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getDatabase: vi.fn(), createSupabaseAuthClient: vi.fn(), send: vi.fn() }));
 vi.mock('@server/utils/database', () => mocks);
 vi.mock('@server/utils/supabase-auth', () => ({ createSupabaseAuthClient: mocks.createSupabaseAuthClient }));
+vi.mock('@server/utils/email', () => ({ getServerEmail: () => ({ sender: { send: mocks.send }, from: { email: 'sender@example.test' } }) }));
 let database: Database;
 registerCheckoutCases(() => database);
+registerRecoveryCases(() => database, mocks.send);
 
 describe('Paystack database environment isolation', () => {
   it('permits the configured test database', async () => {

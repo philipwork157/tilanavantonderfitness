@@ -12,6 +12,7 @@ import {
   orders,
   paymentEvents,
   paymentRefunds,
+  paymentRecoveryJobs,
   payments,
   programAccess,
   programFiles,
@@ -25,6 +26,8 @@ import { assertPaystackDatabaseEnvironment, getPaystackCheckoutConfiguration, ge
 import { getCatalogueStorageConfiguration } from '@server/utils/r2';
 import { isCheckoutPriceCurrent } from './catalogue-policy';
 import { hashCheckoutIntent, resolvePaystackCheckout } from './paystack-checkout-intent';
+import { processPaystackDispute } from './paystack-disputes';
+import { createPaystackEventKey } from '@server/utils/paystack-webhook';
 import {
   getTerminalCheckoutResolution,
   isPaymentAlreadyFulfilled,
@@ -48,6 +51,7 @@ interface PaystackRefundResponse {
     expected_at?: unknown;
     customer_note?: unknown;
     merchant_note?: unknown;
+    transaction?: unknown;
   };
 }
 
@@ -63,6 +67,7 @@ interface PaystackEvent {
     channel?: unknown;
     gateway_response?: unknown;
     paid_at?: unknown;
+    transaction?: unknown;
     transaction_reference?: unknown;
     refund_reference?: unknown;
     domain?: unknown;
@@ -321,13 +326,26 @@ export class PaystackRefundError extends Error {
 async function markPaymentEvent(
   transaction: DatabaseTransaction,
   eventId: number,
-  processingStatus: 'processed' | 'ignored' | 'failed',
+  processingStatus: 'received' | 'processed' | 'ignored' | 'failed',
   errorMessage: string | null = null,
 ) {
   await transaction
     .update(paymentEvents)
     .set({ processingStatus, errorMessage, processedAt: new Date() })
     .where(eq(paymentEvents.id, eventId));
+  if (processingStatus === 'failed' || processingStatus === 'received') {
+    const [owner] = await transaction.select({ paymentId: paymentEvents.paymentId })
+      .from(paymentEvents).where(eq(paymentEvents.id, eventId)).limit(1);
+    if (owner?.paymentId) {
+      await transaction.insert(paymentRecoveryJobs).values({
+        paymentId: owner.paymentId,
+        ...(processingStatus === 'failed' && { reviewReason: 'Provider event validation or matching requires review.', alertPending: true }),
+      }).onConflictDoUpdate({ target: paymentRecoveryJobs.paymentId, set: {
+        nextAttemptAt: new Date(), updatedAt: new Date(),
+        ...(processingStatus === 'failed' && { reviewReason: 'Provider event validation or matching requires review.', alertPending: true }),
+      } });
+    }
+  }
 }
 
 async function getOrderAccessItems(transaction: DatabaseTransaction, orderId: number) {
@@ -449,12 +467,12 @@ async function synchronizePaymentRefundState(
     .from(paymentRefunds)
     .where(and(eq(paymentRefunds.paymentId, payment.id), eq(paymentRefunds.status, 'processed')));
   const refundedAmountCents = processed?.total ?? 0;
-  const paymentStatus = refundedAmountCents === 0
+  const paymentStatus = payment.status === 'reversed' ? 'reversed' : refundedAmountCents === 0
     ? 'succeeded'
     : refundedAmountCents === payment.amountCents
       ? 'refunded'
       : 'partially_refunded';
-  const fullyRefunded = paymentStatus === 'refunded';
+  const fullyRefunded = paymentStatus === 'refunded' || paymentStatus === 'reversed';
   const now = new Date();
 
   await transaction
@@ -556,7 +574,6 @@ async function processRefundEvent(
     || amount > payment.amountCents
     || currency !== payment.currency
     || !isPaystackEnvironmentMatch(environment, payment.environment)
-    || !isPaymentAlreadyFulfilled(payment.status)
   ) {
     await markPaymentEvent(
       transaction,
@@ -564,6 +581,15 @@ async function processRefundEvent(
       'failed',
       'Refund reference, environment, payment state, amount, or currency was invalid.',
     );
+    return;
+  }
+
+  if (payment.status === 'pending') {
+    await markPaymentEvent(transaction, eventId, 'received', 'Awaiting charge fulfillment.');
+    return;
+  }
+  if (!isPaymentAlreadyFulfilled(payment.status)) {
+    await markPaymentEvent(transaction, eventId, 'failed', 'Refund payment state requires review.');
     return;
   }
 
@@ -933,9 +959,13 @@ export async function processPaystackEvent(payload: PaystackEvent, providerEvent
   await assertPaystackDatabaseEnvironment();
   const eventType = stringValue(payload.event) || 'unknown';
   const isRefundEvent = eventType in refundEventStatuses;
+  const isDisputeEvent = ['charge.dispute.create', 'charge.dispute.remind', 'charge.dispute.resolve'].includes(eventType);
+  const disputeTransaction = payload.data?.transaction;
   const reference = isRefundEvent
     ? stringValue(payload.data?.transaction_reference)
-    : stringValue(payload.data?.reference);
+    : isDisputeEvent && disputeTransaction && typeof disputeTransaction === 'object'
+      ? stringValue((disputeTransaction as Record<string, unknown>).reference)
+      : stringValue(payload.data?.reference);
   const database = getDatabase();
 
   await database.transaction(async (transaction) => {
@@ -955,7 +985,7 @@ export async function processPaystackEvent(payload: PaystackEvent, providerEvent
           .for('update')
       : [];
 
-    const [event] = await transaction
+    let [event] = await transaction
       .insert(paymentEvents)
       .values({
         paymentId: payment?.id ?? null,
@@ -967,7 +997,20 @@ export async function processPaystackEvent(payload: PaystackEvent, providerEvent
       .onConflictDoNothing()
       .returning({ id: paymentEvents.id });
 
-    if (!event) return;
+    if (!event) {
+      const [deferred] = await transaction.select().from(paymentEvents)
+        .where(and(eq(paymentEvents.provider, 'paystack'), eq(paymentEvents.providerEventKey, providerEventKey)))
+        .limit(1).for('update');
+      if (deferred?.processingStatus !== 'received') return;
+      event = deferred;
+    }
+
+    if (isDisputeEvent) {
+      const result = await processPaystackDispute(transaction, payload.data, payment);
+      if (result.revoke && payment) await revokeOrderAccess(transaction, payment.orderId);
+      await markPaymentEvent(transaction, event.id, result.status, result.error);
+      return;
+    }
 
     if (eventType === 'charge.success') {
       await processChargeSuccess(transaction, event.id, payload, payment);
@@ -995,7 +1038,7 @@ export async function getPaystackCheckoutStatus(reference: string): Promise<Chec
 }
 
 /** Server-side fallback when the browser returns before a webhook is delivered. */
-export async function verifyPaystackCheckout(reference: string): Promise<void> {
+export async function verifyPaystackCheckout(reference: string, reconcileSettled = false): Promise<void> {
   await assertPaystackDatabaseEnvironment();
   const database = getDatabase();
   const [payment] = await database
@@ -1009,7 +1052,7 @@ export async function verifyPaystackCheckout(reference: string): Promise<void> {
     .from(payments)
     .where(and(eq(payments.provider, 'paystack'), eq(payments.providerReference, reference)))
     .limit(1);
-  if (!payment || payment.status !== 'pending') return;
+  if (!payment || (!reconcileSettled && payment.status !== 'pending')) return;
 
   const { secretKey, environment } = getPaystackCredentials();
   if (payment.environment !== environment) {
@@ -1057,10 +1100,30 @@ export async function verifyPaystackCheckout(reference: string): Promise<void> {
         failureMessage: terminal ? response.message : null,
         updatedAt: now,
       })
-      .where(and(eq(payments.id, payment.id), eq(payments.status, 'pending')))
+      .where(and(eq(payments.id, payment.id), or(
+        eq(payments.status, 'pending'),
+        reconcileSettled && providerStatus === 'reversed'
+          ? inArray(payments.status, ['succeeded', 'partially_refunded']) : undefined,
+      )))
       .returning({ orderId: payments.orderId });
 
     if (!updatedPayment) return;
+
+    if (terminal?.paymentStatus === 'reversed') {
+      const evidence = {
+        reference, amount: payment.amountCents, currency: payment.currency,
+        domain: payment.environment, status: 'reversed',
+      };
+      await transaction.insert(paymentEvents).values({
+        paymentId: payment.id, provider: 'paystack', providerEventKey: `verify:reversal:${createPaystackEventKey(JSON.stringify(evidence))}`,
+        eventType: 'transaction.reversed', processingStatus: 'processed', payload: { data: evidence }, processedAt: now,
+      }).onConflictDoNothing();
+      await transaction.insert(paymentRecoveryJobs).values({
+        paymentId: payment.id, reviewReason: 'Verified payment reversal requires accounting review.', alertPending: true,
+      }).onConflictDoUpdate({ target: paymentRecoveryJobs.paymentId, set: {
+        reviewReason: 'Verified payment reversal requires accounting review.', alertPending: true, updatedAt: now,
+      } });
+    }
 
     if (terminal) {
       await transaction

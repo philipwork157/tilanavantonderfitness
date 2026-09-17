@@ -6,3 +6,4 @@ export * from './identity';
 export * from './invoicing';
 export * from './newsletter';
 export * from './sales';
+export * from './payment-recovery';

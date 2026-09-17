@@ -4,12 +4,12 @@ Date: 17 September 2026
 
 Original reviewed revision: `4f1a2247cc51560a5c065ae02cc0ae217a12cd3f`
 
-Remediation update: 17 September 2026 — PAY-01 through PAY-04 implemented and verified locally.
+Remediation update: 17 September 2026 — PAY-01 through PAY-05 implemented and verified locally.
 
 **Recommendation: do not enable live payments yet.** The basic architecture is
-sound, but recovery and other launch requirements remain unresolved. Stale
-verification, refund matching, and checkout intent retries now have local
-fixes and real PostgreSQL tests. Invoicing is not implemented, and other critical payment
+sound, but deployment activation and other launch requirements remain unresolved.
+Verification, refund matching, checkout retries, environment safety and recovery
+now have local fixes and real PostgreSQL tests. Invoicing is not implemented, and other critical payment
 paths still need tests. Passing builds alone do not establish payment correctness.
 
 This audit covers the Astro catalogue, basket, checkout and return page; Nuxt
@@ -23,7 +23,7 @@ have been applied only to disposable local test databases.
 ## Production readiness checklist
 
 Check an item only after its fix and acceptance checks are complete. PAY-01,
-PAY-02, PAY-03, and PAY-04 are implemented; all other findings remain open. A checked code
+PAY-02, PAY-03, PAY-04, and PAY-05 are implemented; all other findings remain open. A checked code
 fix means locally verified, not deployed. Detailed evidence, conditions, and
 acceptance criteria remain in each finding below.
 
@@ -31,7 +31,7 @@ acceptance criteria remain in each finding below.
 - [x] **PAY-02 (P1):** Match refund API responses and webhooks to one refund; test duplicate and reordered events against refund limits.
 - [x] **PAY-03 (P1):** Make checkout retries under the same persistent intent idempotent and prevent duplicate payable orders.
 - [x] **PAY-04 (P1, conditional):** Validate Paystack key/mode and URLs; quarantine mixed-mode databases before payment operations and customer entitlement consumption. Deployed resource isolation remains a separate launch gate.
-- [ ] **PAY-05 (P1):** Implement independent payment/refund recovery and a defined dispute handling process.
+- [x] **PAY-05 (P1):** Add durable payment/refund recovery, controlled replay, operator alerts and dispute/reversal access policy. Deployment, scheduler activation and real-provider validation remain launch gates.
 - [ ] **BILL-01 (P1 for complete billing):** Implement invoice creation, issue/delivery, settlement, and refund/credit handling.
 - [ ] **TEST-01 (P1):** Cover the remaining critical payment/API/browser paths and gate deployment on automated tests. PAY-01's new tests are only partial progress here.
 - [ ] **WEB-01 (P2):** Preserve basket items during temporary catalogue errors.
@@ -173,7 +173,7 @@ configuration.
 | PAY-02 | P1 — fixed locally | Refund API responses and webhooks do not reliably match the same refund |
 | PAY-03 | P1 — fixed locally | Checkout retries create independent payable orders |
 | PAY-04 | P1 — fixed locally | Key/mode and URL validation; fail-closed database environment isolation |
-| PAY-05 | P1 | Missing recovery for missed/out-of-order events and disputes |
+| PAY-05 | P1 — fixed locally | Durable recovery, deferred-event replay, alerts and dispute/reversal policy |
 | BILL-01 | P1 for complete billing | Invoice lifecycle is absent |
 | TEST-01 | P1 | Critical payment paths lack tests and deployment test gates |
 | WEB-01 | P2 | Temporary catalogue errors permanently remove basket items |
@@ -417,6 +417,53 @@ test purchases cannot authenticate into or download production entitlements;
 production URLs cannot fall back to localhost.
 
 ### PAY-05 — no independent recovery or dispute lifecycle
+
+**Remediation status: implemented and verified locally.** Historical evidence
+below describes the original gap. See [recovery operations](../paystack-recovery.md)
+for the precise policy, rollout, protected endpoints and activation checklist.
+
+**Delivered:**
+
+- Integer-keyed, RLS-enabled `payment_recovery_jobs` and `payment_disputes`,
+  with a reviewed forward migration, restrictive payment foreign keys, unique
+  external dispute IDs and one versioned/leased recurring job per payment.
+- A protected, disabled-by-default external scheduler endpoint and GitHub
+  ten-minute workflow that can wake scale-to-zero Fly machines. Matching
+  environment-specific scheduler tokens and an operator mailbox are required.
+- Bounded provider verification/refund/dispute reads, transaction ownership
+  checks, multi-page validation, durable retry/backoff, expired-lease recovery,
+  concurrent-worker protection and priority for pending payments/refunds.
+  Recovery never initiates a charge/refund or frees an uncertain refund amount
+  merely because the provider list is empty.
+- Prerequisite-dependent valid refund/dispute events remain `received` and
+  can resume after charge fulfillment. Invalid evidence remains failed/auditable,
+  with alerts for known payments. Administrator same-origin/role-protected
+  queue, enqueue, stored-evidence replay and audited acknowledgement operations
+  cannot supply provider payloads or force financial outcomes.
+- Durable, minimal-data SES alerts with delivery retries/timeouts, plus scheduler
+  failure signalling. Open disputes alert without revoking access. Confirmed
+  merchant-accepted disputes or verified reversals revoke that order's access,
+  preserving independently purchased access. Reversal state cannot be undone
+  by later success/refund events. Dispute debits are tracked separately from
+  ordinary refund reservations; unknown bank outcomes require provider review.
+
+**Local evidence:** `pnpm test` passes 170 ordinary tests (144 admin, 26 web);
+the disposable PostgreSQL suite passes 84 tests, including 19 new recovery cases.
+Coverage includes closed-browser/missed-webhook success, uncertain refunds,
+refund-before-charge, timeout backoff/escalation, concurrent workers, expired
+leases, dispute/reversal access policy, cross-payment evidence denial, replay,
+acknowledgement, pagination overflow and SES failure/retry. API tests cover admin
+authorization/origin guard failures, strict input, scheduler capability and
+response codes. `pnpm check`, `pnpm db:check`, and both production builds pass.
+
+**Remaining activation/limits:** the migration has been applied only to temporary
+test databases. Deployed secrets/resources, provider payloads, SES delivery,
+sleeping-machine wake-up and scheduler notifications are unverified. GitHub cron
+is best-effort and default-branch-only: independent heartbeat/backlog monitoring,
+appropriate throughput and a dispute owner are mandatory launch checks, not
+guaranteed by local tests. BILL-01 still owns invoices/credit notes/net accounting;
+SEC-02 still owns retention. No real provider request, email, deployment, commit
+or push was performed in this task.
 
 **Evidence:** [paystack.ts](../../apps/admin/server/services/paystack.ts), lines
 599–615 and 958–1071; [status route](../../apps/admin/server/api/checkout/status.get.ts),
@@ -704,9 +751,11 @@ individual nonnegative-amount checks enforce these relationships.
 
 1. PAY-01/PAY-02 are fixed locally with permanent PostgreSQL regression tests;
    apply their migrations and verify deployed behavior during coordinated rollout.
-2. PAY-03 intent idempotency is implemented locally. Independent recovery
-   (PAY-05) remains open.
-3. Verify environment isolation and backend configuration checks (PAY-04).
+2. PAY-03 intent idempotency and PAY-05 independent recovery are implemented
+   locally. Roll out reviewed migrations and activate/test the external worker
+   using [recovery operations](../paystack-recovery.md).
+3. PAY-04 code checks are implemented locally. Verify deployed resource
+   isolation and the reviewed test-to-live transition before launch.
 4. Complete billing, notifications, and historical integrity
    (BILL-01, DB-01, DB-02, ACCESS-01).
 5. Resolve basket/return-page behavior, entitlement lifecycle, and abuse/data

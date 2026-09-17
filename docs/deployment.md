@@ -182,6 +182,17 @@ future non-Fly deployment must establish the equivalent deployment-mode policy.
 
 ## Paystack and customer access
 
+### Recovery worker rollout (PAY-05)
+
+Review and apply `20260917151828_bored_sebastian_shaw.sql` before deploying the
+recovery service. It has been applied only in disposable local test databases.
+Recovery defaults to disabled and requires new Fly runtime secrets plus a
+matching GitHub scheduler token and SES operator mailbox. The external workflow
+wakes scale-to-zero Fly apps, but GitHub cron is best-effort and only runs from
+the default branch. Configure independent heartbeat/backlog monitoring and
+workflow failure notifications before live activation. Follow the complete
+checklist and admin replay/dispute policy in [paystack-recovery.md](./paystack-recovery.md).
+
 ### Checkout/refund schema rollout (PAY-02/PAY-03)
 
 Apply the reviewed forward migrations

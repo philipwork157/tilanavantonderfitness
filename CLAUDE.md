@@ -236,6 +236,17 @@ reserved. This intentionally blocks another refund until the Paystack dashboard
 or a later webhook resolves the first request, preventing accidental duplicate
 refunds.
 
+## Payment recovery and disputes
+
+PAY-05 recovery uses durable `payment_recovery_jobs` leases, bounded provider
+reads, backoff, SES alerts, and a dedicated-token external scheduler endpoint.
+See `docs/paystack-recovery.md` for activation and administrator enqueue/replay/
+acknowledgement. Deferred prerequisite events remain `received` and can resume;
+permanently invalid evidence stays auditable. Recovery never initiates charges
+or refunds. Open disputes alert without revoking access; resolved accepted
+disputes and verified reversals revoke the affected order, with sticky reversal
+state and separate `payment_disputes` records. Never guess unknown bank outcomes.
+
 ## Customer access, email, and files
 
 After payment, the customer requests access using the purchase email address.
