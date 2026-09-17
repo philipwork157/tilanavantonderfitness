@@ -4,8 +4,10 @@ import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import type { H3Event } from 'h3';
 import { createSupabaseAuthClient } from './supabase-auth';
 import { getDatabase } from './database';
+import { assertPaystackDatabaseEnvironment } from '@server/utils/paystack-configuration';
 
 export async function linkVerifiedCustomerAccount(event: H3Event) {
+  await assertPaystackDatabaseEnvironment();
   const supabase = createSupabaseAuthClient(event);
   const { data: { user }, error } = await supabase.auth.getUser();
   const email = user?.email?.trim().toLowerCase();
@@ -74,6 +76,7 @@ export async function linkVerifiedCustomerAccount(event: H3Event) {
 }
 
 export async function requireCustomer(event: H3Event) {
+  await assertPaystackDatabaseEnvironment();
   const supabase = createSupabaseAuthClient(event);
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) throw createError({ statusCode: 401, statusMessage: 'Please sign in to view your programs.' });

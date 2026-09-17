@@ -185,6 +185,20 @@ from a browser redirect alone.
 Paystack secrets are server-only runtime configuration. Test payments must use
 the test key/environment and live payments must use the live key/environment.
 Never allow an environment to refund a payment created in the other environment.
+The backend validates secret-key prefixes before provider operations and validates
+checkout/account URLs (HTTPS for deployed builds; callback origin must match
+`public.siteUrl`). Paystack databases must contain only one provider environment:
+checkout, verification, webhook/refund processing, magic-link eligibility,
+account linking, and existing customer sessions fail closed when another mode
+or an unknown mode is present. This deliberately quarantines legacy test access
+instead of promoting it to live. Use separate production Supabase/database/private
+storage resources; retain test history in the test database, never relabel it.
+The known Fly dev/prod apps additionally require test/live mode respectively;
+production payments/customer access stay unavailable under the pre-launch test
+configuration. Test purchases must never unlock production private storage.
+First checkout reservations take a database advisory lock and recheck isolation
+inside the transaction so differently configured apps cannot race into an empty
+database. Manual payments do not participate in this Paystack-mode check.
 
 ## Paystack refund flow
 

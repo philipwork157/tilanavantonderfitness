@@ -5,6 +5,9 @@ import { paymentEvents, paymentRefunds, users } from '@tilana/db/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { registerCheckoutCases } from './helpers/paystack-checkout-cases';
+import { assertPaystackDatabaseEnvironment } from '@server/utils/paystack-configuration';
+import { linkVerifiedCustomerAccount, requireCustomer } from '@server/utils/customer-auth';
+import type { H3Event } from 'h3';
 import {
   createBarrier,
   createPaystackTestDatabase,
@@ -13,10 +16,38 @@ import {
   type PaymentFixture,
 } from './helpers/paystack-database';
 
-const mocks = vi.hoisted(() => ({ getDatabase: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getDatabase: vi.fn(), createSupabaseAuthClient: vi.fn() }));
 vi.mock('@server/utils/database', () => mocks);
+vi.mock('@server/utils/supabase-auth', () => ({ createSupabaseAuthClient: mocks.createSupabaseAuthClient }));
 let database: Database;
 registerCheckoutCases(() => database);
+
+describe('Paystack database environment isolation', () => {
+  it('permits the configured test database', async () => {
+    await seedPendingPayment(database);
+    await expect(assertPaystackDatabaseEnvironment()).resolves.toBeUndefined();
+  });
+  it.each(['link', 'session', 'verify', 'webhook', 'refund'])(
+    'quarantines test financial history before live %s operations', async (operation) => {
+      const fixture = await seedPendingPayment(database);
+      await confirmCharge(fixture);
+      const fetch = vi.fn();
+      vi.stubGlobal('$fetch', fetch);
+      vi.stubGlobal('useRuntimeConfig', () => ({ paystackSecretKey: 'sk_live_fixture', paystackEnvironment: 'live' }));
+      const actions = {
+        link: () => linkVerifiedCustomerAccount({} as H3Event),
+        session: () => requireCustomer({} as H3Event),
+        verify: () => verifyPaystackCheckout(fixture.reference),
+        webhook: () => processPaystackEvent({ event: 'charge.success', data: verification(fixture, 'success').data }, `live-test-${fixture.reference}`),
+        refund: () => initiatePaystackRefund(fixture.orderId, { amountCents: 1000 }, 1),
+      };
+      await expect(actions[operation as keyof typeof actions]()).rejects.toMatchObject({ statusCode: 503 });
+      expect(fetch).not.toHaveBeenCalled();
+      expect(mocks.createSupabaseAuthClient).not.toHaveBeenCalled();
+      expect((await readPaymentState(database, fixture)).access).toHaveLength(1);
+    },
+  );
+});
 
 /** Provider evidence is local fixture data; these tests never call Paystack. */
 function verification(fixture: PaymentFixture, status: string) {
@@ -52,7 +83,7 @@ beforeAll(async () => { database = await createPaystackTestDatabase(); });
 afterAll(async () => { await database?.$client.end(); });
 beforeEach(() => {
   mocks.getDatabase.mockReturnValue(database);
-  vi.stubGlobal('useRuntimeConfig', () => ({ paystackSecretKey: 'sk_test_integration_fixture' }));
+  vi.stubGlobal('useRuntimeConfig', () => ({ paystackSecretKey: 'sk_test_integration_fixture', paystackEnvironment: 'test' }));
   vi.stubGlobal('createError', (input: { statusCode: number; statusMessage: string }) =>
     Object.assign(new Error(input.statusMessage), input));
 });
@@ -138,7 +169,8 @@ describe('Paystack verification against PostgreSQL', () => {
     const webhookReady = createBarrier();
     const commitWebhook = createBarrier();
     // Hold the real webhook transaction open after fulfillment but before COMMIT.
-    mocks.getDatabase.mockReturnValueOnce({
+    mocks.getDatabase.mockReturnValue({
+      select: database.select.bind(database),
       transaction: (callback: Parameters<Database['transaction']>[0]) => database.transaction(async (transaction) => {
         const result = await callback(transaction);
         webhookReady.resolve();
@@ -162,6 +194,7 @@ describe('Paystack verification against PostgreSQL', () => {
       response.resolve(verification(fixture, 'reversed'));
       commitWebhook.resolve();
       await Promise.all([webhook, pendingVerification]);
+      mocks.getDatabase.mockReturnValue(database);
     }
     const result = await readPaymentState(database, fixture);
     expect(result.payment).toMatchObject({ status: 'succeeded', refundedAmountCents: 0, providerStatus: 'success' });

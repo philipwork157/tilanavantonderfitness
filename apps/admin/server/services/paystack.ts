@@ -21,6 +21,7 @@ import {
 } from '@tilana/db/schema';
 import { and, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
 import { getDatabase } from '@server/utils/database';
+import { assertPaystackDatabaseEnvironment, getPaystackCheckoutConfiguration, getPaystackCredentials } from '@server/utils/paystack-configuration';
 import { getCatalogueStorageConfiguration } from '@server/utils/r2';
 import { isCheckoutPriceCurrent } from './catalogue-policy';
 import { hashCheckoutIntent, resolvePaystackCheckout } from './paystack-checkout-intent';
@@ -179,18 +180,15 @@ export async function initializePaystackCheckout(input: CheckoutRequest): Promis
 }
 
 export async function initializePaystackBasketCheckout(input: BasketCheckoutRequest): Promise<CheckoutResponse> {
-  const config = useRuntimeConfig();
-  const secretKey = String(config.paystackSecretKey || '').trim();
-  const callbackUrl = String(config.paystackCallbackUrl || '').trim();
-  const environment = String(config.paystackEnvironment || 'test');
-
-  if (!secretKey || !callbackUrl || !['test', 'live'].includes(environment)) {
-    throw createError({ statusCode: 503, statusMessage: 'Online checkout is not configured.' });
-  }
+  const { secretKey, callbackUrl, environment } = getPaystackCheckoutConfiguration();
+  await assertPaystackDatabaseEnvironment();
 
   const database = getDatabase();
   const { keyHash, requestHash } = hashCheckoutIntent(input);
   const checkout = await database.transaction(async (transaction) => {
+    // Serialize first reservations across modes: two differently configured apps must not both pass an empty-database check.
+    await transaction.execute(sql`select pg_advisory_xact_lock(84621904)`);
+    await assertPaystackDatabaseEnvironment(transaction);
     // Serialize reservation creation across processes before checking the unique
     // key. The transaction ends before contacting Paystack; no network row lock.
     await transaction.execute(sql`select pg_advisory_xact_lock(hashtextextended(${keyHash}, 0))`);
@@ -720,12 +718,8 @@ export async function initiatePaystackRefund(
   input: AdminPaymentRefundRequest,
   administratorUserId: number,
 ) {
-  const config = useRuntimeConfig();
-  const secretKey = String(config.paystackSecretKey || '').trim();
-  const environment = String(config.paystackEnvironment || 'test');
-  if (!secretKey || !['test', 'live'].includes(environment)) {
-    throw new PaystackRefundError('Paystack refunds are not configured for this environment.', 503);
-  }
+  const { secretKey, environment } = getPaystackCredentials();
+  await assertPaystackDatabaseEnvironment();
 
   const database = getDatabase();
   const reservation = await database.transaction(async (transaction) => {
@@ -935,6 +929,8 @@ export async function initiatePaystackRefund(
 }
 
 export async function processPaystackEvent(payload: PaystackEvent, providerEventKey: string): Promise<void> {
+  getPaystackCredentials();
+  await assertPaystackDatabaseEnvironment();
   const eventType = stringValue(payload.event) || 'unknown';
   const isRefundEvent = eventType in refundEventStatuses;
   const reference = isRefundEvent
@@ -988,6 +984,7 @@ export async function processPaystackEvent(payload: PaystackEvent, providerEvent
 }
 
 export async function getPaystackCheckoutStatus(reference: string): Promise<CheckoutStatusResponse | null> {
+  await assertPaystackDatabaseEnvironment();
   const [result] = await getDatabase()
     .select({ status: payments.status, orderNumber: orders.orderNumber })
     .from(payments)
@@ -999,6 +996,7 @@ export async function getPaystackCheckoutStatus(reference: string): Promise<Chec
 
 /** Server-side fallback when the browser returns before a webhook is delivered. */
 export async function verifyPaystackCheckout(reference: string): Promise<void> {
+  await assertPaystackDatabaseEnvironment();
   const database = getDatabase();
   const [payment] = await database
     .select({
@@ -1013,9 +1011,10 @@ export async function verifyPaystackCheckout(reference: string): Promise<void> {
     .limit(1);
   if (!payment || payment.status !== 'pending') return;
 
-  const secretKey = String(useRuntimeConfig().paystackSecretKey || '').trim();
-  if (!secretKey) return;
-
+  const { secretKey, environment } = getPaystackCredentials();
+  if (payment.environment !== environment) {
+    throw createError({ statusCode: 503, statusMessage: 'Payment does not belong to this environment.' });
+  }
   const rawResponse = await $fetch<unknown>(
     `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
     { timeout: 10_000, retry: 0, headers: { Authorization: `Bearer ${secretKey}` } },

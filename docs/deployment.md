@@ -159,10 +159,26 @@ the correct development or production site.
 development app so test access emails cannot be delivered accidentally to a
 customer. It must not redirect production customer emails.
 
-Use separate Supabase projects and database URLs for development and production
-when possible. If both Fly apps intentionally share one Supabase project during
-early development, remember that clients and catalogue data are shared even
-though Paystack rows record their test/live provider environment.
+Use separate Supabase projects, database URLs, and private storage resources for
+development and live production. Sharing resources is not an approved live
+deployment architecture. Before go-live, review customer/catalogue migration
+separately and retain test financial history in the isolated test database.
+Never relabel test payments as live or delete financial records to enable checkout.
+
+PAY-04 enforces a single Paystack environment per application database. Any
+Paystack row with a different or unknown environment quarantines payment
+operations and customer access with HTTP 503, including already-linked sessions
+and private download requests. Manual payments are unaffected by the mode
+predicate. Therefore changing a database containing test payments to `live`
+does not enable production access: provision and review an isolated live database.
+The runtime guard is not a replacement for separate Supabase/auth and bucket
+credentials, nor a validation of deployed infrastructure permissions.
+The known Fly deployments also enforce their purpose: `admin-dev` permits only
+test mode and `admin-prod` only live mode for payments/customer access. The
+production portal's current test-mode setting therefore deliberately keeps
+these features unavailable until reviewed go-live. Run pre-launch payment tests
+on isolated development resources, not against production private files. A
+future non-Fly deployment must establish the equivalent deployment-mode policy.
 
 ## Paystack and customer access
 
@@ -198,6 +214,16 @@ should work, configure `NUXT_PAYSTACK_SECRET_KEY` with an `sk_test_...` key and
 set the callback and account URLs shown in the Fly configuration table above.
 Leaving the production app without `NUXT_PAYSTACK_SECRET_KEY` keeps production
 checkout unavailable while the rest of the site can be deployed safely.
+
+The backend rejects mismatched `sk_test_`/`sk_live_` secrets before provider
+initialization, verification, refunds, or webhook processing. Deployed builds
+require HTTPS non-local URLs for `NUXT_PAYSTACK_CALLBACK_URL`,
+`NUXT_ACCOUNT_BASE_URL`, and `NUXT_PUBLIC_SITE_URL`. The callback must be exactly
+the public-site origin plus `/checkout/complete`, without credentials, query,
+or fragment; the account URL and public-site URL must be origins. Local HTTP
+defaults are supported only for local test development, not deployed dev builds
+or live mode. These checks are request-time failures, so an intentionally
+unconfigured checkout does not prevent unrelated admin pages from starting.
 
 Only as part of a future reviewed go-live should all of the following happen
 together:

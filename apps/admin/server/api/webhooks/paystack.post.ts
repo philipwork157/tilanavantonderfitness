@@ -1,11 +1,12 @@
 import { processPaystackEvent } from '@server/services/paystack';
+import { getPaystackCredentials } from '@server/utils/paystack-configuration';
 import {
   createPaystackEventKey,
   isValidPaystackWebhookSignature,
 } from '@server/utils/paystack-webhook';
 
 export default defineEventHandler(async (event) => {
-  const secretKey = String(useRuntimeConfig(event).paystackSecretKey || '').trim();
+  const { secretKey } = getPaystackCredentials(useRuntimeConfig(event));
   const signature = getHeader(event, 'x-paystack-signature') || '';
   const rawBody = await readRawBody(event, 'utf8');
 

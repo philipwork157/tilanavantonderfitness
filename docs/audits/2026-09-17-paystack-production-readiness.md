@@ -4,7 +4,7 @@ Date: 17 September 2026
 
 Original reviewed revision: `4f1a2247cc51560a5c065ae02cc0ae217a12cd3f`
 
-Remediation update: 17 September 2026 — PAY-01, PAY-02, and PAY-03 implemented and verified locally.
+Remediation update: 17 September 2026 — PAY-01 through PAY-04 implemented and verified locally.
 
 **Recommendation: do not enable live payments yet.** The basic architecture is
 sound, but recovery and other launch requirements remain unresolved. Stale
@@ -23,14 +23,14 @@ have been applied only to disposable local test databases.
 ## Production readiness checklist
 
 Check an item only after its fix and acceptance checks are complete. PAY-01,
-PAY-02, and PAY-03 are implemented; all other findings remain open. A checked code
+PAY-02, PAY-03, and PAY-04 are implemented; all other findings remain open. A checked code
 fix means locally verified, not deployed. Detailed evidence, conditions, and
 acceptance criteria remain in each finding below.
 
 - [x] **PAY-01 (P1):** Prevent stale verification from overwriting settled payments; validate provider evidence and pass PostgreSQL concurrency tests.
 - [x] **PAY-02 (P1):** Match refund API responses and webhooks to one refund; test duplicate and reordered events against refund limits.
 - [x] **PAY-03 (P1):** Make checkout retries under the same persistent intent idempotent and prevent duplicate payable orders.
-- [ ] **PAY-04 (P1, conditional):** Validate Paystack key/mode agreement and demonstrate test/live database and entitlement isolation.
+- [x] **PAY-04 (P1, conditional):** Validate Paystack key/mode and URLs; quarantine mixed-mode databases before payment operations and customer entitlement consumption. Deployed resource isolation remains a separate launch gate.
 - [ ] **PAY-05 (P1):** Implement independent payment/refund recovery and a defined dispute handling process.
 - [ ] **BILL-01 (P1 for complete billing):** Implement invoice creation, issue/delivery, settlement, and refund/credit handling.
 - [ ] **TEST-01 (P1):** Cover the remaining critical payment/API/browser paths and gate deployment on automated tests. PAY-01's new tests are only partial progress here.
@@ -172,7 +172,7 @@ configuration.
 | PAY-01 | P1 — fixed locally | Stale verification can overwrite a successful/refunded payment |
 | PAY-02 | P1 — fixed locally | Refund API responses and webhooks do not reliably match the same refund |
 | PAY-03 | P1 — fixed locally | Checkout retries create independent payable orders |
-| PAY-04 | P1, conditional | Key/environment mismatch and test entitlements are not isolated by code |
+| PAY-04 | P1 — fixed locally | Key/mode and URL validation; fail-closed database environment isolation |
 | PAY-05 | P1 | Missing recovery for missed/out-of-order events and disputes |
 | BILL-01 | P1 for complete billing | Invoice lifecycle is absent |
 | TEST-01 | P1 | Critical payment paths lack tests and deployment test gates |
@@ -340,6 +340,52 @@ into old intents. Add bounded provider timeouts and explicit retry policy.
 reuse the same payable intent. A changed basket cannot reuse its key silently.
 
 ### PAY-04 — environment safety depends on unverified configuration
+
+**Remediation status: implemented and verified locally.** The original finding
+below is retained as context. Deployed secrets/resources have not been inspected
+or changed, and go-live remains blocked by the separate launch checklist.
+
+**Delivered controls:**
+
+- `server/utils/paystack-configuration.ts` validates exact `test`/`live` mode
+  and matching secret prefixes before provider actions. Invalid configuration
+  returns generic HTTP 503 errors without leaking secrets. Request-time checks
+  keep intentionally disabled checkout from preventing unrelated admin startup.
+- Checkout validates the configured public-site origin, the exact
+  `/checkout/complete` callback on that origin, and the account origin. Deployed
+  builds and all live-mode URLs require HTTPS and non-loopback hosts, with no
+  credentials/query/fragment. Local test development may use loopback HTTP.
+- A shared database guard rejects any Paystack payment with a different or
+  unknown environment. It protects checkout/status/verification, webhook and
+  refund processing, magic-link eligibility, verified account linking, and
+  existing customer sessions. Both program listing and private downloads use
+  that guarded customer boundary. Replacement-access lookup cannot run in a
+  database containing the opposite mode. Manual payments do not trigger the guard.
+- Known Fly deployment names require test mode for development and live mode for
+  production. This blocks test purchases from using production private storage
+  even in an otherwise uniformly test-mode database. Production payments and
+  customer access intentionally remain unavailable under its pre-launch test
+  configuration. Non-Fly deployments need an equivalent reviewed mode policy.
+- First checkout reservations take a PostgreSQL transaction advisory lock and
+  recheck isolation inside the transaction, preventing differently configured
+  apps from concurrently introducing test and live payments into an empty DB.
+
+**Deployment consequence:** a database containing test payments cannot simply
+be switched to live. Provision isolated production database/auth/private-storage
+resources and review any catalogue/customer migration; preserve test financial
+history in the test database. Do not relabel or delete test payments to bypass
+the check. Mixed/unknown-mode databases are deliberately quarantined, not
+silently repaired. This is application enforcement, not proof of deployed
+Supabase/bucket permissions or isolation against direct privileged SQL writers.
+
+**Local verification:** `pnpm test` passes 144 ordinary tests (118 admin,
+26 web), including 20 configuration cases. The disposable PostgreSQL suite
+passes 65 tests, including invalid checkout configuration producing no provider
+request or payment reservation, and active test-purchase customers denied
+live account linking/session access/verification/webhook/refund operations.
+Existing payment concurrency, idempotency, and refund regressions remain covered.
+`pnpm check` and `pnpm build:admin` pass. No real provider requests, emails,
+deployed database changes, commits, or pushes were performed for PAY-04.
 
 **Evidence:** [paystack.ts](../../apps/admin/server/services/paystack.ts), lines
 195–203, 391–437, and 749–754;

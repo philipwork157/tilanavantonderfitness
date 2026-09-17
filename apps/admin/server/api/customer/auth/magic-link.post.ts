@@ -6,6 +6,7 @@ import { getDatabase } from '@server/utils/database';
 import { readZodBody } from '@server/utils/route-validation';
 import { getSupabaseAdminClient } from '@server/utils/supabase-admin';
 import { sendCustomerAccessEmail } from '@server/services/customer-access-emails';
+import { assertPaystackDatabaseEnvironment, getCustomerAccountBaseUrl } from '@server/utils/paystack-configuration';
 
 export default defineEventHandler(async (event) => {
   enforceSameOrigin(event);
@@ -18,6 +19,8 @@ export default defineEventHandler(async (event) => {
   );
 
   const email = body.email.toLowerCase();
+  await assertPaystackDatabaseEnvironment();
+  const accountBaseUrl = getCustomerAccountBaseUrl(useRuntimeConfig(event));
   const [buyer] = await getDatabase()
     .select({ id: clients.id, firstName: clients.firstName })
     .from(clients)
@@ -28,10 +31,6 @@ export default defineEventHandler(async (event) => {
   // Always return the same response so this endpoint cannot reveal customer emails.
   if (buyer) {
     try {
-      const config = useRuntimeConfig(event);
-      const accountBaseUrl = String(config.accountBaseUrl || '').replace(/\/$/, '');
-      if (!accountBaseUrl) throw new Error('Customer sign-in is not configured.');
-
       const supabase = getSupabaseAdminClient(event);
       const { data, error } = await supabase.auth.admin.generateLink({ type: 'magiclink', email });
       const tokenHash = data.properties?.hashed_token;

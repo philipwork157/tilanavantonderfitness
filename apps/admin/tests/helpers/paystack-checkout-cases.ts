@@ -13,6 +13,8 @@ export function registerCheckoutCases(getDatabase: () => Database) {
   const config = {
     paystackSecretKey: 'sk_test_integration_fixture', paystackEnvironment: 'test',
     paystackCallbackUrl: 'https://website.example.test/checkout/complete',
+    accountBaseUrl: 'https://admin.example.test',
+    public: { siteUrl: 'https://website.example.test' },
     r2PublicMediaBucket: 'test-public', r2PublicMediaBaseUrl: 'https://media.example.test',
     r2PrivateProgramBucket: 'test-private',
   };
@@ -56,6 +58,20 @@ export function registerCheckoutCases(getDatabase: () => Database) {
 
   describe('durable checkout intent against PostgreSQL', () => {
     beforeEach(() => vi.stubGlobal('useRuntimeConfig', () => config));
+
+    it.each([
+      { paystackSecretKey: 'sk_live_fixture' },
+      { paystackCallbackUrl: 'https://other.example.test/checkout/complete' },
+      { accountBaseUrl: 'https://admin.example.test/not-an-origin' },
+    ])('rejects invalid checkout configuration before reserving or contacting Paystack: %j', async (overrides) => {
+      const input = await basket();
+      const fetch = successfulInitialize();
+      vi.stubGlobal('$fetch', fetch);
+      vi.stubGlobal('useRuntimeConfig', () => ({ ...config, ...overrides }));
+      await expect(initializePaystackBasketCheckout(input)).rejects.toMatchObject({ statusCode: 503 });
+      expect(fetch).not.toHaveBeenCalled();
+      expect(await attempts(input)).toHaveLength(0);
+    });
 
     it('serializes simultaneous submissions into one order, payment, and provider call', async () => {
       const input = await basket();

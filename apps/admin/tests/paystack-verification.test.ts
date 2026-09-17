@@ -3,6 +3,10 @@ import { verifyPaystackCheckout } from '@server/services/paystack';
 
 const mocks = vi.hoisted(() => ({ getDatabase: vi.fn() }));
 vi.mock('@server/utils/database', () => mocks);
+vi.mock('@server/utils/paystack-configuration', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@server/utils/paystack-configuration')>(),
+  assertPaystackDatabaseEnvironment: vi.fn(),
+}));
 
 const reference = 'TVT-verification-boundary-test';
 const evidence = {
@@ -26,7 +30,7 @@ function arrangePayment(status = 'pending') {
 }
 
 beforeEach(() => {
-  vi.stubGlobal('useRuntimeConfig', () => ({ paystackSecretKey: 'sk_test_unit_fixture' }));
+  vi.stubGlobal('useRuntimeConfig', () => ({ paystackSecretKey: 'sk_test_unit_fixture', paystackEnvironment: 'test' }));
   vi.stubGlobal('createError', (input: { statusCode: number; statusMessage: string }) =>
     Object.assign(new Error(input.statusMessage), input));
 });
