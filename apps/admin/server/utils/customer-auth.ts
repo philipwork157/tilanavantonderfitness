@@ -1,3 +1,4 @@
+import { USER_ROLES } from '@tilana/contracts/identity';
 import { clients, orders, userRoles, users } from '@tilana/db/schema';
 import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import type { H3Event } from 'h3';
@@ -65,7 +66,7 @@ export async function linkVerifiedCustomerAccount(event: H3Event) {
 
     await transaction
       .insert(userRoles)
-      .values({ userId: appUser.id, role: 'customer' })
+      .values({ userId: appUser.id, role: USER_ROLES.CUSTOMER })
       .onConflictDoNothing();
 
     return { userId: appUser.id, clientId: client.id, email };
@@ -81,7 +82,10 @@ export async function requireCustomer(event: H3Event) {
     .select({ userId: users.id, clientId: clients.id, email: users.email, firstName: users.firstName })
     .from(users)
     .innerJoin(clients, eq(clients.userId, users.id))
-    .innerJoin(userRoles, and(eq(userRoles.userId, users.id), eq(userRoles.role, 'customer')))
+    .innerJoin(
+      userRoles,
+      and(eq(userRoles.userId, users.id), eq(userRoles.role, USER_ROLES.CUSTOMER)),
+    )
     .where(eq(users.supabaseId, user.id))
     .limit(1);
 

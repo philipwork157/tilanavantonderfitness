@@ -1,11 +1,13 @@
+import { userRoleValues, type UserRole } from '@tilana/contracts/identity';
 import { sql } from 'drizzle-orm';
 import { check, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 export const genderValues = ['female', 'male', 'non-binary', 'other', 'prefer-not-to-say'] as const;
 export type Gender = (typeof genderValues)[number];
 
-export const userRoleValues = ['admin', 'customer', 'staff'] as const;
-export type UserRole = (typeof userRoleValues)[number];
+export { USER_ROLES, userRoleValues, type UserRole } from '@tilana/contracts/identity';
+
+const userRoleCheckValues = sql.raw(userRoleValues.map(role => `'${role}'`).join(', '));
 
 /**
  * Application-owned data for a Supabase Auth user.
@@ -50,7 +52,7 @@ export const userRoles = pgTable(
   },
   (table) => [
     uniqueIndex('user_roles_user_role_unique').on(table.userId, table.role),
-    check('user_roles_role_value', sql`${table.role} in ('admin', 'customer', 'staff')`),
+    check('user_roles_role_value', sql`${table.role} in (${userRoleCheckValues})`),
     index('user_roles_role_idx').on(table.role),
   ],
 ).enableRLS();

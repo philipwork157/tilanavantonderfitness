@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { USER_ROLES } from './identity';
 
 export const adminLoginRequestSchema = z.object({
   email: z.string().trim().email().max(254),
@@ -14,7 +15,7 @@ export const adminSessionResponseSchema = z.object({
     email: z.string().email(),
     firstName: z.string(),
     lastName: z.string(),
-    role: z.literal('admin'),
+    role: z.literal(USER_ROLES.ADMIN),
   }),
 });
 

@@ -44,6 +44,41 @@ Use the backend structure `API route -> Zod contract -> service -> Drizzle`:
 Do not introduce another API framework or let page components query PostgreSQL
 directly.
 
+## Code and testing conventions
+
+- Write or update Vitest tests for every new or changed function and API
+  behavior in the same task. Cover successful results, invalid input, edge
+  cases, and failures. API tests must also cover applicable authentication,
+  authorization, ownership, origin checks, and response codes. Add a regression
+  test for every bug fix.
+- Test business rules and contracts directly. Add integration tests when
+  correctness depends on route wiring, database constraints, transactions, or
+  provider lifecycles; mocked unit tests alone do not prove those boundaries.
+  Keep tests deterministic, reset mocks and environment changes between tests,
+  and never send real payments, emails, or production writes from a test.
+  Run `pnpm test` before handing off code changes and use `pnpm test:coverage`
+  when checking coverage. Report any unverified behavior honestly.
+- Use the application aliases documented above in code and tests. Keep alias
+  configuration aligned across the framework, TypeScript, and Vitest. Import
+  shared domain constants and types from framework-neutral contracts rather
+  than repeating string literals or importing server-only database packages
+  into browser code. User roles come from `@tilana/contracts/identity`, using
+  `USER_ROLES.ADMIN`, `USER_ROLES.CUSTOMER`, and `USER_ROLES.STAFF`.
+- Before adding a helper or component, look for an existing reusable one.
+  Extract functions that will be reused into focused, appropriately scoped
+  utilities. Keep business rules in services, validation in contracts, and
+  reactive UI behavior in composables. Do not turn utilities into a catch-all
+  or create abstractions with no genuine reuse.
+- Keep files small, readable, and focused on one responsibility. Split large
+  pages, components, API handlers, and services into cohesive modules. Reuse
+  shared UI components and helpers instead of copying implementations, while
+  keeping API routes thin and preserving the architecture above.
+- Add concise purpose comments or docblocks as you write new functions, API
+  handlers, components, and shared modules. Explain the flow, non-obvious
+  decisions, security boundaries, invariants, and side effects where relevant.
+  Keep comments accurate when behavior changes; explain intent rather than
+  narrating every obvious line of syntax.
+
 ## Database identity rules
 
 Every application-owned table has an auto-incrementing PostgreSQL integer `id`

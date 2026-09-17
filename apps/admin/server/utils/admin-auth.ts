@@ -1,4 +1,5 @@
 import type { AdminSessionResponse } from '@tilana/contracts/auth';
+import { USER_ROLES } from '@tilana/contracts/identity';
 import { userRoles, users } from '@tilana/db/schema';
 import { and, eq } from 'drizzle-orm';
 import type { H3Event } from 'h3';
@@ -25,7 +26,7 @@ export async function getAdminSession(event: H3Event): Promise<AdminSessionRespo
       email: admin.email,
       firstName: admin.firstName,
       lastName: admin.lastName,
-      role: 'admin',
+      role: USER_ROLES.ADMIN,
     },
   };
 }
@@ -41,7 +42,7 @@ export async function findAdminUser(supabaseId: string) {
     .from(users)
     .innerJoin(
       userRoles,
-      and(eq(userRoles.userId, users.id), eq(userRoles.role, 'admin')),
+      and(eq(userRoles.userId, users.id), eq(userRoles.role, USER_ROLES.ADMIN)),
     )
     .where(eq(users.supabaseId, supabaseId))
     .limit(1);

@@ -11,6 +11,7 @@
     "./coaching": "./src/coaching.ts",
     "./contact": "./src/contact.ts",
     "./dashboard": "./src/dashboard.ts",
+    "./identity": "./src/identity.ts",
     "./newsletter": "./src/newsletter.ts",
     "./newsletter.messages": "./src/newsletter.messages.ts",
     "./payments": "./src/payments.ts",

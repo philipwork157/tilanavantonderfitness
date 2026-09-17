@@ -1,4 +1,5 @@
 import { adminLoginRequestSchema } from '@tilana/contracts/auth';
+import { USER_ROLES } from '@tilana/contracts/identity';
 import { clearLoginRateLimit, enforceLoginRateLimit, enforceSameOrigin } from '@server/utils/auth-security';
 import { findAdminUser } from '@server/utils/admin-auth';
 import { readZodBody } from '@server/utils/route-validation';
@@ -36,7 +37,7 @@ export default defineEventHandler(async (event) => {
       email: admin.email,
       firstName: admin.firstName,
       lastName: admin.lastName,
-      role: 'admin' as const,
+      role: USER_ROLES.ADMIN,
     },
   };
 });
