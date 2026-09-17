@@ -19,7 +19,7 @@ import {
   programVolumes,
   type PaymentRefundStatus,
 } from '@tilana/db/schema';
-import { and, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
 import { getDatabase } from '@server/utils/database';
 import { getCatalogueStorageConfiguration } from '@server/utils/r2';
 import { isCheckoutPriceCurrent } from './catalogue-policy';
@@ -608,49 +608,61 @@ async function processRefundEvent(
     return;
   }
 
-  const providerRefundId = identifierValue(payload.data?.refund_reference)
-    ?? identifierValue(payload.data?.id);
-  let [existingRefund] = providerRefundId
+  const providerRefundId = identifierValue(payload.data?.id);
+  const providerRefundReference = identifierValue(payload.data?.refund_reference);
+  const matches = providerRefundId || providerRefundReference
     ? await transaction
-        .select({
-          id: paymentRefunds.id,
-          status: paymentRefunds.status,
-          providerRefundId: paymentRefunds.providerRefundId,
-          customerNote: paymentRefunds.customerNote,
-          merchantNote: paymentRefunds.merchantNote,
-          expectedAt: paymentRefunds.expectedAt,
-          refundedAt: paymentRefunds.refundedAt,
-        })
+        .select()
         .from(paymentRefunds)
         .where(and(
           eq(paymentRefunds.provider, 'paystack'),
-          eq(paymentRefunds.providerRefundId, providerRefundId),
+          or(
+            providerRefundId ? eq(paymentRefunds.providerRefundId, providerRefundId) : undefined,
+            providerRefundReference ? eq(paymentRefunds.providerRefundReference, providerRefundReference) : undefined,
+            // Before PAY-02 this column could contain a reference instead of an ID.
+            providerRefundReference ? eq(paymentRefunds.providerRefundId, providerRefundReference) : undefined,
+          ),
         ))
-        .limit(1)
+        .limit(2)
     : [];
+  let existingRefund = matches[0];
+  if (matches.length > 1 || (existingRefund && (
+    existingRefund.paymentId !== payment.id
+    || existingRefund.amountCents !== amount
+    || existingRefund.currency !== currency
+    || (providerRefundId && existingRefund.providerRefundId && providerRefundId !== existingRefund.providerRefundId)
+    || (providerRefundReference && existingRefund.providerRefundReference && providerRefundReference !== existingRefund.providerRefundReference)
+  ))) {
+    await markPaymentEvent(transaction, eventId, 'failed', 'Refund identifiers or purchase evidence conflicted; review in Paystack.');
+    return;
+  }
 
   if (!existingRefund) {
     const candidates = await transaction
-      .select({
-        id: paymentRefunds.id,
-        status: paymentRefunds.status,
-        providerRefundId: paymentRefunds.providerRefundId,
-        customerNote: paymentRefunds.customerNote,
-        merchantNote: paymentRefunds.merchantNote,
-        expectedAt: paymentRefunds.expectedAt,
-        refundedAt: paymentRefunds.refundedAt,
-      })
+      .select()
       .from(paymentRefunds)
       .where(and(
         eq(paymentRefunds.paymentId, payment.id),
         eq(paymentRefunds.amountCents, amount),
         eq(paymentRefunds.currency, currency),
-        isNull(paymentRefunds.providerRefundId),
         ne(paymentRefunds.status, 'failed'),
       ))
       .orderBy(desc(paymentRefunds.createdAt))
       .limit(2);
-    if (candidates.length === 1) [existingRefund] = candidates;
+    // An identifier-less webhook cannot distinguish repeated equal partial
+    // refunds. Fail closed rather than guessing or reserving the amount twice.
+    const compatible = candidates.filter(candidate =>
+      (!providerRefundId || !candidate.providerRefundId || candidate.providerRefundId === providerRefundId)
+      && (!providerRefundReference || !candidate.providerRefundReference || candidate.providerRefundReference === providerRefundReference));
+    if (compatible.length === 1 && (providerRefundId || providerRefundReference || candidates.length === 1)) {
+      [existingRefund] = compatible;
+    } else if (compatible.length > 0 || (!providerRefundId && !providerRefundReference)) {
+      await markPaymentEvent(transaction, eventId, 'failed', 'Refund identity was missing or ambiguous; review in Paystack.');
+      return;
+    } else if (candidates.some(candidate => ['pending', 'processing', 'needs-attention'].includes(candidate.status))) {
+      await markPaymentEvent(transaction, eventId, 'failed', 'Refund identity conflicted with an unsettled reservation; review in Paystack.');
+      return;
+    }
   }
 
   if (
@@ -682,6 +694,7 @@ async function processRefundEvent(
     : status;
   const values = {
     providerRefundId: providerRefundId ?? existingRefund?.providerRefundId ?? null,
+    providerRefundReference: providerRefundReference ?? existingRefund?.providerRefundReference ?? null,
     status: effectiveStatus,
     amountCents: amount,
     currency,
@@ -715,6 +728,12 @@ async function updateRequestedRefundStatus(
 ) {
   const database = getDatabase();
   await database.transaction(async (transaction) => {
+    const [owner] = await transaction.select({ paymentId: paymentRefunds.paymentId })
+      .from(paymentRefunds).where(eq(paymentRefunds.id, refundId)).limit(1);
+    if (!owner) return;
+    // Keep the same payment-first lock order used by webhooks and API reconciliation.
+    await transaction.select({ id: payments.id }).from(payments)
+      .where(eq(payments.id, owner.paymentId)).for('update');
     const [refund] = await transaction
       .select({ paymentId: paymentRefunds.paymentId, status: paymentRefunds.status })
       .from(paymentRefunds)
@@ -903,6 +922,7 @@ export async function initiatePaystackRefund(
         id: paymentRefunds.id,
         status: paymentRefunds.status,
         providerRefundId: paymentRefunds.providerRefundId,
+        providerRefundReference: paymentRefunds.providerRefundReference,
         customerNote: paymentRefunds.customerNote,
         merchantNote: paymentRefunds.merchantNote,
         expectedAt: paymentRefunds.expectedAt,
@@ -917,14 +937,18 @@ export async function initiatePaystackRefund(
       || refundStatusProgress[currentRefund.status] > refundStatusProgress[incomingStatus]
       ? currentRefund.status
       : incomingStatus;
-    const providerRefundId = identifierValue(response.data?.refund_reference)
-      ?? identifierValue(response.data?.id)
-      ?? currentRefund.providerRefundId;
+    const providerRefundId = identifierValue(response.data?.id) ?? currentRefund.providerRefundId;
+    const providerRefundReference = identifierValue(response.data?.refund_reference) ?? currentRefund.providerRefundReference;
+    if ((currentRefund.providerRefundId && providerRefundId !== currentRefund.providerRefundId)
+      || (currentRefund.providerRefundReference && providerRefundReference !== currentRefund.providerRefundReference)) {
+      throw new PaystackRefundError('Paystack refund identifiers conflicted. Review the reserved refund before retrying.', 502);
+    }
     const now = new Date();
     await transaction
       .update(paymentRefunds)
       .set({
         providerRefundId,
+        providerRefundReference,
         status: effectiveStatus,
         customerNote: stringValue(response.data?.customer_note) ?? currentRefund.customerNote,
         merchantNote: stringValue(response.data?.merchant_note) ?? currentRefund.merchantNote,

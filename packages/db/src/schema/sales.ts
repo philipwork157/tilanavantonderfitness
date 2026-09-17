@@ -203,6 +203,8 @@ export const paymentRefunds = pgTable(
     paymentId: integer('payment_id').notNull(),
     provider: text('provider').notNull().default('paystack'),
     providerRefundId: text('provider_refund_id'),
+    // Paystack's API ID and webhook reference are distinct external identifiers.
+    providerRefundReference: text('provider_refund_reference'),
     status: text('status').$type<PaymentRefundStatus>().notNull().default('pending'),
     amountCents: integer('amount_cents').notNull(),
     currency: text('currency').notNull().default('ZAR'),
@@ -230,6 +232,9 @@ export const paymentRefunds = pgTable(
     uniqueIndex('payment_refunds_provider_id_unique')
       .on(table.provider, table.providerRefundId)
       .where(sql`${table.providerRefundId} is not null`),
+    uniqueIndex('payment_refunds_provider_reference_unique')
+      .on(table.provider, table.providerRefundReference)
+      .where(sql`${table.providerRefundReference} is not null`),
     index('payment_refunds_payment_created_at_idx').on(table.paymentId, table.createdAt),
     index('payment_refunds_status_updated_at_idx').on(table.status, table.updatedAt),
   ],

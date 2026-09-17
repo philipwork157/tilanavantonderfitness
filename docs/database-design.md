@@ -53,6 +53,12 @@ The customer-facing email should link to `/account/programs`. The Nuxt server ve
 - `payment_refunds` records each full or partial refund independently. Its
   integer `payment_id`, provider, and currency must match the parent payment;
   active refund totals cannot exceed the original payment.
+- `payment_refunds.provider_refund_id` stores the Paystack refund API ID;
+  `provider_refund_reference` separately stores its processor/webhook reference.
+  Both are unique external text identifiers, never internal relationship keys.
+  Identifier-less events bind only to an unambiguous matching refund for that
+  payment and amount. Ambiguous equal refunds are recorded as failed audit
+  events for Paystack review; they do not create another reservation.
 
 For example, R400 is stored as `40000`. If Nourish Volume 1 later costs R500, the old `order_items.unit_price_cents` remains `40000`, so purchase history stays accurate.
 

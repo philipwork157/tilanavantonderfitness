@@ -1,6 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Database } from '@tilana/db/server';
-import { processPaystackEvent, verifyPaystackCheckout } from '@server/services/paystack';
+import { initiatePaystackRefund, processPaystackEvent, verifyPaystackCheckout } from '@server/services/paystack';
+import { paymentEvents, paymentRefunds, users } from '@tilana/db/schema';
+import { eq } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
 import {
   createBarrier,
   createPaystackTestDatabase,
@@ -189,5 +192,117 @@ describe('Paystack verification against PostgreSQL', () => {
     });
     await expect(verifyPaystackCheckout(fixture.reference)).rejects.toThrow('Simulated transaction failure');
     expect(await readPaymentState(database, fixture)).toEqual(before);
+  });
+});
+
+/** Refund fixtures exercise real reservations and signed-event reconciliation. */
+async function refundFixture() {
+  const fixture = await seedPendingPayment(database);
+  await confirmCharge(fixture);
+  const uuid = randomUUID();
+  await database.$client`insert into auth.users (id) values (${uuid})`;
+  const [administrator] = await database.insert(users).values({ supabaseId: uuid, firstName: 'Test', lastName: 'Admin', email: `${uuid}@example.test` }).returning();
+  if (!administrator) throw new Error('Test administrator could not be seeded.');
+  return { ...fixture, administratorId: administrator.id };
+}
+
+function refundResponse(fixture: PaymentFixture, amount: number, status = 'pending') {
+  return { status: true, message: 'Queued', data: {
+    id: `api-${fixture.paymentId}`, amount, currency: 'ZAR', domain: 'test', status,
+  } };
+}
+
+async function refundEvent(fixture: PaymentFixture, amount: number, status: string, identity: Record<string, unknown> = {}) {
+  const key = randomUUID();
+  await processPaystackEvent({ event: `refund.${status}`, data: {
+    transaction_reference: fixture.reference, amount, currency: 'ZAR', domain: 'test', status,
+    refund_reference: null, ...identity,
+  } }, key);
+  return key;
+}
+
+async function refundsFor(fixture: PaymentFixture) {
+  return database.select().from(paymentRefunds).where(eq(paymentRefunds.paymentId, fixture.paymentId));
+}
+
+describe('Paystack refund identity against PostgreSQL', () => {
+  beforeEach(() => vi.stubGlobal('useRuntimeConfig', () => ({
+    paystackSecretKey: 'sk_test_integration_fixture', paystackEnvironment: 'test',
+  })));
+
+  it.each([3000, 10000])('matches an ID-less webhook to the API reservation for %i cents', async (amount) => {
+    const fixture = await refundFixture();
+    vi.stubGlobal('$fetch', vi.fn().mockResolvedValue(refundResponse(fixture, amount)));
+    const requested = await initiatePaystackRefund(fixture.orderId, { amountCents: amount }, fixture.administratorId);
+    await refundEvent(fixture, amount, 'processed');
+    await refundEvent(fixture, amount, 'processed');
+    await refundEvent(fixture, amount, 'pending');
+    const refunds = await refundsFor(fixture);
+    expect(refunds).toHaveLength(1);
+    expect(refunds[0]).toMatchObject({ id: requested.id, status: 'processed', providerRefundId: `api-${fixture.paymentId}` });
+    const state = await readPaymentState(database, fixture);
+    expect(state.payment?.refundedAmountCents).toBe(amount);
+    expect(state.order?.status).toBe(amount === 10000 ? 'refunded' : 'paid');
+    expect(state.access[0]?.status).toBe(amount === 10000 ? 'revoked' : 'active');
+  });
+
+  it('preserves distinct numeric API IDs and webhook references', async () => {
+    const fixture = await refundFixture();
+    const response = refundResponse(fixture, 3000);
+    vi.stubGlobal('$fetch', vi.fn().mockResolvedValue({ ...response, data: { ...response.data, id: 123456 } }));
+    await initiatePaystackRefund(fixture.orderId, { amountCents: 3000 }, fixture.administratorId);
+    await refundEvent(fixture, 3000, 'processed', { refund_reference: `processor-${fixture.paymentId}` });
+    await refundEvent(fixture, 3000, 'processing', { refund_reference: `processor-${fixture.paymentId}` });
+    expect(await refundsFor(fixture)).toMatchObject([{ providerRefundId: '123456', providerRefundReference: `processor-${fixture.paymentId}`, status: 'processed' }]);
+  });
+
+  it('handles a processed webhook arriving before the pending API response', async () => {
+    const fixture = await refundFixture();
+    vi.stubGlobal('$fetch', vi.fn().mockImplementation(async () => {
+      await refundEvent(fixture, 10000, 'processed', { refund_reference: `processor-${fixture.paymentId}` });
+      return refundResponse(fixture, 10000);
+    }));
+    const result = await initiatePaystackRefund(fixture.orderId, { amountCents: 10000 }, fixture.administratorId);
+    expect(result.status).toBe('processed');
+    expect(await refundsFor(fixture)).toHaveLength(1);
+    expect((await readPaymentState(database, fixture)).payment?.refundedAmountCents).toBe(10000);
+  });
+
+  it('keeps two equal partial refunds distinct and rejects ambiguous ID-less events', async () => {
+    const fixture = await refundFixture();
+    const response = refundResponse(fixture, 3000);
+    vi.stubGlobal('$fetch', vi.fn().mockResolvedValue(response));
+    await initiatePaystackRefund(fixture.orderId, { amountCents: 3000 }, fixture.administratorId);
+    await refundEvent(fixture, 3000, 'processed', { id: response.data.id });
+    vi.stubGlobal('$fetch', vi.fn().mockResolvedValue({ ...response, data: { ...response.data, id: `${response.data.id}-second` } }));
+    await initiatePaystackRefund(fixture.orderId, { amountCents: 3000 }, fixture.administratorId);
+    const ambiguousKey = await refundEvent(fixture, 3000, 'processed');
+    const [event] = await database.select().from(paymentEvents).where(eq(paymentEvents.providerEventKey, ambiguousKey));
+    expect(event?.processingStatus).toBe('failed');
+    expect((await readPaymentState(database, fixture)).payment?.refundedAmountCents).toBe(3000);
+    await refundEvent(fixture, 3000, 'processed', { id: `${response.data.id}-second` });
+    expect(await refundsFor(fixture)).toHaveLength(2);
+    expect((await readPaymentState(database, fixture)).payment?.refundedAmountCents).toBe(6000);
+    await expect(initiatePaystackRefund(fixture.orderId, { amountCents: 5000 }, fixture.administratorId)).rejects.toThrow('remains refundable');
+  });
+
+  it('does not borrow another payment’s refund ID', async () => {
+    const first = await refundFixture();
+    const second = await refundFixture();
+    await refundEvent(first, 3000, 'processed', { id: 'cross-payment-id' });
+    const key = await refundEvent(second, 3000, 'processed', { id: 'cross-payment-id' });
+    const [event] = await database.select().from(paymentEvents).where(eq(paymentEvents.providerEventKey, key));
+    expect(event?.processingStatus).toBe('failed');
+    expect(await refundsFor(second)).toHaveLength(0);
+    expect((await readPaymentState(database, second)).payment?.refundedAmountCents).toBe(0);
+  });
+
+  it('keeps uncertain requests reserved and resolves them with the later webhook', async () => {
+    const fixture = await refundFixture();
+    vi.stubGlobal('$fetch', vi.fn().mockRejectedValue(new Error('Timeout')));
+    await expect(initiatePaystackRefund(fixture.orderId, { amountCents: 3000 }, fixture.administratorId)).rejects.toThrow('remains reserved');
+    await expect(initiatePaystackRefund(fixture.orderId, { amountCents: 3000 }, fixture.administratorId)).rejects.toThrow('needs review');
+    await refundEvent(fixture, 3000, 'processed');
+    expect(await refundsFor(fixture)).toMatchObject([{ status: 'processed' }]);
   });
 });

@@ -1,0 +1,2 @@
+ALTER TABLE "payment_refunds" ADD COLUMN "provider_refund_reference" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "payment_refunds_provider_reference_unique" ON "payment_refunds" USING btree ("provider","provider_refund_reference") WHERE "payment_refunds"."provider_refund_reference" is not null;

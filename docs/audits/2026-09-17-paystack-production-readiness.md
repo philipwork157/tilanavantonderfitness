@@ -27,7 +27,7 @@ fix means locally verified, not deployed. Detailed evidence, conditions, and
 acceptance criteria remain in each finding below.
 
 - [x] **PAY-01 (P1):** Prevent stale verification from overwriting settled payments; validate provider evidence and pass PostgreSQL concurrency tests.
-- [ ] **PAY-02 (P1):** Match refund API responses and webhooks to one refund; test duplicate and reordered events against refund limits.
+- [x] **PAY-02 (P1):** Match refund API responses and webhooks to one refund; test duplicate and reordered events against refund limits.
 - [ ] **PAY-03 (P1):** Make checkout retries idempotent and prevent duplicate payable orders.
 - [ ] **PAY-04 (P1, conditional):** Validate Paystack key/mode agreement and demonstrate test/live database and entitlement isolation.
 - [ ] **PAY-05 (P1):** Implement independent payment/refund recovery and a defined dispute handling process.
@@ -169,7 +169,7 @@ configuration.
 | ID | Priority | Finding |
 | --- | --- | --- |
 | PAY-01 | P1 — fixed locally | Stale verification can overwrite a successful/refunded payment |
-| PAY-02 | P1 | Refund API responses and webhooks do not reliably match the same refund |
+| PAY-02 | P1 — fixed locally | Refund API responses and webhooks do not reliably match the same refund |
 | PAY-03 | P1 | Checkout retries create independent payable orders |
 | PAY-04 | P1, conditional | Key/environment mismatch and test entitlements are not isolated by code |
 | PAY-05 | P1 | Missing recovery for missed/out-of-order events and disputes |
@@ -235,6 +235,23 @@ gates remain tracked under TEST-01. `pnpm check`, `pnpm build:admin`, and
 uncached). Existing admin dependency annotation and bundle warnings remain.
 
 ### PAY-02 — refund identity is inconsistent across response and webhook
+
+**Status: completed locally, 17 September 2026.** Not yet deployed.
+
+**Implemented:** separate unique API-ID and webhook-reference columns; match
+known identities with payment/amount/currency checks, or bind an unambiguous
+reservation even when its API ID is already saved. Preserve terminal states
+when events arrive out of order. Missing, ambiguous, or contradictory evidence
+is recorded for review without creating another refund. All paths use the same
+payment-first lock order. Historical mixed identifiers are matched conservatively.
+
+Seven added PostgreSQL tests cover partial/full null-reference refunds, numeric
+IDs and differing references, webhook-before-response, duplicate/reordered
+events, equal partial refunds, ownership conflicts, uncertain requests, and
+remaining refund limits. The database suite passed 36 tests. Apply the reviewed
+forward migration `20260917143554_concerned_living_mummy.sql` before deploying
+this service. It adds a nullable reference and partial unique index without
+rewriting historical IDs; unresolved historical refunds still require review.
 
 **Evidence:** [paystack.ts](../../apps/admin/server/services/paystack.ts), lines
 617–659, 703–710, and 926–943; the
