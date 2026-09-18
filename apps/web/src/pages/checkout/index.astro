@@ -77,17 +77,16 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 <script>
   import {
     catalogueSlugSchema,
-    publicCatalogueVolumeResponseSchema,
     type PublicCatalogueVolumeDetail,
   } from '@tilana/contracts/catalogue';
   import { basketCheckoutRequestSchema } from '@tilana/contracts/checkout';
+  import { refreshBasketCatalogue } from '@web/scripts/basket-catalogue';
   import { getCheckoutIntentKey, readCheckoutRecoveryReference, rememberCheckoutIntent } from '@web/scripts/checkout-intent';
   import {
     addToBasket,
     readBasket,
     rememberPendingBasket,
     removeFromBasket,
-    writeBasket,
   } from '@web/scripts/basket';
 
   type ApiMessage = { authorizationUrl?: string; reference?: string; statusMessage?: string; message?: string };
@@ -170,23 +169,13 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     root.setAttribute('aria-busy', 'false');
   }
 
-  async function fetchVolume(slug: string): Promise<PublicCatalogueVolumeDetail | null> {
-    if (!root) return null;
-    const response = await fetch(`${root.dataset.catalogueApiUrl}/${encodeURIComponent(slug)}`, {
-      headers: { Accept: 'application/json' },
-    });
-    const body: unknown = await response.json().catch(() => null);
-    const parsed = publicCatalogueVolumeResponseSchema.safeParse(body);
-    if (!response.ok || !parsed.success || !parsed.data.volume.isAvailable) return null;
-    return parsed.data.volume;
-  }
-
   async function loadBasket() {
     if (!root) return;
     root.setAttribute('aria-busy', 'true');
     loading?.removeAttribute('hidden');
     errorPanel?.setAttribute('hidden', '');
     content?.setAttribute('hidden', '');
+    selectedVolumes = [];
 
     const querySlug = new URLSearchParams(window.location.search).get('programme');
     const parsedQuerySlug = catalogueSlugSchema.safeParse(querySlug);
@@ -198,9 +187,12 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     }
 
     try {
-      const volumes = await Promise.all(slugs.map(fetchVolume));
-      selectedVolumes = volumes.filter((volume): volume is PublicCatalogueVolumeDetail => volume !== null);
-      if (selectedVolumes.length !== slugs.length) writeBasket(selectedVolumes.map(volume => volume.slug));
+      const result = await refreshBasketCatalogue(root.dataset.catalogueApiUrl ?? '', slugs);
+      if (result.state === 'retryable') {
+        showError('Basket could not be confirmed', 'Your selections are saved. We could not confirm the latest programmes and prices. Please try again before paying.', true);
+        return;
+      }
+      selectedVolumes = result.volumes;
       loading?.setAttribute('hidden', '');
       if (!selectedVolumes.length) {
         showError('Your programmes are unavailable', 'The programmes in your basket are no longer available. Please choose from the current collection.', false);
@@ -208,7 +200,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       }
       renderBasket();
     } catch {
-      showError('Basket could not be loaded', 'Please try again in a moment.', true);
+      showError('Basket could not be loaded', 'Your selections are saved. Please try again in a moment.', true);
     }
   }
 

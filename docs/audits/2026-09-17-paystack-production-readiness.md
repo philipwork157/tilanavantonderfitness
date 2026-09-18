@@ -37,7 +37,7 @@ acceptance criteria remain in each finding below.
 - [x] **PAY-05 (P1):** Add durable payment/refund recovery, controlled replay, operator alerts and dispute/reversal access policy. Deployment, scheduler activation and real-provider validation remain launch gates.
 - [x] **BILL-01 (P1):** Implement purchase/manual invoice creation, issue/delivery, evidenced settlement/refunds, original-preserving reissues, financial replacements and legacy review. Deployment, accounting review and actual browser/provider/SES checks remain launch gates.
 - [ ] **TEST-01 (P1):** Cover the remaining critical payment/API/browser paths and gate deployment on automated tests. PAY-01's new tests are only partial progress here.
-- [ ] **WEB-01 (P2):** Preserve basket items during temporary catalogue errors.
+- [x] **WEB-01 (P2):** Preserve basket items during temporary catalogue errors, with retry and fresh-price checks (verified locally).
 - [ ] **WEB-02 (P2):** Keep the submitted basket and pending checkout references consistent during edits/retries.
 - [ ] **WEB-03 (P2):** Display partial/full refund and reversal statuses accurately on the return page.
 - [x] **ACCESS-01 (P2):** Implement post-payment instructions and durable login/email retries locally. Deployment and real-provider rollout remain gated.
@@ -179,7 +179,7 @@ configuration.
 | PAY-05 | P1 — fixed locally | Durable recovery, deferred-event replay, alerts and dispute/reversal policy |
 | BILL-01 | P1 — fixed locally | Purchase/manual billing, immutable reissues/replacements, settlement/refunds and legacy review implemented; rollout pending |
 | TEST-01 | P1 | Critical payment paths lack tests and deployment test gates |
-| WEB-01 | P2 | Temporary catalogue errors permanently remove basket items |
+| WEB-01 | P2 | Fixed locally: temporary catalogue errors preserve the basket and require retry |
 | WEB-02 | P2 | Basket changes during submission can disagree with the charged selection |
 | WEB-03 | P2 | Refund statuses are displayed as if payment never succeeded |
 | ACCESS-01 | P2 | Implemented locally: automatic purchase instructions and durable login/email retries; rollout gated |
@@ -582,6 +582,33 @@ the two reproduced defects, unauthorized access, webhook replay, refund
 overages, and concurrent operations. A failing financial test blocks deployment.
 
 ### WEB-01 — transient HTTP failures erase the basket
+
+**Status: fixed locally (2026-09-18).** Checkout uses the focused
+`apps/web/src/scripts/basket-catalogue.ts` utility to distinguish available,
+definitively unavailable and retryable results. Network failures, ten-second
+timeouts, 429/5xx/other uncertain HTTP responses, malformed/proxy bodies and
+mismatched slugs preserve every stored selection. Even confirmed unavailable
+items are not removed until all selections have been checked successfully.
+Only a validated unavailable volume or this endpoint's explicit JSON 404
+(`Program volume not found.`) may remove an item.
+
+The page clears its in-memory payable selection while loading and shows an
+accessible retry state explaining that selections are saved and current prices
+could not be confirmed. It does not allow checkout of a partially loaded basket.
+Every catalogue refresh, including the existing HTTP 409 price-conflict reload,
+uses `cache: 'no-store'` and a fresh `checkoutRefresh` query key to avoid existing
+browser/shared cache entries. Deployed proxies must retain query keys; the server
+still validates authoritative prices at checkout. Checkout intent/reference
+storage is not reset by catalogue errors. WEB-02's in-flight edit/cross-tab work
+remains separate and open.
+
+Verification passed: 18 new Vitest regression cases covering one/all failures,
+HTML/invalid JSON, timeouts, unavailable evidence, mixed uncertain/unavailable
+responses, recovery with new prices, cache keys and unchanged intent storage.
+`pnpm test` passed (222 admin + 44 web), `pnpm check`, web production build and
+`git diff --check` passed. No migrations or backend financial behavior changed.
+Actual browser fault-injection and deployed proxy-cache checks remain rollout
+evidence, not claimed as completed. Original evidence below is retained.
 
 **Evidence:** [checkout page](../../apps/web/src/pages/checkout/index.astro),
 lines 172–205.
