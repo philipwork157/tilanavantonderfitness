@@ -46,7 +46,7 @@ const accountUrl = import.meta.env.PUBLIC_ACCOUNT_URL ?? 'http://127.0.0.1:3001/
         const response = await fetch(`${root.dataset.apiUrl}?reference=${encodeURIComponent(reference)}`);
         const result = await readCheckoutStatus(response);
         if (result.status === 'succeeded') {
-          clearPaidBasket(reference);
+          await clearPaidBasket(reference);
           show('Payment received', `Thank you. Your order ${result.orderNumber ?? ''} is confirmed and access is linked to your email address.`);
           if (accountLink) accountLink.hidden = false;
           return;

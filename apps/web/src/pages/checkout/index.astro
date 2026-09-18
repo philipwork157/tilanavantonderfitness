@@ -24,6 +24,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     aria-busy="true"
   >
     <div class="container">
+      <p data-checkout-progress role="status" aria-live="polite"></p>
       <div class="checkout-state" data-checkout-loading role="status">
         <span class="state-icon" aria-hidden="true">•••</span>
         <div><h2>Loading your basket</h2><p>Confirming the latest programmes and prices.</p></div>
@@ -81,9 +82,11 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
   } from '@tilana/contracts/catalogue';
   import { basketCheckoutRequestSchema } from '@tilana/contracts/checkout';
   import { refreshBasketCatalogue } from '@web/scripts/basket-catalogue';
+  import { createCheckoutSelectionGuard, sameBasketSelection, lockCheckoutSelection } from '@web/scripts/checkout-selection';
   import { getCheckoutIntentKey, readCheckoutRecoveryReference, rememberCheckoutIntent } from '@web/scripts/checkout-intent';
   import {
     addToBasket,
+    BASKET_STORAGE_KEY,
     readBasket,
     rememberPendingBasket,
     removeFromBasket,
@@ -97,6 +100,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     maximumFractionDigits: 2,
   });
   const root = document.querySelector<HTMLElement>('[data-checkout]');
+  const progress = root?.querySelector<HTMLElement>('[data-checkout-progress]');
   const loading = root?.querySelector<HTMLElement>('[data-checkout-loading]');
   const errorPanel = root?.querySelector<HTMLElement>('[data-checkout-error]');
   const errorTitle = root?.querySelector<HTMLElement>('[data-error-title]');
@@ -111,6 +115,9 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
   const button = form?.querySelector<HTMLButtonElement>('button[type="submit"]');
   const buttonLabel = button?.querySelector<HTMLElement>('span');
   let selectedVolumes: PublicCatalogueVolumeDetail[] = [];
+  const selectionGuard = createCheckoutSelectionGuard();
+  let loadVersion = 0;
+  let queryAdded = false;
 
   function showError(title: string, copy: string, canRetry: boolean) {
     if (!root || !errorPanel || !errorTitle || !errorCopy) return;
@@ -151,6 +158,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       remove.textContent = 'Remove';
       remove.setAttribute('aria-label', `Remove ${volume.name} from basket`);
       remove.addEventListener('click', () => {
+        if (selectionGuard.active) return;
         removeFromBasket(volume.slug);
         selectedVolumes = selectedVolumes.filter(item => item.slug !== volume.slug);
         renderBasket();
@@ -171,6 +179,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
   async function loadBasket() {
     if (!root) return;
+    const version = ++loadVersion;
     root.setAttribute('aria-busy', 'true');
     loading?.removeAttribute('hidden');
     errorPanel?.setAttribute('hidden', '');
@@ -179,7 +188,8 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
     const querySlug = new URLSearchParams(window.location.search).get('programme');
     const parsedQuerySlug = catalogueSlugSchema.safeParse(querySlug);
-    if (parsedQuerySlug.success) addToBasket(parsedQuerySlug.data);
+    if (!queryAdded && parsedQuerySlug.success) addToBasket(parsedQuerySlug.data);
+    queryAdded = true;
     const slugs = readBasket();
     if (!slugs.length) {
       showError('Your basket is empty', 'Browse the programme collection and add anything you would like to purchase.', false);
@@ -187,7 +197,10 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     }
 
     try {
-      const result = await refreshBasketCatalogue(root.dataset.catalogueApiUrl ?? '', slugs);
+      const result = await refreshBasketCatalogue(root.dataset.catalogueApiUrl ?? '', slugs,
+        () => version === loadVersion && sameBasketSelection(slugs, readBasket()));
+      if (version !== loadVersion) return;
+      if (result.state === 'changed') { await loadBasket(); return; }
       if (result.state === 'retryable') {
         showError('Basket could not be confirmed', 'Your selections are saved. We could not confirm the latest programmes and prices. Please try again before paying.', true);
         return;
@@ -200,12 +213,22 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       }
       renderBasket();
     } catch {
+      if (version !== loadVersion) return;
       showError('Basket could not be loaded', 'Your selections are saved. Please try again in a moment.', true);
     }
   }
 
   retry?.addEventListener('click', () => void loadBasket());
   void loadBasket();
+  window.addEventListener('storage', (event) => {
+    if (event.key !== BASKET_STORAGE_KEY && event.key !== null) return;
+    // Another tab can prepare a new basket, but cannot change this submitted purchase.
+    if (selectionGuard.active) {
+      if (progress) progress.textContent = 'Your submitted selection is locked. Basket changes in another tab apply to your next checkout.';
+      return;
+    }
+    void loadBasket();
+  });
 
   let submitting = false;
   form?.addEventListener('submit', async (event) => {
@@ -232,8 +255,19 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       status.dataset.state = 'error';
       return;
     }
+    const selection = selectionGuard.begin(parsed.data.items.map(item => item.volumeSlug), readBasket());
+    if (selection.state === 'busy') return;
+    if (selection.state === 'changed') {
+      await loadBasket();
+      status.textContent = 'Your basket changed in another tab. Please review it before paying.';
+      status.dataset.state = 'error';
+      return;
+    }
 
     submitting = true;
+    root.setAttribute('aria-busy', 'true');
+    if (progress) progress.textContent = 'Opening Paystack. Your submitted selection is locked.';
+    lockCheckoutSelection(content, true);
     button.disabled = true;
     buttonLabel.textContent = 'Opening Paystack…';
     status.textContent = '';
@@ -251,7 +285,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       if (recoveryReference) {
         // Preserve the original purchase while the status endpoint reconciles it.
         await rememberCheckoutIntent(parsed.data.idempotencyKey, recoveryReference);
-        rememberPendingBasket(recoveryReference, parsed.data.items.map(item => item.volumeSlug));
+        rememberPendingBasket(recoveryReference, [...selection.slugs]);
         window.location.assign(`/checkout/complete?reference=${encodeURIComponent(recoveryReference)}`);
         return;
       }
@@ -263,15 +297,20 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         throw new Error(body?.statusMessage ?? body?.message ?? 'Checkout could not be started.');
       }
       await rememberCheckoutIntent(parsed.data.idempotencyKey, body.reference);
-      rememberPendingBasket(body.reference, parsed.data.items.map(item => item.volumeSlug));
+      rememberPendingBasket(body.reference, [...selection.slugs]);
       window.location.assign(body.authorizationUrl);
     } catch (checkoutError) {
+      selectionGuard.finish();
+      lockCheckoutSelection(content, false);
+      root.setAttribute('aria-busy', 'false');
+      if (progress) progress.textContent = '';
       status.textContent = checkoutError instanceof Error ? checkoutError.message : 'Checkout could not be started.';
       status.dataset.state = 'error';
       button.disabled = false;
       buttonLabel.textContent = 'Pay securely for my programmes';
       (window as Window & { turnstile?: { reset: () => void } }).turnstile?.reset();
       submitting = false;
+      if (!sameBasketSelection(selectedVolumes.map(volume => volume.slug), readBasket())) await loadBasket();
     }
   });
 </script>

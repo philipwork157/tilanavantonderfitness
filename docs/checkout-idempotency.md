@@ -90,6 +90,46 @@ review, not an assumption that the provider rejected the charge.
 
 ## Verification and rollout
 
+### Submitted basket consistency (WEB-02)
+
+The checkout page compares the reviewed slugs with current browser storage before
+the first asynchronous submission step. Unseen cross-tab changes require review
+instead of silently changing the charged selection. A frozen submitted snapshot
+guards reentrant submission and is used for both successful initialization and
+uncertain-reference recovery. The checkout grid becomes inert during submission,
+locking remove buttons, customer fields and its navigation for mouse/keyboard
+interaction. A separate live status announces the locked selection.
+
+Storage events refresh the reviewed basket while idle. During submission they
+leave its displayed selection unchanged; changes elsewhere apply to the next
+checkout. Failed submission unlocks the grid and reloads changed storage.
+Versioned catalogue loads cannot overwrite newer selections or persist stale
+unavailability after a cross-tab edit. The `?programme=` shortcut is consumed
+once per page load, not repeatedly on retries after removal.
+
+Pending selections now use separate local-storage keys:
+`tilana-pending-programme-basket:<reference>`. Different references cannot
+overwrite each other's records, and a reference cannot be replaced with a
+different selection. Storage failure stops redirect rather than silently losing
+the association; the existing intent/reference stays available for recovery.
+Confirmed paid completion reads only that reference, removes only its slugs,
+and retains other pending records. Legacy single-reference records remain
+readable and are removed only when their own reference completes.
+
+Web Locks serialize simultaneous paid cleanup callbacks in supporting browsers.
+Without Web Locks, reference records still remain independent, but shared
+read/modify/write basket cleanup has only best-effort cross-tab serialization.
+Ordinary basket edits in other tabs are not globally locked; they must never be
+treated as changes to an already submitted order. Clearing browser storage,
+switching devices or deliberately re-adding the same digital product loses that
+browser-only distinction. Financial truth and fulfillment remain server-owned.
+Browser storage is not an authorization or payment ledger.
+
+Verify actual delayed initialization, blocked local edits, cross-tab changes,
+reload and out-of-order completion in the deployed isolated test environment.
+Local Vitest tests use mocked providers/storage/DOM controls; no real Paystack
+initialization or production mutation is performed.
+
 Run `pnpm test`, `pnpm check`, and both production builds. The opt-in PostgreSQL
 suite in [test instructions](../apps/admin/tests/README.md) tests simultaneous
 submissions, delayed initialization, lost responses, changed details, immutable

@@ -31,8 +31,9 @@ export async function fetchBasketVolume(apiUrl: string, slug: string): Promise<B
 }
 
 /** Do not persist a partial basket when any programme could not be authoritatively checked. */
-export async function refreshBasketCatalogue(apiUrl: string, slugs: string[]) {
+export async function refreshBasketCatalogue(apiUrl: string, slugs: string[], isCurrent = () => true) {
   const results = await Promise.all(slugs.map(slug => fetchBasketVolume(apiUrl, slug)));
+  if (!isCurrent()) return { state: 'changed' as const };
   if (results.some(result => result.state === 'retryable')) return { state: 'retryable' as const };
   const volumes = results.flatMap(result => result.state === 'available' ? [result.volume] : []);
   if (volumes.length !== slugs.length) writeBasket(volumes.map(volume => volume.slug));

@@ -38,7 +38,7 @@ acceptance criteria remain in each finding below.
 - [x] **BILL-01 (P1):** Implement purchase/manual invoice creation, issue/delivery, evidenced settlement/refunds, original-preserving reissues, financial replacements and legacy review. Deployment, accounting review and actual browser/provider/SES checks remain launch gates.
 - [ ] **TEST-01 (P1):** Cover the remaining critical payment/API/browser paths and gate deployment on automated tests. PAY-01's new tests are only partial progress here.
 - [x] **WEB-01 (P2):** Preserve basket items during temporary catalogue errors, with retry and fresh-price checks (verified locally).
-- [ ] **WEB-02 (P2):** Keep the submitted basket and pending checkout references consistent during edits/retries.
+- [x] **WEB-02 (P2):** Freeze submitted selections, lock local edits and persist pending baskets by reference (verified locally).
 - [ ] **WEB-03 (P2):** Display partial/full refund and reversal statuses accurately on the return page.
 - [x] **ACCESS-01 (P2):** Implement post-payment instructions and durable login/email retries locally. Deployment and real-provider rollout remain gated.
 - [ ] **ACCESS-02 (P2):** Respect entitlement start times and preserve access across overlapping purchase/manual grants.
@@ -180,7 +180,7 @@ configuration.
 | BILL-01 | P1 — fixed locally | Purchase/manual billing, immutable reissues/replacements, settlement/refunds and legacy review implemented; rollout pending |
 | TEST-01 | P1 | Critical payment paths lack tests and deployment test gates |
 | WEB-01 | P2 | Fixed locally: temporary catalogue errors preserve the basket and require retry |
-| WEB-02 | P2 | Basket changes during submission can disagree with the charged selection |
+| WEB-02 | P2 | Fixed locally: submitted snapshots, locked checkout edits and reference-scoped pending baskets |
 | WEB-03 | P2 | Refund statuses are displayed as if payment never succeeded |
 | ACCESS-01 | P2 | Implemented locally: automatic purchase instructions and durable login/email retries; rollout gated |
 | ACCESS-02 | P2 | Entitlement start times and overlapping grants are mishandled |
@@ -318,7 +318,8 @@ browser storage/changing devices loses that browser association; simultaneous
 first creation across tabs requires Web Locks. Pending uncertainty never
 expires into a fresh payable reference automatically. Independent operator/
 provider recovery remains PAY-05, broader CI/browser launch gates remain TEST-01,
-and WEB-02's other in-flight basket/pending-reference behavior remains open.
+and WEB-02's in-flight basket/pending-reference code is now implemented locally;
+deployed browser checks remain required.
 
 **Original evidence and acceptance:**
 
@@ -600,7 +601,7 @@ uses `cache: 'no-store'` and a fresh `checkoutRefresh` query key to avoid existi
 browser/shared cache entries. Deployed proxies must retain query keys; the server
 still validates authoritative prices at checkout. Checkout intent/reference
 storage is not reset by catalogue errors. WEB-02's in-flight edit/cross-tab work
-remains separate and open.
+is implemented separately below.
 
 Verification passed: 18 new Vitest regression cases covering one/all failures,
 HTML/invalid JSON, timeouts, unavailable evidence, mixed uncertain/unavailable
@@ -626,6 +627,40 @@ price reload must also bypass stale catalogue caches or explain that a fresh
 price could not yet be retrieved.
 
 ### WEB-02 — the displayed basket can change during initialization
+
+**Status: fixed locally (2026-09-18).** A focused checkout-selection guard freezes
+the reviewed slugs synchronously before initialization, checks current storage
+before submission and rejects reentrant attempts. The grid becomes inert,
+blocking local remove/customer-field/navigation edits while retaining its
+displayed selection. An external live region announces submission and cross-tab
+changes. Successful and recovery responses persist the same frozen snapshot.
+
+Idle storage events reload the basket; in-flight events cannot change the
+submitted selection. Failed attempts unlock and refresh changed storage.
+Catalogue load versions and a current-selection predicate discard obsolete
+responses before they can write stale basket contents. Query shortcut additions
+are consumed once, not re-added on every retry after removal.
+
+Separate per-reference pending keys prevent parallel checkouts from overwriting
+each other. Conflicting reference selections and persistence failure stop
+redirect, preserving the existing intent/reference for recovery. Paid completion
+clears only its reference's selections, retains unrelated records, and supports
+the prior single-reference format. Web Locks serialize concurrent paid cleanups
+where supported; older browsers have best-effort shared basket cleanup, not a
+transactional local-storage ledger. Ordinary edits elsewhere cannot alter the
+server's submitted order. See [consistency limits](../checkout-idempotency.md).
+
+Regression tests cover frozen delayed-response snapshots, guarded reentry,
+cross-tab changes, inert lock/unlock, obsolete refreshes, reference persistence,
+reload-style reads, out-of-order/concurrent paid cleanup, legacy records,
+malformed storage and persistence failure. Actual deployed multi-tab browser
+and Paystack smoke checks remain launch evidence, not claimed as completed.
+Original finding and acceptance below are retained for traceability.
+
+Verification passed: `pnpm test` (222 admin + 57 web tests, including 13 new
+regression cases), `pnpm check`, the web production build and `git diff --check`.
+No backend or schema changes were needed. No provider/database writes, commits
+or deployment were performed.
 
 **Evidence:** [checkout page](../../apps/web/src/pages/checkout/index.astro),
 lines 149–156, 217–241, and 260; [basket storage](../../apps/web/src/scripts/basket.ts).

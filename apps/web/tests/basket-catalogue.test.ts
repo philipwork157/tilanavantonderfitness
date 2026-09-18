@@ -22,6 +22,12 @@ beforeEach(() => {
 });
 
 describe('authoritative basket catalogue refresh', () => {
+  it('does not let an obsolete catalogue load overwrite a newer cross-tab basket', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ volume: volume(slugs[0]!, false) })));
+    expect(await refreshBasketCatalogue(apiUrl, [slugs[0]!], () => false)).toEqual({ state: 'changed' });
+    expect(readBasket()).toEqual(slugs);
+    expect(setItem).not.toHaveBeenCalled();
+  });
   it.each([429, 500, 502, 503, 401, 403])('preserves every item when one catalogue request returns %s', async code => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(available(slugs[0]!)).mockResolvedValueOnce(Response.json({}, { status: code })));
     expect(await refreshBasketCatalogue(apiUrl, slugs)).toEqual({ state: 'retryable' });
