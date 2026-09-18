@@ -6,7 +6,7 @@ let adminClientUrl = '';
 let adminClientKey = '';
 
 /** Server-only Supabase client for administrative Auth operations. */
-export function getSupabaseAdminClient(event: H3Event): SupabaseClient {
+export function getSupabaseAdminClient(event?: H3Event): SupabaseClient {
   const config = useRuntimeConfig(event);
   const url = String(config.supabaseUrl || '').trim();
   const secretKey = String(config.supabaseServiceRoleKey || '').trim();

@@ -4,8 +4,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { enforceLoginRateLimit, enforceSameOrigin } from '@server/utils/auth-security';
 import { getDatabase } from '@server/utils/database';
 import { readZodBody } from '@server/utils/route-validation';
-import { getSupabaseAdminClient } from '@server/utils/supabase-admin';
-import { sendCustomerAccessEmail } from '@server/services/customer-access-emails';
+import { queueCustomerLogin, deliverCustomerNotifications } from '@server/services/customer-notifications';
 import { assertPaystackDatabaseEnvironment, getCustomerAccountBaseUrl } from '@server/utils/paystack-configuration';
 import { customerPurchaseHistoryCondition } from '@server/utils/customer-purchase-history';
 
@@ -21,7 +20,7 @@ export default defineEventHandler(async (event) => {
 
   const email = body.email.toLowerCase();
   await assertPaystackDatabaseEnvironment();
-  const accountBaseUrl = getCustomerAccountBaseUrl(useRuntimeConfig(event));
+  getCustomerAccountBaseUrl(useRuntimeConfig(event));
   const [buyer] = await getDatabase()
     .select({ id: clients.id, firstName: clients.firstName })
     .from(clients)
@@ -32,24 +31,10 @@ export default defineEventHandler(async (event) => {
   // Always return the same response so this endpoint cannot reveal customer emails.
   if (buyer) {
     try {
-      const supabase = getSupabaseAdminClient(event);
-      const { data, error } = await supabase.auth.admin.generateLink({ type: 'magiclink', email });
-      const tokenHash = data.properties?.hashed_token;
-      if (error || !tokenHash) {
-        throw new Error(error?.message || 'Supabase did not return a customer sign-in token.');
-      }
-
-      const signInUrl = new URL('/api/customer/auth/confirm', `${accountBaseUrl}/`);
-      signInUrl.searchParams.set('token_hash', tokenHash);
-      signInUrl.searchParams.set('type', 'email');
-      signInUrl.searchParams.set('next', '/account/programs');
-      await sendCustomerAccessEmail({
-        intendedRecipient: email,
-        firstName: buyer.firstName,
-        signInUrl: signInUrl.toString(),
-      });
-    } catch (error) {
-      console.error('Customer magic-link delivery failed.', error instanceof Error ? error.message : error);
+      const jobId = await queueCustomerLogin(buyer.id);
+      await deliverCustomerNotifications(jobId);
+    } catch {
+      console.error('Customer magic-link queue or delivery requires attention.');
     }
   }
 

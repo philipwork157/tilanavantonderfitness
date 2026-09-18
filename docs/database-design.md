@@ -114,6 +114,12 @@ entitlement.
 
 ## Payment recovery and disputes
 
+`customer_notifications` is an RLS-enabled integer-keyed access email outbox.
+An order/client composite FK protects purchase notification ownership; unique
+keys deduplicate order notifications and five-minute login requests. It stores
+lease/retry/acceptance/cancellation timestamps, never authentication tokens.
+See [customer-access-delivery.md](./customer-access-delivery.md).
+
 PAY-05 adds `payment_recovery_jobs` (one durable job per integer payment ID,
 due time, expiring/versioned lease, retry count and operator alert state) and
 `payment_disputes` (provider dispute ID, integer payment link, provider outcome

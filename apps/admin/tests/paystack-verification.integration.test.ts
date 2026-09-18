@@ -5,6 +5,7 @@ import { paymentEvents, paymentRefunds, users } from '@tilana/db/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { registerCheckoutCases } from './helpers/paystack-checkout-cases';
+import { registerCustomerNotificationCases } from './helpers/customer-notification-cases';
 import { registerRecoveryCases } from './helpers/payment-recovery-cases';
 import { registerInvoiceCases } from './helpers/invoice-cases';
 import { registerClientManagementCases } from './helpers/client-management-cases';
@@ -21,12 +22,14 @@ import {
   type PaymentFixture,
 } from './helpers/paystack-database';
 
-const mocks = vi.hoisted(() => ({ getDatabase: vi.fn(), createSupabaseAuthClient: vi.fn(), send: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getDatabase: vi.fn(), createSupabaseAuthClient: vi.fn(), send: vi.fn(), generateLink: vi.fn() }));
+vi.mock('@server/utils/supabase-admin', () => ({ getSupabaseAdminClient: () => ({ auth: { admin: { generateLink: mocks.generateLink } } }) }));
 vi.mock('@server/utils/database', () => mocks);
 vi.mock('@server/utils/supabase-auth', () => ({ createSupabaseAuthClient: mocks.createSupabaseAuthClient }));
 vi.mock('@server/utils/email', () => ({ getServerEmail: () => ({ sender: { send: mocks.send }, from: { email: 'sender@example.test' } }) }));
 let database: Database;
 registerCheckoutCases(() => database);
+registerCustomerNotificationCases(() => database, mocks.send, mocks.generateLink);
 registerRecoveryCases(() => database, mocks.send);
 registerInvoiceCases(() => database, mocks.send, mocks.createSupabaseAuthClient);
 registerClientManagementCases(() => database);

@@ -7,3 +7,4 @@ export * from './invoicing';
 export * from './newsletter';
 export * from './sales';
 export * from './payment-recovery';
+export * from './customer-notifications';

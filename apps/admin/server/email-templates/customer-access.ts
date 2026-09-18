@@ -5,14 +5,18 @@ export interface CustomerAccessEmailTemplateInput {
   signInUrl: string;
   intendedEmail: string;
   redirectedToDevelopment: boolean;
+  instructionsOnly?: boolean;
 }
 
 /** Builds the branded HTML and plain-text versions of a customer access email. */
 export function renderCustomerAccessEmail(input: CustomerAccessEmailTemplateInput) {
   const firstName = singleLineEmailText(input.firstName);
   const greeting = firstName ? `Hi ${firstName},` : 'Hello,';
+  const instructions = input.instructionsOnly
+    ? 'Your payment is confirmed. Sign in using the email address you used at checkout. We will send you a secure, one-time link to access your purchased programs.'
+    : 'Use this secure, one-time link to sign in and access the programs connected to your purchase:';
   const developmentNotice = input.redirectedToDevelopment
-    ? `Development preview — intended customer: ${input.intendedEmail}`
+    ? `Development preview. Intended customer: ${input.intendedEmail}`
     : '';
   const subject = `${input.redirectedToDevelopment ? '[DEV] ' : ''}Your Tilana program access link`;
   const text = [
@@ -22,7 +26,7 @@ export function renderCustomerAccessEmail(input: CustomerAccessEmailTemplateInpu
     '',
     greeting,
     '',
-    'Use this secure, one-time link to sign in and access the programs connected to your purchase:',
+    instructions,
     input.signInUrl,
     '',
     'The program PDF is available securely inside your account; it is not attached to this email.',
@@ -61,7 +65,7 @@ export function renderCustomerAccessEmail(input: CustomerAccessEmailTemplateInpu
             <tr>
               <td class="email-content" style="padding:38px 40px;">
                 <p style="margin:0 0 16px;color:#0f0e13;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.5;">${escapeEmailHtml(greeting)}</p>
-                <p style="margin:0 0 28px;color:#614635;font-size:16px;line-height:1.75;">Use the secure, one-time link below to sign in and access the programs connected to your purchase.</p>
+                <p style="margin:0 0 28px;color:#614635;font-size:16px;line-height:1.75;">${escapeEmailHtml(instructions)}</p>
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;">
                   <tr>
                     <td align="center" style="padding:0 0 30px;">
@@ -73,7 +77,7 @@ export function renderCustomerAccessEmail(input: CustomerAccessEmailTemplateInpu
                   <tr>
                     <td style="padding:22px 24px;">
                       <p style="margin:0 0 6px;color:#614635;font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;">Secure access</p>
-                      <p style="margin:0;color:#614635;font-size:13px;line-height:1.7;">Your program PDF is available inside your account rather than attached to this email. The sign-in link expires and can only be used securely.</p>
+                      <p style="margin:0;color:#614635;font-size:13px;line-height:1.7;">Your program PDF is available inside your account rather than attached to this email. ${input.instructionsOnly ? 'Request a new one-time sign-in link whenever you need it.' : 'The sign-in link expires and can only be used securely.'}</p>
                     </td>
                   </tr>
                 </table>

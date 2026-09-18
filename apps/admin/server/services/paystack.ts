@@ -28,6 +28,7 @@ import { isCheckoutPriceCurrent } from './catalogue-policy';
 import { hashCheckoutIntent, resolvePaystackCheckout } from './paystack-checkout-intent';
 import { processPaystackDispute } from './paystack-disputes';
 import { createPaystackEventKey } from '@server/utils/paystack-webhook';
+import { queuePurchaseAccess } from './customer-notifications';
 import {
   getTerminalCheckoutResolution,
   isPaymentAlreadyFulfilled,
@@ -555,6 +556,7 @@ async function processChargeSuccess(
     .where(eq(orders.id, payment.orderId));
 
   await grantOrderAccess(transaction, payment.orderId);
+  await queuePurchaseAccess(transaction, payment.orderId);
   await markPaymentEvent(transaction, eventId, 'processed');
 }
 

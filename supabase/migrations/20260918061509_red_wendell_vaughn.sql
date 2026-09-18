@@ -1,0 +1,1 @@
+ALTER TABLE "customer_notifications" ADD CONSTRAINT "customer_notifications_order_client_fk" FOREIGN KEY ("order_id","client_id") REFERENCES "public"."orders"("id","client_id") ON DELETE restrict ON UPDATE no action;

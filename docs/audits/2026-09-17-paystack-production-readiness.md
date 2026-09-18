@@ -40,7 +40,7 @@ acceptance criteria remain in each finding below.
 - [ ] **WEB-01 (P2):** Preserve basket items during temporary catalogue errors.
 - [ ] **WEB-02 (P2):** Keep the submitted basket and pending checkout references consistent during edits/retries.
 - [ ] **WEB-03 (P2):** Display partial/full refund and reversal statuses accurately on the return page.
-- [ ] **ACCESS-01 (P2):** Send post-payment access instructions automatically with durable delivery retries.
+- [x] **ACCESS-01 (P2):** Implement post-payment instructions and durable login/email retries locally. Deployment and real-provider rollout remain gated.
 - [ ] **ACCESS-02 (P2):** Respect entitlement start times and preserve access across overlapping purchase/manual grants.
 - [ ] **ACCESS-03 (P2):** Prevent archived/unpublished programs from losing files owed to existing buyers.
 - [x] **DB-01 (P2):** Enforce invoice/order customer consistency with a forward migration and real PostgreSQL tests. Deployed legacy links still require preflight review.
@@ -182,7 +182,7 @@ configuration.
 | WEB-01 | P2 | Temporary catalogue errors permanently remove basket items |
 | WEB-02 | P2 | Basket changes during submission can disagree with the charged selection |
 | WEB-03 | P2 | Refund statuses are displayed as if payment never succeeded |
-| ACCESS-01 | P2 | No automatic post-payment email or durable delivery retry |
+| ACCESS-01 | P2 | Implemented locally: automatic purchase instructions and durable login/email retries; rollout gated |
 | ACCESS-02 | P2 | Entitlement start times and overlapping grants are mishandled |
 | ACCESS-03 | P2 | Unpublishing enables removal of the last file owed to existing buyers |
 | DB-01 | P2 — fixed locally | Composite invoice/order customer FK and PostgreSQL regression test |
@@ -634,6 +634,28 @@ revisiting the callback after partial/full refunds and a delayed confirmation.
 
 ### ACCESS-01 — payment does not automatically send access instructions
 
+**Status: implemented locally (2026-09-18).** Fulfillment now atomically queues
+one purchase notification per order. Branded instructions link to sign-in,
+not an expiring bearer token. Login requests queue and try immediately; failed
+deliveries remain retryable. An RLS-enabled integer outbox, order/client FK,
+unique keys, versioned leases, capped backoff, eligibility rechecks, stale-login
+expiry and required safe test recipient protect delivery. Live never redirects.
+The protected scheduler runs the disabled-by-default worker and signals failures
+with HTTP 503. Tokens are freshly generated, not stored/logged. Delivery remains
+at least once, not exactly once. See [delivery operations](../customer-access-delivery.md).
+
+Regression tests cover closed-browser success/replay, concurrent workers,
+failed SES/Auth followed by retry, refund cancellation, request coalescing,
+expiry, ownership FK, safe recipients and public route guards/privacy. Real
+SES/Supabase/browser checks, forward deployed migrations, activation and
+independent backlog/heartbeat monitoring remain launch requirements. Historical
+finding and acceptance criteria below are retained for traceability.
+
+Verification passed: `pnpm test` (222 admin + 26 web tests), disposable
+PostgreSQL integration suite (131 tests, including eight new delivery cases),
+`pnpm check`, `pnpm db:check`, admin production build and `git diff --check`.
+No real provider calls, deployed database writes, commits or deployments.
+
 **Evidence:** [charge fulfillment](../../apps/admin/server/services/paystack.ts),
 lines 578–584; [magic-link route](../../apps/admin/server/api/customer/auth/magic-link.post.ts),
 lines 28–56; [email service](../../apps/admin/server/services/customer-access-emails.ts).
@@ -824,9 +846,9 @@ individual nonnegative-amount checks enforce these relationships.
    using [recovery operations](../paystack-recovery.md).
 3. PAY-04 code checks are implemented locally. Verify deployed resource
    isolation and the reviewed test-to-live transition before launch.
-4. BILL-01, DB-01 and DB-02 are implemented locally. Complete automatic purchase
-   access notifications (ACCESS-01) and the separate billing rollout/accounting
-   review gates.
+4. BILL-01, DB-01, DB-02 and ACCESS-01 are implemented locally. Complete
+   [access delivery rollout](../customer-access-delivery.md) and separate billing
+   rollout/accounting review gates.
 5. Resolve basket/return-page behavior, entitlement lifecycle, and abuse/data
    retention findings. Add the corresponding API and browser tests.
 6. Gate deployment on those tests. In an isolated test environment, execute a

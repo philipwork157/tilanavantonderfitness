@@ -28,6 +28,7 @@ export default defineNuxtConfig({
     newsletterApiBaseUrl: 'http://127.0.0.1:3001',
     newsletterSiteUrl: 'http://127.0.0.1:4321',
     customerAccessDevelopmentRecipient: '',
+    customerNotificationsEnabled: false,
     invoiceBillingEnabled: false,
     invoiceDevelopmentRecipient: '',
     paystackSecretKey: '',

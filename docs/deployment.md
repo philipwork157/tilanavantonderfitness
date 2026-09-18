@@ -184,6 +184,14 @@ future non-Fly deployment must establish the equivalent deployment-mode policy.
 
 ### Purchase billing rollout (BILL-01)
 
+ACCESS-01 rollout is documented in [customer-access-delivery.md](./customer-access-delivery.md).
+Review both new customer notification migrations before backend deployment.
+Enable `NUXT_CUSTOMER_NOTIFICATIONS_ENABLED=true` for the existing protected
+scheduler to send purchase instructions and retry failed login emails. It
+defaults to false. Test mode now requires a valid safe
+`NUXT_CUSTOMER_ACCESS_DEVELOPMENT_RECIPIENT`; live never uses that redirect.
+No deployed migrations, activation or real SES sends were performed locally.
+
 Follow [billing.md](./billing.md) before activation. Review/apply
 `20260917155837_polite_shockwave.sql` and
 `20260917155928_marvelous_iron_patriot.sql`; these invoice migrations have been

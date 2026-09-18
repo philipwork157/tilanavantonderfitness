@@ -263,6 +263,12 @@ coaching invoice. BILL-01 code is implemented locally; deployment, accountant
 review and actual browser/provider/SES rollout evidence remain required.
 
 After payment, the customer requests access using the purchase email address.
+ACCESS-01 queues purchase instructions atomically with Paystack fulfillment.
+The opt-in protected scheduler sends a non-expiring sign-in-page link; requested
+one-time login emails also use durable retry work with fresh tokens generated
+only during delivery. No tokens are persisted/logged. Test delivery requires
+a safe inbox; live cannot redirect. See `docs/customer-access-delivery.md` for
+leases, at-least-once limits, expiry, monitoring and rollout gates.
 The Nuxt server asks Supabase Admin Auth to generate a passwordless token without
 using Supabase SMTP. A branded HTML email is built in the project and delivered
 through AWS SES.
