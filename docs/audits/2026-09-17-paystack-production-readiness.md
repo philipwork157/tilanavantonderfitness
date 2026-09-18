@@ -39,7 +39,7 @@ acceptance criteria remain in each finding below.
 - [ ] **TEST-01 (P1):** Cover the remaining critical payment/API/browser paths and gate deployment on automated tests. PAY-01's new tests are only partial progress here.
 - [x] **WEB-01 (P2):** Preserve basket items during temporary catalogue errors, with retry and fresh-price checks (verified locally).
 - [x] **WEB-02 (P2):** Freeze submitted selections, lock local edits and persist pending baskets by reference (verified locally).
-- [ ] **WEB-03 (P2):** Display partial/full refund and reversal statuses accurately on the return page.
+- [x] **WEB-03 (P2):** Display partial/full refund and reversal statuses accurately on the return page (verified locally).
 - [x] **ACCESS-01 (P2):** Implement post-payment instructions and durable login/email retries locally. Deployment and real-provider rollout remain gated.
 - [ ] **ACCESS-02 (P2):** Respect entitlement start times and preserve access across overlapping purchase/manual grants.
 - [ ] **ACCESS-03 (P2):** Prevent archived/unpublished programs from losing files owed to existing buyers.
@@ -181,7 +181,7 @@ configuration.
 | TEST-01 | P1 | Critical payment paths lack tests and deployment test gates |
 | WEB-01 | P2 | Fixed locally: temporary catalogue errors preserve the basket and require retry |
 | WEB-02 | P2 | Fixed locally: submitted snapshots, locked checkout edits and reference-scoped pending baskets |
-| WEB-03 | P2 | Refund statuses are displayed as if payment never succeeded |
+| WEB-03 | P2 | Fixed locally: explicit payment/refund/reversal messages and support reference |
 | ACCESS-01 | P2 | Implemented locally: automatic purchase instructions and durable login/email retries; rollout gated |
 | ACCESS-02 | P2 | Entitlement start times and overlapping grants are mishandled |
 | ACCESS-03 | P2 | Unpublishing enables removal of the last file owed to existing buyers |
@@ -679,6 +679,27 @@ reference. Test delayed responses, remove clicks, reload, and parallel tabs.
 The selection shown for payment and later cleared must match the submitted one.
 
 ### WEB-03 — return-page messages misrepresent refunds
+
+**Status: fixed locally (2026-09-18).** A focused, tested completion utility maps
+every contracted status explicitly. Partial refunds retain the purchase-email
+sign-in link and successful basket cleanup. Full refunds and reversals explain
+that access from this order was removed, without claiming other valid purchases
+were revoked. Failed and abandoned checkouts have separate messages and support
+guidance. The payment reference is displayed using text content (never HTML),
+including during delayed confirmation, with missing/invalid reference handling.
+
+The return page still trusts only successful HTTP responses validated by the
+shared status contract. Bounded, uncached polling retries pending, network,
+HTTP and malformed-response failures; uncertain evidence neither reports a
+failed payment nor retires its reserved intent. Browser callbacks do not grant
+access or change the financial ledger. Real provider/browser refund smoke checks
+remain rollout evidence, not claimed as completed. Original finding follows.
+
+Verification passed: `pnpm test` (222 admin + 74 web tests, including 17 new
+completion regression cases), `pnpm check`, the web production build and
+`git diff --check`. Tests cover all statuses, revisited refund callbacks, delayed
+confirmation, invalid evidence, cleanup decisions and bounded retry exhaustion.
+No backend/schema changes, commits, deployment or real payment/email writes.
 
 **Evidence:** [return page](../../apps/web/src/pages/checkout/complete.astro),
 lines 43–57; [status contract](../../packages/contracts/src/checkout.ts).

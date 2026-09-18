@@ -7,10 +7,11 @@ const accountUrl = import.meta.env.PUBLIC_ACCOUNT_URL ?? 'http://127.0.0.1:3001/
 
 <BaseLayout title="Payment status" description="Check the status of your program payment." showNewsletter={false}>
   <main class="section complete-page" data-payment-status data-api-url={statusApiUrl}>
-    <div class="container status-card">
+    <div class="container status-card" aria-live="polite" aria-atomic="true">
       <p class="eyebrow">Secure checkout</p>
       <h1 data-status-title>Confirming your payment…</h1>
       <p data-status-copy>Please keep this page open while Paystack confirms the payment.</p>
+      <p data-reference hidden>Payment reference: <code data-reference-value></code></p>
       <a class="button button-secondary" href="/program" data-status-link hidden>Back to programs</a>
       <a class="button button-primary account-link" href={accountUrl} data-account-link hidden>Access my programs</a>
     </div>
@@ -20,7 +21,7 @@ const accountUrl = import.meta.env.PUBLIC_ACCOUNT_URL ?? 'http://127.0.0.1:3001/
 <script>
   import { clearPaidBasket } from '@web/scripts/basket';
   import { clearCompletedCheckoutIntent } from '@web/scripts/checkout-intent';
-  import { readCheckoutStatus } from '@web/scripts/checkout-status';
+  import { confirmCheckoutStatus } from '@web/scripts/checkout-completion';
 
   const root = document.querySelector<HTMLElement>('[data-payment-status]');
   const title = root?.querySelector<HTMLElement>('[data-status-title]');
@@ -28,6 +29,8 @@ const accountUrl = import.meta.env.PUBLIC_ACCOUNT_URL ?? 'http://127.0.0.1:3001/
   const link = root?.querySelector<HTMLElement>('[data-status-link]');
   const accountLink = root?.querySelector<HTMLElement>('[data-account-link]');
   const reference = new URLSearchParams(window.location.search).get('reference');
+  const referenceRow = root?.querySelector<HTMLElement>('[data-reference]');
+  const referenceValue = root?.querySelector<HTMLElement>('[data-reference-value]');
 
   const show = (heading: string, message: string) => {
     if (title) title.textContent = heading;
@@ -41,30 +44,20 @@ const accountUrl = import.meta.env.PUBLIC_ACCOUNT_URL ?? 'http://127.0.0.1:3001/
       return;
     }
 
-    for (let attempt = 0; attempt < 10; attempt += 1) {
-      try {
-        const response = await fetch(`${root.dataset.apiUrl}?reference=${encodeURIComponent(reference)}`);
-        const result = await readCheckoutStatus(response);
-        if (result.status === 'succeeded') {
-          await clearPaidBasket(reference);
-          show('Payment received', `Thank you. Your order ${result.orderNumber ?? ''} is confirmed and access is linked to your email address.`);
-          if (accountLink) accountLink.hidden = false;
-          return;
-        }
-        if (result.status && !['pending'].includes(result.status)) {
-          // Retire only a confirmed terminal intent. A pending/uncertain attempt
-          // stays reserved, while deliberate later purchases can use a new key.
-          await clearCompletedCheckoutIntent(reference);
-          show('Payment not completed', 'No successful payment was recorded. You can return to the programs page and try again.');
-          return;
-        }
-      } catch {
-        // A webhook may still be in flight, so retry briefly before showing help.
-      }
-      await new Promise((resolve) => window.setTimeout(resolve, 2000));
+    if (referenceValue) referenceValue.textContent = reference;
+    if (referenceRow) referenceRow.hidden = false;
+    if (!/^[A-Za-z0-9.=-]{10,160}$/.test(reference)) {
+      show('Payment reference invalid', 'Please contact Tilana with the payment reference below if you completed a payment.');
+      return;
     }
-
-    show('Payment is still processing', 'Confirmation can take a moment. Please check again shortly or contact Tilana with your payment reference.');
+    const result = await confirmCheckoutStatus(root.dataset.apiUrl ?? '', reference, {
+      fetch,
+      pause: () => new Promise((resolve) => window.setTimeout(resolve, 2000)),
+      clearPaid: clearPaidBasket,
+      retireIntent: clearCompletedCheckoutIntent,
+    });
+    show(result.heading, result.message);
+    if (accountLink) accountLink.hidden = !result.access;
   };
 
   void checkStatus();
@@ -76,4 +69,5 @@ const accountUrl = import.meta.env.PUBLIC_ACCOUNT_URL ?? 'http://127.0.0.1:3001/
   .status-card h1 { margin: 0.75rem 0 1rem; font-family: var(--font-heading); font-size: clamp(2.2rem, 6vw, 4rem); }
   .status-card p:not(.eyebrow) { margin: 0 auto 1.8rem; max-width: 36rem; line-height: 1.7; }
   .account-link { margin-left: 0.6rem; }
+  [data-reference-value] { overflow-wrap: anywhere; }
 </style>
