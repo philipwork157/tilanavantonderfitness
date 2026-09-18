@@ -30,6 +30,8 @@ const saving = ref(false);
 const formError = ref('');
 const successMessage = ref('');
 const editingClientId = ref<number | null>(null);
+// Existing paid sales are read-only; profile details remain editable.
+const purchaseReadOnly = ref(false);
 const selectedEnquiryId = ref('manual');
 const route = useRoute();
 const { data, status, error, refresh } = await useFetch('/api/admin/clients', { lazy: true });
@@ -199,6 +201,7 @@ function closeForm() {
 async function openEditForm(client: ClientRecord) {
   successMessage.value = '';
   editingClientId.value = client.id;
+  purchaseReadOnly.value = client.programmes.some((programme) => programme.status !== 'pending');
   selectedEnquiryId.value = 'manual';
   form.firstName = client.firstName;
   form.lastName = client.lastName;
@@ -433,7 +436,7 @@ useSeoMeta({ title: 'Clients | Tilana Admin', robots: 'noindex, nofollow' });
               <p class="eyebrow">{{ editingClientId ? 'Edit client' : 'New client' }}</p>
               <h2>{{ editingClientId ? 'Update their details' : 'Add their details' }}</h2>
             </div>
-            <span>{{ editingClientId ? 'Manual correction' : 'Manual entry' }}</span>
+            <span>{{ editingClientId ? 'Profile update' : 'Manual entry' }}</span>
           </div>
 
           <div class="field-grid">
@@ -463,7 +466,7 @@ useSeoMeta({ title: 'Clients | Tilana Admin', robots: 'noindex, nofollow' });
               <USelect v-model="form.gender" :items="genderOptions" value-key="value" size="xl" />
             </UFormField>
             <UFormField label="Purchase status">
-              <USelect v-model="form.purchaseStatus" :items="purchaseStatusOptions" value-key="value" size="xl" />
+              <USelect v-model="form.purchaseStatus" :items="purchaseStatusOptions" value-key="value" size="xl" :disabled="!!editingClientId && purchaseReadOnly" />
             </UFormField>
           </div>
 
@@ -471,7 +474,7 @@ useSeoMeta({ title: 'Clients | Tilana Admin', robots: 'noindex, nofollow' });
             <div class="programme-heading">
               <div>
                 <h3>Programmes</h3>
-                <p>Record the actual price agreed with this client.</p>
+                <p>{{ editingClientId && purchaseReadOnly ? 'Recorded purchases are read-only. Profile edits do not change payment or access history.' : 'Record the actual price agreed with this client.' }}</p>
               </div>
               <UButton
                 type="button"
@@ -479,7 +482,7 @@ useSeoMeta({ title: 'Clients | Tilana Admin', robots: 'noindex, nofollow' });
                 icon="i-lucide-plus"
                 color="neutral"
                 variant="soft"
-                :disabled="!programmeOptions.length || form.programmes.length >= programmeOptions.length"
+                :disabled="(!!editingClientId && purchaseReadOnly) || !programmeOptions.length || form.programmes.length >= programmeOptions.length"
                 @click="addProgramme"
               />
             </div>
@@ -499,6 +502,7 @@ useSeoMeta({ title: 'Clients | Tilana Admin', robots: 'noindex, nofollow' });
                 <UFormField label="Programme" required>
                   <USelect
                     v-model="item.programVolumeId"
+                    :disabled="!!editingClientId && purchaseReadOnly"
                     :items="programmeOptions"
                     value-key="value"
                     size="xl"
@@ -506,7 +510,7 @@ useSeoMeta({ title: 'Clients | Tilana Admin', robots: 'noindex, nofollow' });
                   />
                 </UFormField>
                 <UFormField label="Price paid (ZAR)" required>
-                  <UInput v-model.number="item.priceRands" type="number" min="0" step="1" size="xl">
+                  <UInput v-model.number="item.priceRands" type="number" min="0" step="1" size="xl" :disabled="!!editingClientId && purchaseReadOnly">
                     <template #leading><span class="currency-prefix">R</span></template>
                   </UInput>
                 </UFormField>
@@ -516,7 +520,7 @@ useSeoMeta({ title: 'Clients | Tilana Admin', robots: 'noindex, nofollow' });
                   color="error"
                   variant="soft"
                   aria-label="Remove programme"
-                  :disabled="form.programmes.length === 1"
+                  :disabled="(!!editingClientId && purchaseReadOnly) || form.programmes.length === 1"
                   class="remove-programme"
                   @click="removeProgramme(index)"
                 />

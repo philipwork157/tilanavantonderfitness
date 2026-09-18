@@ -7,6 +7,7 @@ import { readZodBody } from '@server/utils/route-validation';
 import { getSupabaseAdminClient } from '@server/utils/supabase-admin';
 import { sendCustomerAccessEmail } from '@server/services/customer-access-emails';
 import { assertPaystackDatabaseEnvironment, getCustomerAccountBaseUrl } from '@server/utils/paystack-configuration';
+import { customerPurchaseHistoryCondition } from '@server/utils/customer-purchase-history';
 
 export default defineEventHandler(async (event) => {
   enforceSameOrigin(event);
@@ -24,7 +25,7 @@ export default defineEventHandler(async (event) => {
   const [buyer] = await getDatabase()
     .select({ id: clients.id, firstName: clients.firstName })
     .from(clients)
-    .innerJoin(orders, and(eq(orders.clientId, clients.id), eq(orders.status, 'paid')))
+    .innerJoin(orders, and(eq(orders.clientId, clients.id), customerPurchaseHistoryCondition()))
     .where(sql`lower(${clients.email}) = ${email}`)
     .limit(1);
 

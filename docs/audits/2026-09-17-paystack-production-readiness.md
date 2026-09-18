@@ -5,11 +5,13 @@ Date: 17 September 2026
 Original reviewed revision: `4f1a2247cc51560a5c065ae02cc0ae217a12cd3f`
 
 Remediation update: 17 September 2026 — PAY-01 through PAY-05 implemented and verified locally.
+Billing update: 18 September 2026 — prepaid purchase invoices/credits/delivery implemented locally; BILL-01 remains partial, DB-01 fixed locally.
 
 **Recommendation: do not enable live payments yet.** The basic architecture is
 sound, but deployment activation and other launch requirements remain unresolved.
 Verification, refund matching, checkout retries, environment safety and recovery
-now have local fixes and real PostgreSQL tests. Invoicing is not implemented, and other critical payment
+now have local fixes and real PostgreSQL tests. Purchase invoicing is implemented locally,
+but correction/reissue and manual billing remain open, and other critical payment
 paths still need tests. Passing builds alone do not establish payment correctness.
 
 This audit covers the Astro catalogue, basket, checkout and return page; Nuxt
@@ -23,7 +25,8 @@ have been applied only to disposable local test databases.
 ## Production readiness checklist
 
 Check an item only after its fix and acceptance checks are complete. PAY-01,
-PAY-02, PAY-03, PAY-04, and PAY-05 are implemented; all other findings remain open. A checked code
+PAY-02, PAY-03, PAY-04, PAY-05 and DB-01 are implemented; BILL-01 has partial progress.
+All other findings remain open. A checked code
 fix means locally verified, not deployed. Detailed evidence, conditions, and
 acceptance criteria remain in each finding below.
 
@@ -40,8 +43,8 @@ acceptance criteria remain in each finding below.
 - [ ] **ACCESS-01 (P2):** Send post-payment access instructions automatically with durable delivery retries.
 - [ ] **ACCESS-02 (P2):** Respect entitlement start times and preserve access across overlapping purchase/manual grants.
 - [ ] **ACCESS-03 (P2):** Prevent archived/unpublished programs from losing files owed to existing buyers.
-- [ ] **DB-01 (P2):** Enforce invoice/order customer consistency with a forward migration and database tests.
-- [ ] **DB-02 (P2):** Separate customer profile edits from immutable paid-order history and financial corrections.
+- [x] **DB-01 (P2):** Enforce invoice/order customer consistency with a forward migration and real PostgreSQL tests. Deployed legacy links still require preflight review.
+- [x] **DB-02 (P2):** Preserve recorded manual purchase history during profile edits; reject financial rewrites and reserve corrections for a separate workflow (fixed locally).
 - [ ] **SEC-01 (P2):** Add shared abuse controls, trusted ingress identity, verification throttling, and email recipient cooldowns.
 - [ ] **SEC-02 (P2):** Minimize retained provider data and define a tested retention/access policy.
 
@@ -174,7 +177,7 @@ configuration.
 | PAY-03 | P1 — fixed locally | Checkout retries create independent payable orders |
 | PAY-04 | P1 — fixed locally | Key/mode and URL validation; fail-closed database environment isolation |
 | PAY-05 | P1 — fixed locally | Durable recovery, deferred-event replay, alerts and dispute/reversal policy |
-| BILL-01 | P1 for complete billing | Invoice lifecycle is absent |
+| BILL-01 | P1 — partially fixed locally | Purchase invoices/credits implemented; correction/reissue and manual billing remain |
 | TEST-01 | P1 | Critical payment paths lack tests and deployment test gates |
 | WEB-01 | P2 | Temporary catalogue errors permanently remove basket items |
 | WEB-02 | P2 | Basket changes during submission can disagree with the charged selection |
@@ -182,8 +185,8 @@ configuration.
 | ACCESS-01 | P2 | No automatic post-payment email or durable delivery retry |
 | ACCESS-02 | P2 | Entitlement start times and overlapping grants are mishandled |
 | ACCESS-03 | P2 | Unpublishing enables removal of the last file owed to existing buyers |
-| DB-01 | P2 | Invoice/order customer consistency is not enforced |
-| DB-02 | P2 | Editing a paid manual order deletes its financial history |
+| DB-01 | P2 — fixed locally | Composite invoice/order customer FK and PostgreSQL regression test |
+| DB-02 | P2 | Fixed locally: profile edits preserve recorded manual purchase history |
 | SEC-01 | P2 | Public verification and email abuse controls need strengthening |
 | SEC-02 | P2 | Full provider payloads retain unnecessary sensitive payment data |
 
@@ -496,6 +499,25 @@ without direct database editing or duplicate fulfillment.
 
 ### BILL-01 — invoices are schema only
 
+**Update, 18 September 2026: purchase billing implemented locally; full finding
+remains open.** See [billing lifecycle and rollout](../billing.md).
+
+- [x] Confirm non-VAT sole-proprietor seller details and capture original checkout buyer snapshots.
+- [x] Issue one numbered prepaid invoice per Paystack order from immutable lines, with explicit payment linkage and safe concurrent replay.
+- [x] Provide private invoice/credit PDFs and shared admin/customer history pages.
+- [x] Deliver billing notifications through a durable, versioned SES outbox with test/live recipient isolation and retries.
+- [x] Preserve processed refund and reversal credit history without rewriting invoices or double-crediting.
+- [x] Add PostgreSQL invoice/client ownership, immutability, settlement/line consistency, credit limits and outbox relationship guards (also DB-01).
+- [x] Test invoice lifecycle, route identity/origin/contracts, PDF generation, delivery failures/concurrency and refunded-customer billing access locally.
+- [ ] Implement a controlled correction/reissue workflow and manual/coaching invoice authoring; never edit issued snapshots in place.
+- [ ] Review legacy missing buyer snapshots and multiple settled attempts through an approved billing/allocation process.
+
+The worker is disabled by default and shares the existing PAY-05 external trigger.
+No scheduler move to Fly cron is included. The two billing migrations have been
+tested only in disposable local PostgreSQL; deployment, provider/browser checks,
+SES delivery and backlog monitoring remain separate rollout gates. Original
+evidence below describes the pre-remediation state, not the new purchase code.
+
 **Evidence:** [invoice schema](../../packages/db/src/schema/invoicing.ts);
 [admin navigation](../../apps/admin/app/layouts/dashboard.vue), line 13;
 [successful payment handler](../../apps/admin/server/services/paystack.ts),
@@ -648,6 +670,14 @@ payment completion after unpublishing.
 
 ### DB-01 — invoices can refer to another customer's order
 
+**Status: fixed locally, 18 September 2026.** Billing migration
+`20260917155837_polite_shockwave.sql` adds `invoices_order_client_fk`, preserving
+nullable order links and preventing an invoice from belonging to a different
+client than its order. Real PostgreSQL regression tests prove rejection; billing
+also validates settlement currency/amount and invoice line totals. No deployed
+migration was applied. Preflight inconsistent legacy rows before rollout.
+Original evidence below describes the previous schema.
+
 **Evidence:** [invoicing.ts](../../packages/db/src/schema/invoicing.ts), lines
 15–16; [integer-key migration](../../supabase/migrations/20260906182814_slim_moon_knight.sql),
 lines 253–254.
@@ -664,6 +694,24 @@ cross-client invoice in a database integration test. Validate invoice currency,
 line totals, and settlement allocations against the intended order model.
 
 ### DB-02 — paid manual-order edits destroy historical records
+
+**Status: fixed locally, 18 September 2026.** The manual editor now locks the
+client/order and returns after profile updates for recorded purchases, without
+touching order timestamps, items, payments, entitlements or invoice links.
+Financial changes are rejected before any profile update. Only pending manual
+reservations with no paid timestamp, payment attempts or invoices can be
+replaced/settled. Failed attempts and draft invoices also protect history.
+Paid purchase fields are read-only in the admin form; server checks remain
+authoritative. PostgreSQL regressions cover repeated profile edits, atomic
+rejection, pending settlement, failed attempts, invoice links and concurrent
+settlement. No migration is required for this fix. Controlled financial
+correction authoring remains part of the open BILL-01 work. Original evidence
+below describes the pre-fix behavior.
+
+Local verification: 217 regular tests and 106 isolated PostgreSQL integration
+tests passed, including eight new manual-history regressions. Repository
+lint/type checks and the admin production build passed. No deployed data was
+changed; browser interaction and deployment checks remain rollout work.
 
 **Evidence:** [updateManualClient](../../apps/admin/server/services/client-management.ts),
 lines 234–308.

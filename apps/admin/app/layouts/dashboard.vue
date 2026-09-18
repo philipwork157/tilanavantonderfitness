@@ -10,7 +10,7 @@ const navigation = [
   { label: 'Newsletter', icon: 'i-lucide-mail', to: '/newsletter' },
   { label: 'Programs', icon: 'i-lucide-dumbbell', to: '/programs' },
   { label: 'APIs', icon: 'i-lucide-braces', to: '/api-docs' },
-  { label: 'Invoices', icon: 'i-lucide-receipt-text', disabled: true },
+  { label: 'Invoices', icon: 'i-lucide-receipt-text', to: '/invoices' },
 ];
 
 const pageTitle = computed(() => {
@@ -19,6 +19,7 @@ const pageTitle = computed(() => {
   if (route.path === '/newsletter') return 'Newsletter signups';
   if (route.path.startsWith('/programs')) return 'Programs';
   if (route.path.startsWith('/api-docs')) return 'API documentation';
+  if (route.path.startsWith('/invoices')) return 'Invoices';
   return 'Dashboard';
 });
 const initials = computed(() => {

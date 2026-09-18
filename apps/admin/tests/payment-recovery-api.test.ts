@@ -3,11 +3,13 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   requireAdminMutation: vi.fn(), requireAdmin: vi.fn(), runPaymentRecovery: vi.fn(),
   replayPaymentEvent: vi.fn(), requestPaymentRecovery: vi.fn(), getDatabase: vi.fn(),
+  runInvoiceWorker: vi.fn(),
 }));
 vi.mock('@server/utils/admin-mutation', () => ({ requireAdminMutation: mocks.requireAdminMutation }));
 vi.mock('@server/utils/admin-auth', () => ({ requireAdmin: mocks.requireAdmin }));
 vi.mock('@server/utils/database', () => ({ getDatabase: mocks.getDatabase }));
 vi.mock('@server/services/payment-recovery', () => mocks);
+vi.mock('@server/services/invoice-worker', () => ({ runInvoiceWorker: mocks.runInvoiceWorker }));
 let input: unknown;
 vi.mock('@server/utils/route-validation', () => ({
   readZodBody: async (_event: unknown, schema: { safeParse: (value: unknown) => { success: boolean; data?: unknown } }) => {
@@ -31,6 +33,7 @@ beforeEach(() => {
   mocks.requireAdminMutation.mockResolvedValue({ user: { id: 7 } });
   mocks.requireAdmin.mockResolvedValue({ user: { id: 7 } });
   mocks.runPaymentRecovery.mockResolvedValue({ processed: 1, retried: 0, alerts: { sent: 0, failed: 0 } });
+  mocks.runInvoiceWorker.mockResolvedValue({ failedOrderIds: [], delivery: { failed: 0 } });
   mocks.requestPaymentRecovery.mockResolvedValue({ queued: true });
   mocks.replayPaymentEvent.mockResolvedValue({ id: 9, processingStatus: 'processed' });
   mocks.getDatabase.mockReturnValue({ select: () => ({ from: () => ({
@@ -91,6 +94,12 @@ describe('operator and scheduler payment recovery routes', () => {
   });
   it('signals alert transport failure to the external scheduler', async () => {
     mocks.runPaymentRecovery.mockResolvedValueOnce({ alerts: { failed: 1 } });
+    await expect(internal({} as never)).rejects.toMatchObject({ statusCode: 503 });
+  });
+  it('signals billing delivery or issuance failure to the scheduler', async () => {
+    mocks.runInvoiceWorker.mockResolvedValueOnce({ failedOrderIds: [12], delivery: { failed: 0 } });
+    await expect(internal({} as never)).rejects.toMatchObject({ statusCode: 503 });
+    mocks.runInvoiceWorker.mockResolvedValueOnce({ failedOrderIds: [], delivery: { failed: 1 } });
     await expect(internal({} as never)).rejects.toMatchObject({ statusCode: 503 });
   });
 });

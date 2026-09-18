@@ -124,6 +124,24 @@ See [recovery operations](./paystack-recovery.md) for policy and activation.
 
 ## Invoices
 
+Manual client profile edits preserve all recorded sale rows and timestamps.
+The manual editor can replace/settle only pending reservations without payment
+attempts, invoices or a paid timestamp. Recorded financial changes are rejected;
+corrections must use a separate audited workflow, not delete/recreate history.
+
+The prepaid Paystack lifecycle is implemented in [billing.md](./billing.md).
+`invoices.source = 'purchase'` is unique per order and links an integer
+`settled_payment_id`. A composite order/client FK prevents ownership mismatches.
+`orders.customer_name/customer_email/customer_phone` preserve checkout buyer
+details independently of editable client profiles. `invoice_credits` preserves
+refund/reversal adjustments, with exact refund links where applicable, invoice
+locks and overage protection. `invoice_deliveries` is the versioned SES outbox;
+`invoice_processing_jobs` tracks issuance review/backoff. All have integer IDs
+and RLS. Issued purchase documents/lines and credits are immutable; deferred
+validation checks settlement and line totals. PDFs are generated privately on
+demand, not written to R2. Manual authoring/reissue is not implemented, and
+pre-existing manual rows are excluded from the new purchase history views.
+
 - `invoices` can reference an order but keeps immutable seller and client billing snapshots.
 - `invoice_items` snapshots descriptions and prices independently from the live catalogue.
 - Generated invoice PDFs can be stored privately in R2 using the invoice's R2 bucket and object key fields.

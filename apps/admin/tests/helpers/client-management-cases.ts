@@ -1,0 +1,87 @@
+import { randomUUID } from 'node:crypto';
+import { describe, expect, it } from 'vitest';
+import type { Database } from '@tilana/db/server';
+import { clients, invoices, orderItems, orders, payments, programAccess, users } from '@tilana/db/schema';
+import { eq } from 'drizzle-orm';
+import { createManualClient, updateManualClient } from '@server/services/client-management';
+import { seedPendingPayment } from './paystack-database';
+
+/** Real PostgreSQL regression coverage for profile edits and immutable manual sales. */
+export function registerClientManagementCases(getDatabase: () => Database) {
+  async function fixture(status: 'paid' | 'pending') {
+    const db = getDatabase();
+    const seeded = await seedPendingPayment(db);
+    const [item] = await db.select().from(orderItems).where(eq(orderItems.id, seeded.itemId));
+    const uuid = randomUUID();
+    await db.$client`insert into auth.users (id) values (${uuid})`;
+    const [admin] = await db.insert(users).values({ supabaseId: uuid, firstName: 'Test', lastName: 'Admin', email: `${uuid}@example.test` }).returning();
+    const input = { firstName: 'Manual', lastName: 'Buyer', email: `manual-${uuid}@example.test`, phone: '', gender: null, notes: '', purchaseStatus: status, programmes: [{ programVolumeId: item!.programVolumeId!, priceCents: 10000 }] };
+    const client = await createManualClient(input, admin!.id);
+    return { db, input, client, administratorId: admin!.id };
+  }
+  async function history(db: Database, clientId: number) {
+    const [order] = await db.select().from(orders).where(eq(orders.clientId, clientId));
+    return { order, items: await db.select().from(orderItems).where(eq(orderItems.orderId, order!.id)), payments: await db.select().from(payments).where(eq(payments.orderId, order!.id)), access: await db.select().from(programAccess).where(eq(programAccess.clientId, clientId)) };
+  }
+  describe('Manual client historical integrity', () => {
+    it('preserves every sale and access field during repeated paid profile edits', async () => {
+      const f = await fixture('paid');
+      const before = await history(f.db, f.client.id);
+      for (const firstName of ['Updated', 'Updated again']) {
+        await updateManualClient(f.client.id, { ...f.input, firstName, phone: '123', notes: 'Profile only' }, f.administratorId);
+        expect(await history(f.db, f.client.id)).toEqual(before);
+      }
+      const [profile] = await f.db.select().from(clients).where(eq(clients.id, f.client.id));
+      expect(profile).toMatchObject({ firstName: 'Updated again', phone: '123', notes: 'Profile only' });
+    });
+    it.each(['price', 'status', 'volume'])('rejects paid %s changes atomically', async (change) => {
+      const f = await fixture('paid');
+      const before = await history(f.db, f.client.id);
+      const input = { ...f.input, firstName: 'Must roll back', programmes: [...f.input.programmes] };
+      if (change === 'price') input.programmes = [{ ...input.programmes[0]!, priceCents: 9000 }];
+      if (change === 'volume') input.programmes = [{ ...input.programmes[0]!, programVolumeId: 2147483647 }];
+      if (change === 'status') input.purchaseStatus = 'pending';
+      await expect(updateManualClient(f.client.id, input, f.administratorId)).rejects.toThrow('cannot be rewritten');
+      expect(await history(f.db, f.client.id)).toEqual(before);
+      const [profile] = await f.db.select().from(clients).where(eq(clients.id, f.client.id));
+      expect(profile?.firstName).toBe('Manual');
+    });
+    it('settles a pristine pending manual reservation once and then preserves it', async () => {
+      const f = await fixture('pending');
+      const input = { ...f.input, purchaseStatus: 'paid' as const, programmes: [{ ...f.input.programmes[0]!, priceCents: 12000 }] };
+      await updateManualClient(f.client.id, input, f.administratorId);
+      const settled = await history(f.db, f.client.id);
+      expect(settled.payments).toHaveLength(1);
+      expect(settled.order).toMatchObject({ status: 'paid', totalCents: 12000 });
+      await updateManualClient(f.client.id, { ...input, notes: 'New profile note' }, f.administratorId);
+      expect(await history(f.db, f.client.id)).toEqual(settled);
+    });
+    it('does not delete failed payment attempts on a pending manual order', async () => {
+      const f = await fixture('pending');
+      const initial = await history(f.db, f.client.id);
+      await f.db.insert(payments).values({ orderId: initial.order!.id, provider: 'manual', status: 'failed', amountCents: 10000, currency: 'ZAR' });
+      const before = await history(f.db, f.client.id);
+      await updateManualClient(f.client.id, { ...f.input, notes: 'Profile edit' }, f.administratorId);
+      expect(await history(f.db, f.client.id)).toEqual(before);
+      await expect(updateManualClient(f.client.id, { ...f.input, purchaseStatus: 'paid' }, f.administratorId)).rejects.toThrow('cannot be rewritten');
+    });
+    it('preserves invoice links and prevents rewriting an invoiced pending reservation', async () => {
+      const f = await fixture('pending');
+      const before = await history(f.db, f.client.id);
+      const [invoice] = await f.db.insert(invoices).values({ invoiceNumber: `TEST-${randomUUID()}`, clientId: f.client.id, orderId: before.order!.id, sellerName: 'Test Seller', clientName: 'Original Buyer', clientEmail: f.input.email }).returning();
+      await updateManualClient(f.client.id, { ...f.input, lastName: 'Updated' }, f.administratorId);
+      expect(await history(f.db, f.client.id)).toEqual(before);
+      expect((await f.db.select().from(invoices).where(eq(invoices.id, invoice!.id)))[0]).toEqual(invoice);
+      await expect(updateManualClient(f.client.id, { ...f.input, purchaseStatus: 'paid' }, f.administratorId)).rejects.toThrow('cannot be rewritten');
+    });
+    it('serializes concurrent settlement and creates only one manual payment', async () => {
+      const f = await fixture('pending');
+      const input = { ...f.input, purchaseStatus: 'paid' as const };
+      await Promise.all([updateManualClient(f.client.id, input, f.administratorId), updateManualClient(f.client.id, input, f.administratorId)]);
+      const after = await history(f.db, f.client.id);
+      expect(after.payments).toHaveLength(1);
+      expect(after.items).toHaveLength(1);
+      expect(after.access).toHaveLength(1);
+    });
+  });
+}

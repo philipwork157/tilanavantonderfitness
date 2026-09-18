@@ -7,6 +7,8 @@ import { and, eq } from 'drizzle-orm';
 import { initializePaystackBasketCheckout, initializePaystackCheckout, processPaystackEvent } from '@server/services/paystack';
 import { hashCheckoutIntent } from '@server/services/paystack-checkout-intent';
 import { createBarrier } from './paystack-database';
+import { reconcileOrderInvoice } from '@server/services/invoice-issuance';
+import { getInvoiceDocument } from '@server/services/invoice-records';
 
 /** Register database cases in the single integration entry point sharing its fresh cluster. */
 export function registerCheckoutCases(getDatabase: () => Database) {
@@ -83,10 +85,25 @@ export function registerCheckoutCases(getDatabase: () => Database) {
       expect(fetch).toHaveBeenCalledTimes(1);
       const stored = await attempts(input);
       expect(stored).toHaveLength(1);
+      const [order] = await getDatabase().select().from(orders).where(eq(orders.id, stored[0]!.orderId));
+      expect(order).toMatchObject({ customerName: `${input.firstName} ${input.lastName}`, customerEmail: input.email, customerPhone: null });
       const items = await getDatabase().select().from(orderItems).where(eq(orderItems.orderId, stored[0]!.orderId));
       expect(items).toHaveLength(2);
       expect(items.reduce((sum, item) => sum + item.lineTotalCents, 0)).toBe(30000);
       expect(fetch.mock.calls[0]?.[1]).toMatchObject({ timeout: 10000, retry: 0, body: { amount: '30000', reference: results[0]?.reference } });
+    });
+
+    it('links a real two-volume checkout and verified fulfillment to one paid invoice', async () => {
+      const input = await basket();
+      vi.stubGlobal('$fetch', successfulInitialize());
+      const checkout = await initializePaystackBasketCheckout(input);
+      await charge(checkout.reference);
+      const [payment] = await attempts(input);
+      const id = (await reconcileOrderInvoice(payment!.orderId))!;
+      const document = await getInvoiceDocument(id);
+      expect(document.invoice).toMatchObject({ status: 'paid', totalCents: 30000, clientName: 'Test Customer', clientEmail: input.email, settledPaymentId: payment!.id });
+      expect(document.items).toHaveLength(2);
+      expect(await reconcileOrderInvoice(payment!.orderId)).toBe(id);
     });
 
     it('reuses the saved URL after a lost browser response and token refresh', async () => {

@@ -22,6 +22,7 @@ useSeoMeta({ title: 'My programs | Tilana', robots: 'noindex, nofollow' });
       <button type="button" @click="signOut">Sign out</button>
     </header>
     <section class="welcome">
+      <NuxtLink to="/account/invoices">My invoices</NuxtLink>
       <p class="eyebrow">Customer library</p>
       <h1>Welcome, {{ data?.customer.firstName }}.</h1>
       <p>Your verified purchases and available program files appear here.</p>

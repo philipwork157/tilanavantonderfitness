@@ -33,6 +33,8 @@ export const orders = pgTable(
     orderNumber: text('order_number').notNull(),
     clientId: integer('client_id').notNull().references(() => clients.id, { onDelete: 'restrict' }),
     customerEmail: text('customer_email'),
+    customerName: text('customer_name'),
+    customerPhone: text('customer_phone'),
     status: text('status').$type<OrderStatus>().notNull().default('draft'),
     currency: text('currency').notNull().default('ZAR'),
     subtotalCents: integer('subtotal_cents').notNull().default(0),

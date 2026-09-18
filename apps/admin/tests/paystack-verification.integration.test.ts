@@ -6,6 +6,8 @@ import { eq } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { registerCheckoutCases } from './helpers/paystack-checkout-cases';
 import { registerRecoveryCases } from './helpers/payment-recovery-cases';
+import { registerInvoiceCases } from './helpers/invoice-cases';
+import { registerClientManagementCases } from './helpers/client-management-cases';
 import { assertPaystackDatabaseEnvironment } from '@server/utils/paystack-configuration';
 import { linkVerifiedCustomerAccount, requireCustomer } from '@server/utils/customer-auth';
 import type { H3Event } from 'h3';
@@ -24,6 +26,8 @@ vi.mock('@server/utils/email', () => ({ getServerEmail: () => ({ sender: { send:
 let database: Database;
 registerCheckoutCases(() => database);
 registerRecoveryCases(() => database, mocks.send);
+registerInvoiceCases(() => database, mocks.send, mocks.createSupabaseAuthClient);
+registerClientManagementCases(() => database);
 
 describe('Paystack database environment isolation', () => {
   it('permits the configured test database', async () => {

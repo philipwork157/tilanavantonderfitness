@@ -19,6 +19,7 @@ interface ApiEndpointDefinition {
   query?: ApiQueryParameter[];
   successStatus?: string;
   successDescription?: string;
+  pdf?: boolean;
 }
 
 const endpoints: ApiEndpointDefinition[] = [
@@ -43,6 +44,9 @@ const endpoints: ApiEndpointDefinition[] = [
   { method: 'post', path: '/api/customer/auth/magic-link', tag: 'Customer access', summary: 'Request a customer sign-in link', description: 'Always returns the same response so customer email addresses cannot be enumerated.', security: 'public', requestSchema: 'CustomerMagicLinkRequest' },
   { method: 'get', path: '/api/customer/auth/confirm', tag: 'Customer access', summary: 'Confirm a customer magic link', security: 'public', query: [{ name: 'token_hash', description: 'Supabase email token hash.', required: true }, { name: 'type', description: 'Supabase verification type.', required: true }, { name: 'next', description: 'Safe application-relative destination.' }] },
   { method: 'get', path: '/api/customer/programs', tag: 'Customer access', summary: 'List programs available to the signed-in customer', security: 'customer' },
+  { method: 'get', path: '/api/customer/invoices', tag: 'Customer billing', summary: 'List the linked customer invoices and credit notes', security: 'customer', query: [{ name: 'before', description: 'Positive integer invoice cursor.', schema: { type: 'integer', minimum: 1 } }] },
+  { method: 'get', path: '/api/customer/invoices/{id}/pdf', tag: 'Customer billing', summary: 'Download an owned invoice PDF', security: 'customer', pdf: true },
+  { method: 'get', path: '/api/customer/invoices/{id}/credits/{creditId}', tag: 'Customer billing', summary: 'Download a credit note belonging to an owned invoice', security: 'customer', pdf: true },
   { method: 'get', path: '/api/customer/files/{id}', tag: 'Customer access', summary: 'Create a temporary private PDF download', description: 'Checks active entitlement before returning a short-lived R2 download URL.', security: 'customer' },
 
   { method: 'get', path: '/api/admin/dashboard', tag: 'Admin overview', summary: 'Read dashboard metrics', security: 'admin', query: [{ name: 'periodDays', description: 'Reporting window in days.', schema: { type: 'integer', enum: [7, 30, 90, 365], default: 30 } }] },
@@ -64,6 +68,11 @@ const endpoints: ApiEndpointDefinition[] = [
   { method: 'post', path: '/api/admin/clients/{id}/recalculate', tag: 'Admin clients', summary: 'Recalculate client coaching targets', security: 'admin', requestSchema: 'GenericRequest' },
   { method: 'post', path: '/api/admin/orders/{id}/refund', tag: 'Admin payments', summary: 'Request a full or partial Paystack refund', description: 'Protects against refund overages and keeps ambiguous provider outcomes reserved for review.', security: 'admin', requestSchema: 'RefundRequest' },
   { method: 'get', path: '/api/admin/payments/recovery', tag: 'Admin payments', summary: 'Review payment recovery jobs and failed or deferred events', security: 'admin' },
+  { method: 'get', path: '/api/admin/invoices', tag: 'Admin billing', summary: 'List issued purchase invoices and credit totals', security: 'admin', query: [{ name: 'before', description: 'Positive integer invoice cursor.', schema: { type: 'integer', minimum: 1 } }] },
+  { method: 'get', path: '/api/admin/invoices/operations', tag: 'Admin billing', summary: 'Review billing failures and pending delivery jobs', security: 'admin' },
+  { method: 'get', path: '/api/admin/invoices/{id}/pdf', tag: 'Admin billing', summary: 'Download an invoice PDF', security: 'admin', pdf: true },
+  { method: 'get', path: '/api/admin/invoices/{id}/credits/{creditId}', tag: 'Admin billing', summary: 'Download a linked credit note PDF', security: 'admin', pdf: true },
+  { method: 'post', path: '/api/admin/invoices/{id}/delivery', tag: 'Admin billing', summary: 'Expedite an unsent billing email', security: 'admin', requestSchema: 'InvoiceRetryRequest', successStatus: '202' },
   { method: 'post', path: '/api/admin/payments/recovery', tag: 'Admin payments', summary: 'Enqueue reconciliation or replay stored provider evidence', security: 'admin', requestSchema: 'RecoveryRequest' },
 
   { method: 'get', path: '/api/admin/programs', tag: 'Admin catalogue', summary: 'List all managed programs', security: 'admin' },
@@ -108,8 +117,8 @@ function pathParameters(path: string) {
     name,
     in: 'path',
     required: true,
-    description: name === 'id' ? 'Positive integer database identifier.' : 'URL-safe catalogue slug.',
-    schema: name === 'id'
+    description: name === 'id' || name === 'creditId' ? 'Positive integer database identifier.' : 'URL-safe catalogue slug.',
+    schema: name === 'id' || name === 'creditId'
       ? { type: 'integer', minimum: 1 }
       : { type: 'string', pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' },
   }));
@@ -150,7 +159,7 @@ function buildOperation(endpoint: ApiEndpointDefinition) {
     responses: {
       [successStatus]: {
         description: endpoint.successDescription ?? 'Successful response.',
-        content: { 'application/json': { schema: { $ref: '#/components/schemas/GenericResponse' } } },
+        content: endpoint.pdf ? { 'application/pdf': { schema: { type: 'string', format: 'binary' } } } : { 'application/json': { schema: { $ref: '#/components/schemas/GenericResponse' } } },
       },
       '400': { $ref: '#/components/responses/BadRequest' },
       '401': { $ref: '#/components/responses/Unauthorized' },
@@ -187,6 +196,8 @@ export function getAdminOpenApiDocument() {
       { name: 'Admin newsletter', description: 'Private newsletter campaign management.' },
       { name: 'Admin clients', description: 'Private client, coaching, and assignment management.' },
       { name: 'Admin payments', description: 'Protected payment administration.' },
+      { name: 'Admin billing', description: 'Protected invoice history and delivery operations.' },
+      { name: 'Customer billing', description: 'Owned financial documents, including refunded purchases.' },
       { name: 'Admin catalogue', description: 'Protected programs, volumes, covers, and private PDFs.' },
       { name: 'Developer documentation', description: 'Private API reference metadata.' },
     ],
@@ -203,7 +214,7 @@ export function getAdminOpenApiDocument() {
           type: 'apiKey',
           in: 'cookie',
           name: 'sb-auth-token',
-          description: 'Represents the project-scoped Supabase auth cookie linked to a customer with active program access. The exact generated cookie name varies by environment.',
+          description: 'Represents the project-scoped Supabase auth cookie linked to a customer identity. Program and file routes separately require active entitlements; billing history remains available after a refund. The exact generated cookie name varies by environment.',
         },
         paystackSignature: {
           type: 'apiKey',
@@ -220,6 +231,7 @@ export function getAdminOpenApiDocument() {
         ServerError: { description: 'The operation could not be completed.', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
       },
       schemas: {
+        InvoiceRetryRequest: { type: 'object', required: ['action'], additionalProperties: false, properties: { action: { const: 'retry-delivery' } } },
         RecoveryRequest: { oneOf: [
           { type: 'object', required: ['action', 'paymentId'], additionalProperties: false, properties: { action: { const: 'acknowledge' }, paymentId: { type: 'integer', minimum: 1 } } },
           { type: 'object', required: ['action', 'paymentId'], additionalProperties: false, properties: { action: { const: 'reconcile' }, paymentId: { type: 'integer', minimum: 1 } } },

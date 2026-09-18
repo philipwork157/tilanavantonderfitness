@@ -12,6 +12,7 @@
     "./contact": "./src/contact.ts",
     "./dashboard": "./src/dashboard.ts",
     "./identity": "./src/identity.ts",
+    "./invoices": "./src/invoices.ts",
     "./newsletter": "./src/newsletter.ts",
     "./newsletter.messages": "./src/newsletter.messages.ts",
     "./payments": "./src/payments.ts",

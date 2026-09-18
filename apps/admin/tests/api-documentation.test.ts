@@ -13,7 +13,7 @@ describe('admin API documentation', () => {
 
     assert.equal(document.openapi, '3.1.0');
     assert.equal(operations.length, documentedApiEndpointCount);
-    assert.equal(documentedApiEndpointCount, 54);
+    assert.equal(documentedApiEndpointCount, 62);
     assert.equal(new Set(operationIds).size, operationIds.length);
   });
 
@@ -26,6 +26,9 @@ describe('admin API documentation', () => {
     assert.ok(document.paths['/api/public/programs']);
     assert.ok(document.paths['/api/public/program-volumes/{slug}']);
     assert.ok(document.paths['/api/checkout/paystack/basket']);
+    assert.ok(document.paths['/api/admin/invoices']);
+    assert.deepEqual(document.paths['/api/customer/invoices/{id}/pdf']?.get?.security, [{ customerSession: [] }]);
+    assert.ok(document.paths['/api/customer/invoices/{id}/pdf']?.get?.responses['200'].content['application/pdf']);
     assert.ok(document.components.schemas.CheckoutRequest.required.includes('idempotencyKey'));
     assert.ok(document.components.schemas.BasketCheckoutRequest.required.includes('idempotencyKey'));
     assert.deepEqual(document.paths['/api/admin/openapi']?.get?.security, [{ adminSession: [] }]);

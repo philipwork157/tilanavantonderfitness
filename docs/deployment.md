@@ -182,6 +182,21 @@ future non-Fly deployment must establish the equivalent deployment-mode policy.
 
 ## Paystack and customer access
 
+### Purchase billing rollout (BILL-01)
+
+Follow [billing.md](./billing.md) before activation. Review/apply
+`20260917155837_polite_shockwave.sql` and
+`20260917155928_marvelous_iron_patriot.sql`; these invoice migrations have been
+tested only in disposable local databases. Billing defaults to disabled.
+Configure Fly runtime `NUXT_INVOICE_BILLING_ENABLED=true`, plus required
+`NUXT_INVOICE_DEVELOPMENT_RECIPIENT` in test mode and existing SES
+credentials/verified sender. Live delivery never uses the test redirect.
+The protected PAY-05 scheduler invokes billing after recovery; activate it
+and monitor issuance/email backlogs independently. This does not move scheduling
+to Fly cron or deploy anything. Historical purchases without original buyer
+snapshots and inconsistent legacy invoice/client links need review, not invented
+historical data or automatic financial ownership edits.
+
 ### Recovery worker rollout (PAY-05)
 
 Review and apply `20260917151828_bored_sebastian_shaw.sql` before deploying the

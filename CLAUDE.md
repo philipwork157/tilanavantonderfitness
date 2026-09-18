@@ -249,6 +249,15 @@ state and separate `payment_disputes` records. Never guess unknown bank outcomes
 
 ## Customer access, email, and files
 
+Purchase billing is documented in `docs/billing.md`. New checkout orders capture
+original buyer name/email/phone. The disabled-by-default invoice worker shares
+the protected recovery scheduler, issues immutable prepaid non-VAT purchase
+snapshots, links exactly one settled payment, and creates provider-backed credit
+notes without editing issued invoices. PDFs are private server-generated
+documents, independent of program entitlement. SES uses durable versioned outbox
+leases and required safe test-inbox routing. Manual billing/correction authoring
+and rollout validation remain outstanding; do not claim BILL-01 is fully closed.
+
 After payment, the customer requests access using the purchase email address.
 The Nuxt server asks Supabase Admin Auth to generate a passwordless token without
 using Supabase SMTP. A branded HTML email is built in the project and delivered

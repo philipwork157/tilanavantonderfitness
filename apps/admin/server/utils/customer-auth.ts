@@ -5,6 +5,7 @@ import type { H3Event } from 'h3';
 import { createSupabaseAuthClient } from './supabase-auth';
 import { getDatabase } from './database';
 import { assertPaystackDatabaseEnvironment } from '@server/utils/paystack-configuration';
+import { customerPurchaseHistoryCondition } from './customer-purchase-history';
 
 export async function linkVerifiedCustomerAccount(event: H3Event) {
   await assertPaystackDatabaseEnvironment();
@@ -26,7 +27,7 @@ export async function linkVerifiedCustomerAccount(event: H3Event) {
         lastName: clients.lastName,
       })
       .from(clients)
-      .innerJoin(orders, and(eq(orders.clientId, clients.id), eq(orders.status, 'paid')))
+      .innerJoin(orders, and(eq(orders.clientId, clients.id), customerPurchaseHistoryCondition()))
       .where(sql`lower(${clients.email}) = ${email}`)
       .limit(1);
 

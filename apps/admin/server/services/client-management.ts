@@ -2,6 +2,7 @@ import type { AdminClientCreateRequest, AdminClientUpdateRequest } from '@tilana
 import type { Database } from '@tilana/db/server';
 import {
   clients,
+  invoices,
   orderItems,
   orders,
   paymentRefunds,
@@ -22,7 +23,7 @@ export class ClientEmailExistsError extends Error {
 
 export class ClientNotEditableError extends Error {
   constructor() {
-    super('Automated purchases cannot be rewritten from the manual client editor.');
+    super('Recorded purchases cannot be rewritten from the client editor. Keep programmes, prices and payment status unchanged when editing a profile.');
   }
 }
 
@@ -221,7 +222,8 @@ export async function updateManualClient(
       .select({ id: clients.id })
       .from(clients)
       .where(eq(clients.id, clientId))
-      .limit(1);
+      .limit(1)
+      .for('update');
     if (!client) return null;
 
     const [duplicateEmail] = await transaction
@@ -232,12 +234,36 @@ export async function updateManualClient(
     if (duplicateEmail) throw new ClientEmailExistsError();
 
     const existingOrders = await transaction
-      .select({ id: orders.id, orderNumber: orders.orderNumber })
+      .select({ id: orders.id, orderNumber: orders.orderNumber, status: orders.status, paidAt: orders.paidAt })
       .from(orders)
-      .where(eq(orders.clientId, clientId));
+      .where(eq(orders.clientId, clientId))
+      .for('update');
 
     if (existingOrders.length > 1 || existingOrders.some((order) => !order.orderNumber.startsWith('MAN-'))) {
       throw new ClientNotEditableError();
+    }
+
+    const existingOrder = existingOrders[0];
+    let preservePurchase = false;
+    if (existingOrder) {
+      const [payment] = await transaction.select({ id: payments.id }).from(payments)
+        .where(eq(payments.orderId, existingOrder.id)).limit(1);
+      const [invoice] = await transaction.select({ id: invoices.id }).from(invoices)
+        .where(eq(invoices.orderId, existingOrder.id)).limit(1);
+      // Only an unpaid, uninvoiced pending reservation can be replaced here.
+      // Preserve even failed/pending payment attempts rather than deleting audit history.
+      preservePurchase = existingOrder.status !== 'pending' || existingOrder.paidAt !== null || !!payment || !!invoice;
+      if (preservePurchase) {
+        const items = await transaction.select().from(orderItems)
+          .where(eq(orderItems.orderId, existingOrder.id));
+        const unchanged = input.purchaseStatus === existingOrder.status
+          && items.length === input.programmes.length
+          && items.every((item) => item.quantity === 1 && input.programmes.some((assignment) =>
+            assignment.programVolumeId === item.programVolumeId
+            && assignment.priceCents === item.unitPriceCents
+            && assignment.priceCents === item.lineTotalCents));
+        if (!unchanged) throw new ClientNotEditableError();
+      }
     }
 
     await transaction
@@ -252,6 +278,12 @@ export async function updateManualClient(
         updatedAt: new Date(),
       })
       .where(eq(clients.id, clientId));
+
+    // A profile-only edit must not touch order timestamps, items, payments,
+    // entitlements, or invoices. Financial corrections need a separate workflow.
+    if (preservePurchase && existingOrder) {
+      return { id: clientId, orderNumber: existingOrder.orderNumber };
+    }
 
     const totalCents = input.programmes.reduce((total, item) => total + item.priceCents, 0);
     const isPaid = input.purchaseStatus === 'paid';
@@ -272,7 +304,7 @@ export async function updateManualClient(
           createdByUserId: administratorUserId,
           paidAt: isPaid ? now : null,
         })
-        .returning({ id: orders.id, orderNumber: orders.orderNumber });
+        .returning({ id: orders.id, orderNumber: orders.orderNumber, status: orders.status, paidAt: orders.paidAt });
     } else {
       const existingItems = await transaction
         .select({ id: orderItems.id })
@@ -282,7 +314,6 @@ export async function updateManualClient(
       if (itemIds.length) {
         await transaction.delete(programAccess).where(inArray(programAccess.orderItemId, itemIds));
       }
-      await transaction.delete(payments).where(eq(payments.orderId, order.id));
       await transaction.delete(orderItems).where(eq(orderItems.orderId, order.id));
       await transaction
         .update(orders)

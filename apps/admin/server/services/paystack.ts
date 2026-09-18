@@ -233,6 +233,8 @@ export async function initializePaystackBasketCheckout(input: BasketCheckoutRequ
         orderNumber,
         clientId: customer.id,
         customerEmail: customer.email,
+        customerName: `${input.firstName.trim()} ${input.lastName.trim()}`,
+        customerPhone: input.phone.trim() || null,
         status: 'pending',
         currency: 'ZAR',
         subtotalCents: totalCents,
