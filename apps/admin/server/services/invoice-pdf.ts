@@ -7,7 +7,7 @@ type InvoiceDocument = Awaited<ReturnType<typeof getInvoiceDocument>>;
 
 /** Generate private PDFs solely from issued snapshots. Font bytes come from bundled server assets. */
 export async function renderInvoicePdf(document: InvoiceDocument, fontBytes: Uint8Array) {
-  const { invoice, items, credit } = document;
+  const { invoice, items, credit, edition } = document;
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
   const font = await pdf.embedFont(fontBytes, { subset: true });
@@ -21,8 +21,15 @@ export async function renderInvoicePdf(document: InvoiceDocument, fontBytes: Uin
     if ([...clean].some(character => !glyphs.has(character.codePointAt(0)!))) throw new Error('Invoice text requires a supported PDF font.');
     let remaining = clean;
     do {
-      let length = remaining.length;
-      while (length > 1 && font.widthOfTextAtSize(remaining.slice(0, length), size) > 490) length--;
+      // Binary search prevents long descriptions from producing quadratic width scans.
+      let lower = 1;
+      let upper = remaining.length;
+      let length = 1;
+      while (lower <= upper) {
+        const candidate = Math.floor((lower + upper) / 2);
+        if (font.widthOfTextAtSize(remaining.slice(0, candidate), size) <= 490) { length = candidate; lower = candidate + 1; }
+        else upper = candidate - 1;
+      }
       // Avoid splitting surrogate pairs; prefer a word boundary for wrapped prose.
       if (length < remaining.length) {
         const space = remaining.lastIndexOf(' ', length);
@@ -38,22 +45,28 @@ export async function renderInvoicePdf(document: InvoiceDocument, fontBytes: Uin
   line(invoice.sellerName, 23);
   for (const address of (invoice.sellerAddress || '').split('\n')) line(address);
   y -= 18;
-  line(credit ? 'CREDIT NOTE' : 'INVOICE', 20);
+  line(credit ? 'CREDIT NOTE' : invoice.status === 'draft' ? 'DRAFT INVOICE' : invoice.status === 'void' ? 'VOID INVOICE' : 'INVOICE', 20);
   line(credit?.creditNumber ?? invoice.invoiceNumber, 13);
-  line(`Issued: ${credit ? formatBillingDate(credit.issuedAt) : invoice.issueDate}`);
+  line(`Issued: ${credit ? formatBillingDate(credit.issuedAt) : invoice.issueDate || 'Not issued'}`);
+  if (edition) {
+    line(`Reissued edition ${edition.id}: ${formatBillingDate(edition.issuedAt)}`);
+    line(`Original invoice: ${invoice.invoiceNumber}. No change to amounts or ownership.`);
+    line(`Correction: ${edition.reason}`);
+  }
+  if (invoice.replacesInvoiceId) line(`Replaces void invoice ID: ${invoice.replacesInvoiceId}`);
   if (credit) line(`Original invoice: ${invoice.invoiceNumber}`);
   else line(`Payment received: ${invoice.paidAt ? formatBillingDate(invoice.paidAt) : 'Not recorded'}`);
   y -= 15;
   line('Customer', 13);
-  line(invoice.clientName);
+  line(edition?.clientName ?? invoice.clientName);
   line(invoice.clientEmail);
-  if (invoice.clientAddress) line(invoice.clientAddress);
+  if (edition?.clientAddress ?? invoice.clientAddress) line((edition?.clientAddress ?? invoice.clientAddress)!);
   y -= 18;
   if (credit) {
     line(credit.reason === 'refund' ? 'Processed payment refund' : 'Verified payment reversal');
     line(`Credit amount: ${formatInvoiceMoney(credit.amountCents, invoice.currency)}`, 14);
   } else {
-    line('Purchased programs', 13);
+    line('Items and services', 13);
     for (const item of items) {
       line(item.description);
       line(`${item.quantity} x ${formatInvoiceMoney(item.unitPriceCents, invoice.currency)}     ${formatInvoiceMoney(item.lineTotalCents, invoice.currency)}`);
@@ -61,7 +74,7 @@ export async function renderInvoicePdf(document: InvoiceDocument, fontBytes: Uin
     }
     line(`Subtotal: ${formatInvoiceMoney(invoice.subtotalCents, invoice.currency)}`);
     if (invoice.discountCents) line(`Discount: ${formatInvoiceMoney(invoice.discountCents, invoice.currency)}`);
-    line(`Total paid: ${formatInvoiceMoney(invoice.totalCents, invoice.currency)}`, 14);
+    line(`${invoice.status === 'paid' ? 'Total paid' : 'Invoice total'}: ${formatInvoiceMoney(invoice.totalCents, invoice.currency)}`, 14);
   }
   y -= 20;
   line(invoice.notes || '');

@@ -1,9 +1,10 @@
 import { and, asc, eq, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
-import { invoiceCredits, invoiceDeliveries, invoiceItems, invoiceProcessingJobs, invoices, orderItems, orders, payments, paymentRefunds } from '@tilana/db/schema';
+import { invoiceCredits, invoiceDeliveries, invoiceItems, invoiceProcessingJobs, invoicePurchaseReviews, invoices, orderItems, orders, payments, paymentRefunds } from '@tilana/db/schema';
 import { getDatabase } from '@server/utils/database';
 import { assertPaystackDatabaseEnvironment } from '@server/utils/paystack-configuration';
 import { INVOICE_SELLER, validateInvoicePurchase } from './invoice-policy';
 import { formatBillingDate } from '@tilana/contracts/invoices';
+import { assertBillingTextSupported } from '@server/utils/billing-font';
 
 /** Issue from settled server evidence. Order serialization plus unique indexes make retries safe. */
 export async function reconcileOrderInvoice(orderId: number) {
@@ -18,15 +19,23 @@ export async function reconcileOrderInvoice(orderId: number) {
     )).orderBy(asc(payments.id));
     if (!settled.length) return null;
     // More than one successful attempt requires human allocation, not invented accounting.
-    if (settled.length !== 1) throw new Error('Multiple settled attempts require billing review.');
-    const payment = settled[0]!;
+    const [review] = await transaction.select().from(invoicePurchaseReviews).where(eq(invoicePurchaseReviews.orderId, orderId));
+    if (settled.length !== 1 && (!review || settled.some(payment => payment.id !== review.paymentId
+      && (!['refunded', 'reversed'].includes(payment.status) || payment.refundedAmountCents !== payment.amountCents)))) {
+      throw new Error('Multiple settled attempts require billing review.');
+    }
+    const payment = (review ? settled.find(payment => payment.id === review.paymentId) : settled[0])!;
+    if (!payment) throw new Error('Approved settlement is no longer eligible.');
     let [invoice] = await transaction.select().from(invoices).where(and(eq(invoices.orderId, order.id), eq(invoices.source, 'purchase')));
     if (!invoice) {
       const items = await transaction.select().from(orderItems).where(eq(orderItems.orderId, order.id)).orderBy(asc(orderItems.id));
       validateInvoicePurchase(order, payment, items);
-      if (!order.customerEmail || !order.customerName || !payment.paidAt) {
+      const buyerName = order.customerName || review?.clientName;
+      const buyerEmail = order.customerEmail || review?.clientEmail;
+      if (!buyerEmail || !buyerName || !payment.paidAt) {
         throw new Error('Missing original buyer snapshot requires billing review.');
       }
+      await assertBillingTextSupported([buyerName, buyerEmail, ...items.map(item => item.description)]);
       const [sequence] = await transaction.execute<{ value: string }>(sql`select nextval('billing_document_number')::text as value`);
       const issuedAt = new Date();
       [invoice] = await transaction.insert(invoices).values({
@@ -34,7 +43,7 @@ export async function reconcileOrderInvoice(orderId: number) {
         source: 'purchase', settledPaymentId: payment.id, clientId: order.clientId, orderId: order.id,
         status: 'draft', currency: order.currency, subtotalCents: order.subtotalCents,
         discountCents: order.discountCents, taxCents: 0, totalCents: order.totalCents,
-        clientName: order.customerName, clientEmail: order.customerEmail, clientPhone: order.customerPhone,
+        clientName: buyerName, clientEmail: buyerEmail, clientPhone: order.customerPhone || review?.clientPhone,
         issueDate: formatBillingDate(issuedAt), issuedAt, paidAt: payment.paidAt,
       }).returning();
       if (!invoice) throw new Error('Invoice issuance failed.');

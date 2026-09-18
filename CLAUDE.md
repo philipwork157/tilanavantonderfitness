@@ -255,8 +255,12 @@ the protected recovery scheduler, issues immutable prepaid non-VAT purchase
 snapshots, links exactly one settled payment, and creates provider-backed credit
 notes without editing issued invoices. PDFs are private server-generated
 documents, independent of program entitlement. SES uses durable versioned outbox
-leases and required safe test-inbox routing. Manual billing/correction authoring
-and rollout validation remain outstanding; do not claim BILL-01 is fully closed.
+leases and required safe test-inbox routing. Manual/coaching billing uses
+explicit draft/issue/evidenced-payment/refund commands, immutable corrections,
+replacement links and evidence-backed legacy reviews. Never fabricate Paystack
+outcomes through manual actions or grant program access merely by issuing a
+coaching invoice. BILL-01 code is implemented locally; deployment, accountant
+review and actual browser/provider/SES rollout evidence remain required.
 
 After payment, the customer requests access using the purchase email address.
 The Nuxt server asks Supabase Admin Auth to generate a passwordless token without

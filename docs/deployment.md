@@ -188,6 +188,14 @@ Follow [billing.md](./billing.md) before activation. Review/apply
 `20260917155837_polite_shockwave.sql` and
 `20260917155928_marvelous_iron_patriot.sql`; these invoice migrations have been
 tested only in disposable local databases. Billing defaults to disabled.
+The manual/coaching, reissue and review implementation additionally requires
+`20260918054700_free_spirit.sql`, `20260918054905_steady_quasar.sql` and
+`20260918060107_grey_spot.sql`. Review all forward SQL, existing relationships
+and accounting policy before deployment. Nothing here adopts legacy manual
+invoice rows automatically or authorizes deployed database changes. Verify
+actual browser guards/ownership, issued-but-unpaid billing login, confirmed
+manual receipt/refund, void/full-credit replacement and separate original/reissue
+PDF downloads before enabling customer delivery.
 Configure Fly runtime `NUXT_INVOICE_BILLING_ENABLED=true`, plus required
 `NUXT_INVOICE_DEVELOPMENT_RECIPIENT` in test mode and existing SES
 credentials/verified sender. Live delivery never uses the test redirect.

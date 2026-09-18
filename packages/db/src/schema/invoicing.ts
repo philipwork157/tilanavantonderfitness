@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { check, date, foreignKey, index, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { type AnyPgColumn, check, date, foreignKey, index, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { programVolumes } from './catalog';
 import { clients, users } from './identity';
 import { orders, payments, paymentRefunds } from './sales';
@@ -13,6 +13,8 @@ export const invoices = pgTable(
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
     invoiceNumber: text('invoice_number').notNull(),
     source: text('source').$type<'manual' | 'purchase'>().notNull().default('manual'),
+    managed: integer('managed').notNull().default(0),
+    replacesInvoiceId: integer('replaces_invoice_id').references((): AnyPgColumn => invoices.id, { onDelete: 'restrict' }),
     settledPaymentId: integer('settled_payment_id').references(() => payments.id, { onDelete: 'restrict' }),
     reconciledAt: timestamp('reconciled_at', { withTimezone: true }),
     clientId: integer('client_id').notNull().references(() => clients.id, { onDelete: 'restrict' }),
@@ -45,7 +47,10 @@ export const invoices = pgTable(
   },
   (table) => [
     uniqueIndex('invoices_invoice_number_unique').on(table.invoiceNumber),
+    uniqueIndex('invoices_replacement_unique').on(table.replacesInvoiceId),
+    check('invoices_managed_valid', sql`${table.managed} in (0, 1)`),
     uniqueIndex('invoices_purchase_order_unique').on(table.orderId).where(sql`${table.source} = 'purchase'`),
+    uniqueIndex('invoices_managed_order_unique').on(table.orderId).where(sql`${table.managed} = 1`),
     foreignKey({ name: 'invoices_order_client_fk', columns: [table.orderId, table.clientId], foreignColumns: [orders.id, orders.clientId] }).onDelete('restrict'),
     check('invoices_source_valid', sql`${table.source} in ('manual', 'purchase')`),
     check('invoices_purchase_settlement_present', sql`${table.source} <> 'purchase' or (${table.orderId} is not null and ${table.settledPaymentId} is not null and ${table.status} in ('draft', 'paid') and ${table.taxCents} = 0 and ${table.sellerTaxNumber} is null)`),
@@ -91,18 +96,37 @@ export const invoiceCredits = pgTable('invoice_credits', {
   index('invoice_credits_invoice_idx').on(table.invoiceId),
 ]).enableRLS();
 
-/** Transactional outbox: delivery failures cannot roll back payment or invoice issuance. */
+/** Append-only non-financial reissues keep the original invoice and settlement intact. */
+export const invoiceEditions = pgTable('invoice_editions', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  invoiceId: integer('invoice_id').notNull().references(() => invoices.id, { onDelete: 'restrict' }),
+  clientName: text('client_name').notNull(),
+  clientAddress: text('client_address'),
+  clientPhone: text('client_phone'),
+  reason: text('reason').notNull(),
+  createdByUserId: integer('created_by_user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  issuedAt: timestamp('issued_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [index('invoice_editions_invoice_idx').on(table.invoiceId),
+  check('invoice_editions_reason_length', sql`char_length(${table.reason}) between 5 and 1000`),
+  check('invoice_editions_name_length', sql`char_length(${table.clientName}) between 1 and 200`),
+]).enableRLS();
+
+/** Each reissue has a separate outbox record; initial and credit targets remain unique. */
 export const invoiceDeliveries = pgTable('invoice_deliveries', {
   id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
   invoiceId: integer('invoice_id').notNull().references(() => invoices.id, { onDelete: 'restrict' }),
   creditId: integer('credit_id').references(() => invoiceCredits.id, { onDelete: 'restrict' }),
+  editionId: integer('edition_id').references(() => invoiceEditions.id, { onDelete: 'restrict' }),
   attempts: integer('attempts').notNull().default(0),
   nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
   leaseUntil: timestamp('lease_until', { withTimezone: true }),
   leaseVersion: integer('lease_version').notNull().default(0),
   sentAt: timestamp('sent_at', { withTimezone: true }),
+  canceledAt: timestamp('canceled_at', { withTimezone: true }),
 }, (table) => [
-  uniqueIndex('invoice_deliveries_invoice_unique').on(table.invoiceId).where(sql`${table.creditId} is null`),
+  uniqueIndex('invoice_deliveries_invoice_unique').on(table.invoiceId).where(sql`${table.creditId} is null and ${table.editionId} is null`),
+  uniqueIndex('invoice_deliveries_edition_unique').on(table.editionId),
+  check('invoice_deliveries_single_document', sql`${table.creditId} is null or ${table.editionId} is null`),
   uniqueIndex('invoice_deliveries_credit_unique').on(table.creditId),
   check('invoice_deliveries_attempts_valid', sql`${table.attempts} >= 0 and ${table.leaseVersion} >= 0`),
   index('invoice_deliveries_due_idx').on(table.nextAttemptAt),
@@ -141,3 +165,34 @@ export const invoiceItems = pgTable(
     index('invoice_items_invoice_idx').on(table.invoiceId),
   ],
 ).enableRLS();
+
+/** Immutable administrator evidence for legacy snapshots and resolved extra attempts. */
+export const invoicePurchaseReviews = pgTable('invoice_purchase_reviews', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  orderId: integer('order_id').notNull().references(() => orders.id, { onDelete: 'restrict' }),
+  paymentId: integer('payment_id').notNull().references(() => payments.id, { onDelete: 'restrict' }),
+  clientName: text('client_name').notNull(),
+  clientEmail: text('client_email').notNull(),
+  clientPhone: text('client_phone'),
+  evidence: text('evidence').notNull(),
+  createdByUserId: integer('created_by_user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [uniqueIndex('invoice_purchase_reviews_order_unique').on(table.orderId),
+  check('invoice_purchase_reviews_evidence_length', sql`char_length(${table.evidence}) between 10 and 1000`),
+]).enableRLS();
+
+/** Request hashes, actor and resulting records make financial admin retries safe and auditable. */
+export const invoiceCommands = pgTable('invoice_commands', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  keyHash: text('key_hash').notNull(),
+  requestHash: text('request_hash').notNull(),
+  action: text('action').notNull(),
+  reason: text('reason').notNull(),
+  invoiceId: integer('invoice_id').references(() => invoices.id, { onDelete: 'restrict' }),
+  editionId: integer('edition_id').references(() => invoiceEditions.id, { onDelete: 'restrict' }),
+  orderId: integer('order_id').references(() => orders.id, { onDelete: 'restrict' }),
+  createdByUserId: integer('created_by_user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [uniqueIndex('invoice_commands_key_unique').on(table.keyHash),
+  check('invoice_commands_hashes_valid', sql`${table.keyHash} ~ '^[a-f0-9]{64}$' and ${table.requestHash} ~ '^[a-f0-9]{64}$'`),
+]).enableRLS();

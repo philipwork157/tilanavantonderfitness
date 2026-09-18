@@ -5,13 +5,13 @@ Date: 17 September 2026
 Original reviewed revision: `4f1a2247cc51560a5c065ae02cc0ae217a12cd3f`
 
 Remediation update: 17 September 2026 — PAY-01 through PAY-05 implemented and verified locally.
-Billing update: 18 September 2026 — prepaid purchase invoices/credits/delivery implemented locally; BILL-01 remains partial, DB-01 fixed locally.
+Billing update: 18 September 2026 — BILL-01 implemented locally, including manual/coaching lifecycle, original-preserving reissues and evidence-backed review. DB-01 and DB-02 fixed locally. Rollout/accounting review remains outstanding.
 
 **Recommendation: do not enable live payments yet.** The basic architecture is
 sound, but deployment activation and other launch requirements remain unresolved.
 Verification, refund matching, checkout retries, environment safety and recovery
-now have local fixes and real PostgreSQL tests. Purchase invoicing is implemented locally,
-but correction/reissue and manual billing remain open, and other critical payment
+now have local fixes and real PostgreSQL tests. Purchase/manual invoicing,
+correction/reissue and settlement/refund history are implemented locally; other critical payment
 paths still need tests. Passing builds alone do not establish payment correctness.
 
 This audit covers the Astro catalogue, basket, checkout and return page; Nuxt
@@ -25,7 +25,7 @@ have been applied only to disposable local test databases.
 ## Production readiness checklist
 
 Check an item only after its fix and acceptance checks are complete. PAY-01,
-PAY-02, PAY-03, PAY-04, PAY-05 and DB-01 are implemented; BILL-01 has partial progress.
+PAY-02, PAY-03, PAY-04, PAY-05, BILL-01, DB-01 and DB-02 are implemented locally.
 All other findings remain open. A checked code
 fix means locally verified, not deployed. Detailed evidence, conditions, and
 acceptance criteria remain in each finding below.
@@ -35,7 +35,7 @@ acceptance criteria remain in each finding below.
 - [x] **PAY-03 (P1):** Make checkout retries under the same persistent intent idempotent and prevent duplicate payable orders.
 - [x] **PAY-04 (P1, conditional):** Validate Paystack key/mode and URLs; quarantine mixed-mode databases before payment operations and customer entitlement consumption. Deployed resource isolation remains a separate launch gate.
 - [x] **PAY-05 (P1):** Add durable payment/refund recovery, controlled replay, operator alerts and dispute/reversal access policy. Deployment, scheduler activation and real-provider validation remain launch gates.
-- [ ] **BILL-01 (P1 for complete billing):** Implement invoice creation, issue/delivery, settlement, and refund/credit handling.
+- [x] **BILL-01 (P1):** Implement purchase/manual invoice creation, issue/delivery, evidenced settlement/refunds, original-preserving reissues, financial replacements and legacy review. Deployment, accounting review and actual browser/provider/SES checks remain launch gates.
 - [ ] **TEST-01 (P1):** Cover the remaining critical payment/API/browser paths and gate deployment on automated tests. PAY-01's new tests are only partial progress here.
 - [ ] **WEB-01 (P2):** Preserve basket items during temporary catalogue errors.
 - [ ] **WEB-02 (P2):** Keep the submitted basket and pending checkout references consistent during edits/retries.
@@ -177,7 +177,7 @@ configuration.
 | PAY-03 | P1 — fixed locally | Checkout retries create independent payable orders |
 | PAY-04 | P1 — fixed locally | Key/mode and URL validation; fail-closed database environment isolation |
 | PAY-05 | P1 — fixed locally | Durable recovery, deferred-event replay, alerts and dispute/reversal policy |
-| BILL-01 | P1 — partially fixed locally | Purchase invoices/credits implemented; correction/reissue and manual billing remain |
+| BILL-01 | P1 — fixed locally | Purchase/manual billing, immutable reissues/replacements, settlement/refunds and legacy review implemented; rollout pending |
 | TEST-01 | P1 | Critical payment paths lack tests and deployment test gates |
 | WEB-01 | P2 | Temporary catalogue errors permanently remove basket items |
 | WEB-02 | P2 | Basket changes during submission can disagree with the charged selection |
@@ -499,8 +499,9 @@ without direct database editing or duplicate fulfillment.
 
 ### BILL-01 — invoices are schema only
 
-**Update, 18 September 2026: purchase billing implemented locally; full finding
-remains open.** See [billing lifecycle and rollout](../billing.md).
+**Status: implemented and verified locally, 18 September 2026.** See
+[billing lifecycle and rollout](../billing.md). This does not mark deployment,
+real financial/email tests or legal/accounting approval as completed.
 
 - [x] Confirm non-VAT sole-proprietor seller details and capture original checkout buyer snapshots.
 - [x] Issue one numbered prepaid invoice per Paystack order from immutable lines, with explicit payment linkage and safe concurrent replay.
@@ -509,14 +510,33 @@ remains open.** See [billing lifecycle and rollout](../billing.md).
 - [x] Preserve processed refund and reversal credit history without rewriting invoices or double-crediting.
 - [x] Add PostgreSQL invoice/client ownership, immutability, settlement/line consistency, credit limits and outbox relationship guards (also DB-01).
 - [x] Test invoice lifecycle, route identity/origin/contracts, PDF generation, delivery failures/concurrency and refunded-customer billing access locally.
-- [ ] Implement a controlled correction/reissue workflow and manual/coaching invoice authoring; never edit issued snapshots in place.
-- [ ] Review legacy missing buyer snapshots and multiple settled attempts through an approved billing/allocation process.
+- [x] Implement controlled non-financial reissues, manual/coaching draft/issue/payment/refund authoring and void/full-credit replacements; preserve all original records.
+- [x] Provide evidence-backed legacy snapshot/allocation approval with original-evidence inspection, immutable actor/reason records and fail-closed unresolved overpayments.
+- [x] Add durable admin-command idempotency, private edition PDFs/outbox targets, billed manual integrity guards and billing-only login without programme grants.
+- [ ] Apply reviewed migrations, activate the worker/SES safely and review actual legacy records in the intended environment.
+- [ ] Obtain accounting review and validate actual authenticated browser, Paystack and SES flows before live enablement.
 
 The worker is disabled by default and shares the existing PAY-05 external trigger.
-No scheduler move to Fly cron is included. The two billing migrations have been
+No scheduler move to Fly cron is included. All five billing migrations have been
 tested only in disposable local PostgreSQL; deployment, provider/browser checks,
 SES delivery and backlog monitoring remain separate rollout gates. Original
-evidence below describes the pre-remediation state, not the new purchase code.
+evidence below describes the pre-remediation state, not the implemented code.
+
+Manual bank/cash payment and refund commands record administrator-confirmed
+evidence; they never move money. Paystack documents reject manual settlement,
+refund and void overrides. Partial payments/instalments are deliberately not
+supported. Reissues cannot alter amounts, customer ownership or recipient email;
+financial manual replacements require a void or fully credited original.
+Existing paid manual program purchases can be invoiced without duplicating
+orders/payments/access. Confirmed full manual refunds reuse the shared entitlement
+boundary, retaining independent paid purchases. Legacy mixed/unresolved payment
+histories and conflicting original snapshots remain blocked, not guessed.
+
+Local verification passed: 237 regular tests, 123 isolated PostgreSQL integration
+tests (17 new billing-administration regressions), repository lint/type checks,
+migration consistency checks and both app production builds. Synthetic original,
+reissued and unpaid service PDFs were rendered for visual QA. No deployed
+migrations, live provider calls or real customer emails were performed.
 
 **Evidence:** [invoice schema](../../packages/db/src/schema/invoicing.ts);
 [admin navigation](../../apps/admin/app/layouts/dashboard.vue), line 13;
@@ -705,7 +725,7 @@ Paid purchase fields are read-only in the admin form; server checks remain
 authoritative. PostgreSQL regressions cover repeated profile edits, atomic
 rejection, pending settlement, failed attempts, invoice links and concurrent
 settlement. No migration is required for this fix. Controlled financial
-correction authoring remains part of the open BILL-01 work. Original evidence
+correction authoring is now implemented under BILL-01. Original evidence
 below describes the pre-fix behavior.
 
 Local verification: 217 regular tests and 106 isolated PostgreSQL integration
@@ -804,8 +824,9 @@ individual nonnegative-amount checks enforce these relationships.
    using [recovery operations](../paystack-recovery.md).
 3. PAY-04 code checks are implemented locally. Verify deployed resource
    isolation and the reviewed test-to-live transition before launch.
-4. Complete billing, notifications, and historical integrity
-   (BILL-01, DB-01, DB-02, ACCESS-01).
+4. BILL-01, DB-01 and DB-02 are implemented locally. Complete automatic purchase
+   access notifications (ACCESS-01) and the separate billing rollout/accounting
+   review gates.
 5. Resolve basket/return-page behavior, entitlement lifecycle, and abuse/data
    retention findings. Add the corresponding API and browser tests.
 6. Gate deployment on those tests. In an isolated test environment, execute a

@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import InvoiceHistory from '@app/components/invoices/InvoiceHistory.vue';
+import BillingTools from '@app/components/invoices/BillingTools.vue';
 
 /** Protected by the existing administrator middleware and role-checked API. */
 definePageMeta({ layout: 'dashboard' });
 useSeoMeta({ title: 'Invoices | Tilana', robots: 'noindex, nofollow' });
 const { data: operations, error: operationsError, refresh } = await useFetch('/api/admin/invoices/operations');
 const retryError = ref(false);
+const historyVersion = ref(0);
+/** Refresh both bounded operational queues and shared invoice history after a command. */
+async function billingChanged() { historyVersion.value++; await refresh(); }
 
 /** Expedite only durable unsent records through the same-origin administrator API. */
 async function retryDelivery(invoiceId: number) {
@@ -20,7 +24,8 @@ async function retryDelivery(invoiceId: number) {
 <template>
   <div>
     <h1>Invoices</h1>
-    <p>Issued purchase invoices and traceable refund or reversal credit notes.</p>
+    <p>Purchase and manual/coaching invoices, original documents, audited reissues and credit notes.</p>
+    <BillingTools @changed="billingChanged" />
     <p v-if="operationsError" role="alert">Billing operations could not be loaded.</p>
     <p v-if="retryError" role="alert">Delivery retry could not be queued. Try again later.</p>
     <section v-if="operations?.review.length" aria-label="Billing review">
@@ -34,6 +39,6 @@ async function retryDelivery(invoiceId: number) {
         <button type="button" @click="retryDelivery(job.invoiceId)">Retry delivery</button>
       </p>
     </section>
-    <InvoiceHistory audience="admin" />
+    <InvoiceHistory :key="historyVersion" audience="admin" />
   </div>
 </template>

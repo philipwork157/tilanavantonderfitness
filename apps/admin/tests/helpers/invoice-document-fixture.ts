@@ -5,7 +5,7 @@ import { INVOICE_SELLER } from '@server/services/invoice-policy';
 export function invoiceDocumentFixture() {
   const date = new Date('2026-09-17T12:00:00Z');
   const invoice: typeof invoices.$inferSelect = {
-    ...INVOICE_SELLER, id: 1, source: 'purchase', settledPaymentId: 1, reconciledAt: date,
+    ...INVOICE_SELLER, id: 1, source: 'purchase', managed: 0, replacesInvoiceId: null, settledPaymentId: 1, reconciledAt: date,
     invoiceNumber: 'TVT-INV-00000001', clientId: 1, orderId: 1, status: 'paid', currency: 'ZAR',
     subtotalCents: 59800, discountCents: 0, taxCents: 0, totalCents: 59800,
     sellerEmail: null, sellerPhone: null, clientName: 'Zoë Test Buyer', clientEmail: 'fixture@example.test',
@@ -16,5 +16,5 @@ export function invoiceDocumentFixture() {
     { id: 1, invoiceId: 1, programVolumeId: 1, description: 'Beginner · Volume 1', quantity: 1, unitPriceCents: 39900, lineTotalCents: 39900, createdAt: date },
     { id: 2, invoiceId: 1, programVolumeId: 2, description: 'Mobility · Volume 1', quantity: 1, unitPriceCents: 19900, lineTotalCents: 19900, createdAt: date },
   ];
-  return { invoice, items, credit: null };
+  return { invoice, items, credit: null, edition: null };
 }

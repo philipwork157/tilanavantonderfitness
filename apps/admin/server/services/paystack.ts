@@ -415,7 +415,8 @@ async function grantOrderAccess(transaction: DatabaseTransaction, orderId: numbe
   for (const item of items) await ensureAccessForItem(transaction, item);
 }
 
-async function revokeOrderAccess(transaction: DatabaseTransaction, orderId: number) {
+/** Shared refund boundary: revoke this sale's grants while retaining other paid purchases. */
+export async function revokeOrderAccess(transaction: DatabaseTransaction, orderId: number) {
   const items = await getOrderAccessItems(transaction, orderId);
   const itemIds = items.map((item) => item.id);
   const now = new Date();

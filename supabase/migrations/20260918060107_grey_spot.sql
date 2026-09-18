@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "invoices_managed_order_unique" ON "invoices" USING btree ("order_id") WHERE "invoices"."managed" = 1;

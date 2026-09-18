@@ -180,6 +180,9 @@ export async function createManualClient(
       .values({
         orderNumber: createManualOrderNumber(),
         clientId: client.id,
+        customerName: `${input.firstName} ${input.lastName}`,
+        customerEmail: email,
+        customerPhone: input.phone || null,
         status: input.purchaseStatus,
         currency: 'ZAR',
         subtotalCents: totalCents,
@@ -296,6 +299,9 @@ export async function updateManualClient(
         .values({
           orderNumber: createManualOrderNumber(),
           clientId,
+          customerName: `${input.firstName} ${input.lastName}`,
+          customerEmail: email,
+          customerPhone: input.phone || null,
           status: input.purchaseStatus,
           currency: 'ZAR',
           subtotalCents: totalCents,
@@ -320,6 +326,9 @@ export async function updateManualClient(
         .set({
           status: input.purchaseStatus,
           subtotalCents: totalCents,
+          customerName: `${input.firstName} ${input.lastName}`,
+          customerEmail: email,
+          customerPhone: input.phone || null,
           totalCents,
           paidAt: isPaid ? now : null,
           updatedAt: now,

@@ -15,10 +15,14 @@ const { data, error, status } = await useFetch<InvoiceList>(base, { query: compu
     <p v-else-if="!data?.invoices.length">No invoices have been issued yet.</p>
     <article v-for="invoice in data?.invoices" :key="invoice.id">
       <h2>{{ invoice.invoiceNumber }}</h2>
+      <p v-if="audience === 'admin'">Invoice ID: {{ invoice.id }}</p>
       <p>{{ invoice.clientName }} · {{ invoice.issueDate }} · {{ invoice.status }}</p>
       <p>Total: {{ formatInvoiceMoney(invoice.totalCents, invoice.currency) }}</p>
       <p v-if="invoice.creditedCents">Credited: {{ formatInvoiceMoney(invoice.creditedCents, invoice.currency) }}</p>
       <a :href="`${base}/${invoice.id}/pdf`">Download invoice PDF</a>
+      <ul v-if="invoice.editions?.length">
+        <li v-for="edition in invoice.editions" :key="edition.id"><a :href="`${base}/${invoice.id}/editions/${edition.id}`">Reissued edition {{ edition.id }}</a></li>
+      </ul>
       <ul v-if="invoice.credits.length">
         <li v-for="credit in invoice.credits" :key="credit.id">
           <a :href="`${base}/${invoice.id}/credits/${credit.id}`">{{ credit.creditNumber }} · {{ credit.reason }} · {{ formatInvoiceMoney(credit.amountCents, invoice.currency) }}</a>

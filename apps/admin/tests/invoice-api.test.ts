@@ -3,6 +3,11 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ requireAdmin: vi.fn(), requireAdminMutation: vi.fn(), requireCustomer: vi.fn(),
   listInvoices: vi.fn(), getInvoiceDocument: vi.fn(), retryInvoiceDelivery: vi.fn(), sendInvoicePdf: vi.fn(),
   getDatabase: vi.fn(), assertPaystackDatabaseEnvironment: vi.fn() }));
+const administration = vi.hoisted(() => ({ createManualInvoice: vi.fn(), applyInvoiceAction: vi.fn(), approveInvoicePurchaseReview: vi.fn(), inspectInvoice: vi.fn(), inspectInvoicePurchase: vi.fn() }));
+vi.mock('@server/services/invoice-administration', () => administration);
+vi.mock('@server/services/invoice-actions', () => administration);
+vi.mock('@server/services/invoice-review', () => administration);
+vi.mock('@server/services/invoice-inspection', () => administration);
 vi.mock('@server/utils/admin-auth', () => ({ requireAdmin: mocks.requireAdmin }));
 vi.mock('@server/utils/admin-mutation', () => ({ requireAdminMutation: mocks.requireAdminMutation }));
 vi.mock('@server/utils/customer-auth', () => ({ requireCustomer: mocks.requireCustomer }));
@@ -24,11 +29,18 @@ beforeAll(async () => {
   routes.customerCredit = (await import('@server/api/customer/invoices/[id]/credits/[creditId].get')).default;
   routes.retry = (await import('@server/api/admin/invoices/[id]/delivery.post')).default;
   routes.operations = (await import('@server/api/admin/invoices/operations.get')).default;
+  routes.create = (await import('@server/api/admin/invoices/index.post')).default;
+  routes.action = (await import('@server/api/admin/invoices/[id]/actions.post')).default;
+  routes.review = (await import('@server/api/admin/invoices/orders/[id]/review.post')).default;
+  routes.inspect = (await import('@server/api/admin/invoices/[id]/index.get')).default;
+  routes.inspectReview = (await import('@server/api/admin/invoices/orders/[id]/review.get')).default;
+  routes.adminEdition = (await import('@server/api/admin/invoices/[id]/editions/[editionId].get')).default;
+  routes.customerEdition = (await import('@server/api/customer/invoices/[id]/editions/[editionId].get')).default;
 });
 beforeEach(() => {
   query = {}; body = { action: 'retry-delivery' }; id = '12';
   vi.stubGlobal('getQuery', () => query);
-  vi.stubGlobal('getRouterParam', (_event: unknown, name: string) => name === 'creditId' ? '8' : id);
+  vi.stubGlobal('getRouterParam', (_event: unknown, name: string) => name === 'creditId' || name === 'editionId' ? '8' : id);
   vi.stubGlobal('readBody', async () => body);
   vi.stubGlobal('setResponseStatus', vi.fn());
   vi.stubGlobal('createError', (input: object) => Object.assign(new Error('Invalid request'), input));
@@ -42,14 +54,14 @@ beforeEach(() => {
   mocks.getDatabase.mockReturnValue({ select: () => ({ from: () => ({ where: () => ({ orderBy: () => ({ limit: async () => [] }) }) }) }) });
 });
 describe('invoice route boundaries', () => {
-  it.each(['adminList', 'adminPdf', 'adminCredit', 'operations'])('requires an administrator before %s', async name => {
+  it.each(['adminList', 'adminPdf', 'adminCredit', 'operations', 'inspect', 'inspectReview', 'adminEdition'])('requires an administrator before %s', async name => {
     mocks.requireAdmin.mockRejectedValueOnce(Object.assign(new Error('Denied'), { statusCode: 401 }));
     await expect(routes[name]!({} as never)).rejects.toMatchObject({ statusCode: 401 });
     expect(mocks.getInvoiceDocument).not.toHaveBeenCalled();
     expect(mocks.listInvoices).not.toHaveBeenCalled();
     expect(mocks.getDatabase).not.toHaveBeenCalled();
   });
-  it.each(['customerList', 'customerPdf', 'customerCredit'])('requires a customer before %s', async name => {
+  it.each(['customerList', 'customerPdf', 'customerCredit', 'customerEdition'])('requires a customer before %s', async name => {
     mocks.requireCustomer.mockRejectedValueOnce(Object.assign(new Error('Denied'), { statusCode: 401 }));
     await expect(routes[name]!({} as never)).rejects.toMatchObject({ statusCode: 401 });
     expect(mocks.getInvoiceDocument).not.toHaveBeenCalled();
@@ -101,5 +113,39 @@ describe('invoice route boundaries', () => {
     body = { action: 'retry-delivery' };
     expect(await routes.retry!({} as never)).toEqual({ queued: 1 });
     expect(setResponseStatus).toHaveBeenCalledWith({}, 202);
+  });
+  it.each(['create', 'action', 'review'])('checks admin/origin before %s writes', async name => {
+    mocks.requireAdminMutation.mockRejectedValueOnce(Object.assign(new Error('Denied'), { statusCode: 403 }));
+    await expect(routes[name]!({} as never)).rejects.toMatchObject({ statusCode: 403 });
+    expect(administration.createManualInvoice).not.toHaveBeenCalled();
+    expect(administration.applyInvoiceAction).not.toHaveBeenCalled();
+    expect(administration.approveInvoicePurchaseReview).not.toHaveBeenCalled();
+  });
+  it('validates draft payloads and binds administrator identity', async () => {
+    body = { idempotencyKey: '123e4567-e89b-42d3-a456-426614174000', reason: 'Agreed service fee', clientId: 7, items: [{ description: 'Coaching', quantity: 1, unitPriceCents: 5000 }] };
+    await routes.create!({} as never);
+    expect(administration.createManualInvoice).toHaveBeenCalledWith(body, 1);
+    body = { ...(body as object), status: 'paid' };
+    await expect(routes.create!({} as never)).rejects.toMatchObject({ statusCode: 400 });
+  });
+  it('validates action/review contracts and target IDs before executing', async () => {
+    body = { idempotencyKey: '123e4567-e89b-42d3-a456-426614174000', reason: 'Original evidence verified', action: 'issue' };
+    await routes.action!({} as never);
+    expect(administration.applyInvoiceAction).toHaveBeenCalledWith(12, body, 1);
+    body = { idempotencyKey: '123e4567-e89b-42d3-a456-426614174000', reason: 'Original evidence verified', paymentId: 9, clientName: 'Buyer', clientEmail: 'buyer@example.test', clientPhone: '', evidence: 'Original checkout evidence reference' };
+    await routes.review!({} as never);
+    expect(administration.approveInvoicePurchaseReview).toHaveBeenCalledWith(12, body, 1);
+    id = 'bad-id';
+    await expect(routes.review!({} as never)).rejects.toMatchObject({ statusCode: 400 });
+  });
+  it('scopes edition downloads to both verified customer and invoice association', async () => {
+    await routes.customerEdition!({} as never);
+    expect(mocks.getInvoiceDocument).toHaveBeenCalledWith(12, 7, undefined, 8);
+    await routes.adminEdition!({} as never);
+    expect(mocks.getInvoiceDocument).toHaveBeenCalledWith(12, undefined, undefined, 8);
+    await routes.inspect!({} as never);
+    expect(administration.inspectInvoice).toHaveBeenCalledWith(12);
+    await routes.inspectReview!({} as never);
+    expect(administration.inspectInvoicePurchase).toHaveBeenCalledWith(12);
   });
 });

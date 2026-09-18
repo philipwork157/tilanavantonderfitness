@@ -1,3 +1,5 @@
+import { getBillingAdminOpenApiSchemas } from '@tilana/contracts/invoices';
+
 type ApiMethod = 'get' | 'post' | 'patch' | 'put';
 type ApiSecurity = 'admin' | 'customer' | 'paystack' | 'public';
 
@@ -47,6 +49,7 @@ const endpoints: ApiEndpointDefinition[] = [
   { method: 'get', path: '/api/customer/invoices', tag: 'Customer billing', summary: 'List the linked customer invoices and credit notes', security: 'customer', query: [{ name: 'before', description: 'Positive integer invoice cursor.', schema: { type: 'integer', minimum: 1 } }] },
   { method: 'get', path: '/api/customer/invoices/{id}/pdf', tag: 'Customer billing', summary: 'Download an owned invoice PDF', security: 'customer', pdf: true },
   { method: 'get', path: '/api/customer/invoices/{id}/credits/{creditId}', tag: 'Customer billing', summary: 'Download a credit note belonging to an owned invoice', security: 'customer', pdf: true },
+  { method: 'get', path: '/api/customer/invoices/{id}/editions/{editionId}', tag: 'Customer billing', summary: 'Download an owned corrected invoice edition', security: 'customer', pdf: true },
   { method: 'get', path: '/api/customer/files/{id}', tag: 'Customer access', summary: 'Create a temporary private PDF download', description: 'Checks active entitlement before returning a short-lived R2 download URL.', security: 'customer' },
 
   { method: 'get', path: '/api/admin/dashboard', tag: 'Admin overview', summary: 'Read dashboard metrics', security: 'admin', query: [{ name: 'periodDays', description: 'Reporting window in days.', schema: { type: 'integer', enum: [7, 30, 90, 365], default: 30 } }] },
@@ -70,6 +73,12 @@ const endpoints: ApiEndpointDefinition[] = [
   { method: 'get', path: '/api/admin/payments/recovery', tag: 'Admin payments', summary: 'Review payment recovery jobs and failed or deferred events', security: 'admin' },
   { method: 'get', path: '/api/admin/invoices', tag: 'Admin billing', summary: 'List issued purchase invoices and credit totals', security: 'admin', query: [{ name: 'before', description: 'Positive integer invoice cursor.', schema: { type: 'integer', minimum: 1 } }] },
   { method: 'get', path: '/api/admin/invoices/operations', tag: 'Admin billing', summary: 'Review billing failures and pending delivery jobs', security: 'admin' },
+  { method: 'post', path: '/api/admin/invoices', tag: 'Admin billing', summary: 'Create an idempotent manual/coaching draft without charging or granting access', security: 'admin', requestSchema: 'ManualInvoiceRequest', successStatus: '201' },
+  { method: 'get', path: '/api/admin/invoices/{id}', tag: 'Admin billing', summary: 'Inspect original invoice snapshots, editions and administrator evidence', security: 'admin' },
+  { method: 'post', path: '/api/admin/invoices/{id}/actions', tag: 'Admin billing', summary: 'Issue, void, reissue or record confirmed manual payment/refund evidence', security: 'admin', requestSchema: 'InvoiceActionRequest' },
+  { method: 'get', path: '/api/admin/invoices/orders/{id}/review', tag: 'Admin billing', summary: 'Inspect original purchase snapshots and payment attempts for billing review', security: 'admin' },
+  { method: 'post', path: '/api/admin/invoices/orders/{id}/review', tag: 'Admin billing', summary: 'Approve evidenced legacy snapshots and resolved payment allocation', security: 'admin', requestSchema: 'InvoiceReviewRequest' },
+  { method: 'get', path: '/api/admin/invoices/{id}/editions/{editionId}', tag: 'Admin billing', summary: 'Download a corrected edition while retaining the original document', security: 'admin', pdf: true },
   { method: 'get', path: '/api/admin/invoices/{id}/pdf', tag: 'Admin billing', summary: 'Download an invoice PDF', security: 'admin', pdf: true },
   { method: 'get', path: '/api/admin/invoices/{id}/credits/{creditId}', tag: 'Admin billing', summary: 'Download a linked credit note PDF', security: 'admin', pdf: true },
   { method: 'post', path: '/api/admin/invoices/{id}/delivery', tag: 'Admin billing', summary: 'Expedite an unsent billing email', security: 'admin', requestSchema: 'InvoiceRetryRequest', successStatus: '202' },
@@ -117,8 +126,8 @@ function pathParameters(path: string) {
     name,
     in: 'path',
     required: true,
-    description: name === 'id' || name === 'creditId' ? 'Positive integer database identifier.' : 'URL-safe catalogue slug.',
-    schema: name === 'id' || name === 'creditId'
+    description: name === 'id' || name?.endsWith('Id') ? 'Positive integer database identifier.' : 'URL-safe catalogue slug.',
+    schema: name === 'id' || name?.endsWith('Id')
       ? { type: 'integer', minimum: 1 }
       : { type: 'string', pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' },
   }));
@@ -231,6 +240,7 @@ export function getAdminOpenApiDocument() {
         ServerError: { description: 'The operation could not be completed.', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
       },
       schemas: {
+        ...getBillingAdminOpenApiSchemas(),
         InvoiceRetryRequest: { type: 'object', required: ['action'], additionalProperties: false, properties: { action: { const: 'retry-delivery' } } },
         RecoveryRequest: { oneOf: [
           { type: 'object', required: ['action', 'paymentId'], additionalProperties: false, properties: { action: { const: 'acknowledge' }, paymentId: { type: 'integer', minimum: 1 } } },

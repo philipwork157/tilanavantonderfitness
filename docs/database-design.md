@@ -139,8 +139,16 @@ locks and overage protection. `invoice_deliveries` is the versioned SES outbox;
 `invoice_processing_jobs` tracks issuance review/backoff. All have integer IDs
 and RLS. Issued purchase documents/lines and credits are immutable; deferred
 validation checks settlement and line totals. PDFs are generated privately on
-demand, not written to R2. Manual authoring/reissue is not implemented, and
-pre-existing manual rows are excluded from the new purchase history views.
+demand, not written to R2. `managed = 1` marks new/manual-adopted billing documents
+so legacy manual invoice rows are not silently exposed. `invoice_commands` owns
+append-only actor/reason/idempotency evidence; `invoice_editions` preserves
+non-financial reissues; `invoice_purchase_reviews` stores approved original
+evidence without rewriting orders. All IDs/FKs are integer and RLS-enabled.
+Manual drafts create service orders/items but no entitlements; settled manual
+payments/refunds are separate evidence-driven records. `replaces_invoice_id`
+links one replacement to a void or fully credited manual original of the same
+client. Deferred checks and immutability triggers protect managed manual
+invoice/items, billed order snapshots and settled manual payment evidence.
 
 - `invoices` can reference an order but keeps immutable seller and client billing snapshots.
 - `invoice_items` snapshots descriptions and prices independently from the live catalogue.

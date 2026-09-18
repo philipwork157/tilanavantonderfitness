@@ -8,9 +8,11 @@ import { registerCheckoutCases } from './helpers/paystack-checkout-cases';
 import { registerRecoveryCases } from './helpers/payment-recovery-cases';
 import { registerInvoiceCases } from './helpers/invoice-cases';
 import { registerClientManagementCases } from './helpers/client-management-cases';
+import { registerInvoiceAdministrationCases } from './helpers/invoice-administration-cases';
 import { assertPaystackDatabaseEnvironment } from '@server/utils/paystack-configuration';
 import { linkVerifiedCustomerAccount, requireCustomer } from '@server/utils/customer-auth';
 import type { H3Event } from 'h3';
+import { readFile } from 'node:fs/promises';
 import {
   createBarrier,
   createPaystackTestDatabase,
@@ -28,6 +30,7 @@ registerCheckoutCases(() => database);
 registerRecoveryCases(() => database, mocks.send);
 registerInvoiceCases(() => database, mocks.send, mocks.createSupabaseAuthClient);
 registerClientManagementCases(() => database);
+registerInvoiceAdministrationCases(() => database, mocks.createSupabaseAuthClient);
 
 describe('Paystack database environment isolation', () => {
   it('permits the configured test database', async () => {
@@ -89,6 +92,7 @@ async function confirmRefund(fixture: PaymentFixture, amount: number) {
 beforeAll(async () => { database = await createPaystackTestDatabase(); });
 afterAll(async () => { await database?.$client.end(); });
 beforeEach(() => {
+  vi.stubGlobal('useStorage', () => ({ getItemRaw: () => readFile(new URL('../server/assets/fonts/NotoSans-Regular.ttf', import.meta.url)) }));
   mocks.getDatabase.mockReturnValue(database);
   vi.stubGlobal('useRuntimeConfig', () => ({ paystackSecretKey: 'sk_test_integration_fixture', paystackEnvironment: 'test' }));
   vi.stubGlobal('createError', (input: { statusCode: number; statusMessage: string }) =>

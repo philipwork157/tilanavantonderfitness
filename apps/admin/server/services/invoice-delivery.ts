@@ -22,7 +22,7 @@ export async function deliverInvoices() {
   for (let index = 0; index < 5; index++) {
     const now = new Date();
     const job = await database.transaction(async transaction => {
-      const [pending] = await transaction.select().from(invoiceDeliveries).where(and(isNull(invoiceDeliveries.sentAt),
+      const [pending] = await transaction.select().from(invoiceDeliveries).where(and(isNull(invoiceDeliveries.sentAt), isNull(invoiceDeliveries.canceledAt),
         lte(invoiceDeliveries.nextAttemptAt, now), or(isNull(invoiceDeliveries.leaseUntil), lte(invoiceDeliveries.leaseUntil, now))))
         .orderBy(asc(invoiceDeliveries.nextAttemptAt), asc(invoiceDeliveries.id)).limit(1).for('update', { skipLocked: true });
       if (!pending) return null;
@@ -34,13 +34,14 @@ export async function deliverInvoices() {
     if (!job) break;
     const ownership = and(eq(invoiceDeliveries.id, job.id), eq(invoiceDeliveries.leaseVersion, job.leaseVersion));
     try {
-      const { invoice, credit } = await getInvoiceDocument(job.invoiceId, undefined, job.creditId ?? undefined);
+      const { invoice, credit, edition } = await getInvoiceDocument(job.invoiceId, undefined, job.creditId ?? undefined, job.editionId ?? undefined);
+      if (invoice.status === 'void' || invoice.status === 'draft') throw new Error('Invoice is not deliverable.');
       const recipient = getInvoiceRecipient(invoice.clientEmail);
       const accountUrl = `${getCustomerAccountBaseUrl()}/account/invoices`;
       const number = credit?.creditNumber ?? invoice.invoiceNumber;
-      const kind = credit ? 'Credit note' : 'Invoice';
+      const kind = credit ? 'Credit note' : edition ? 'Reissued invoice' : 'Invoice';
       const amount = formatInvoiceMoney(credit?.amountCents ?? invoice.totalCents, invoice.currency);
-      const text = `${kind} ${number}\n${amount}\n${credit ? 'Adjustment to' : 'Payment received for'} invoice ${invoice.invoiceNumber}.\nSign in with your purchase email to download your private document: ${accountUrl}\n${invoice.notes || ''}`;
+      const text = `${kind} ${number}\n${amount}\n${credit ? 'Adjustment to' : invoice.status === 'paid' ? 'Payment received for' : 'Payment not yet recorded for'} invoice ${invoice.invoiceNumber}.\nSign in with your customer email to download your private document: ${accountUrl}\n${invoice.notes || ''}`;
       const { sender, from } = getServerEmail();
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {

@@ -33,4 +33,20 @@ describe('private snapshot PDF rendering', () => {
     document.invoice.clientName = 'Buyer 😀';
     await expect(renderInvoicePdf(document, font)).rejects.toThrow('supported PDF font');
   });
+  it('renders an audited edition without mutating the original snapshot', async () => {
+    const document = invoiceDocumentFixture();
+    const bytes = await renderInvoicePdf({ ...document, edition: { id: 2, invoiceId: 1, clientName: 'Zoë Corrected Buyer', clientPhone: null,
+      clientAddress: 'Correct billing address', reason: 'Corrected customer billing name and address', createdByUserId: 1, issuedAt: new Date('2026-09-18T10:00:00Z') } }, font);
+    expect(document.invoice.clientName).toBe('Zoë Test Buyer');
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
+    if (process.env.BILLING_PDF_EDITION_QA_OUTPUT) await writeFile(process.env.BILLING_PDF_EDITION_QA_OUTPUT, bytes);
+  });
+  it('renders an issued unpaid service invoice without claiming payment was received', async () => {
+    const document = invoiceDocumentFixture();
+    document.invoice = { ...document.invoice, source: 'manual', managed: 1, status: 'issued', paidAt: null, settledPaymentId: null };
+    document.items = [{ ...document.items[0]!, programVolumeId: null, description: 'Monthly coaching', quantity: 2, unitPriceCents: 29900, lineTotalCents: 59800 }];
+    const bytes = await renderInvoicePdf(document, font);
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
+    if (process.env.BILLING_PDF_MANUAL_QA_OUTPUT) await writeFile(process.env.BILLING_PDF_MANUAL_QA_OUTPUT, bytes);
+  });
 });
