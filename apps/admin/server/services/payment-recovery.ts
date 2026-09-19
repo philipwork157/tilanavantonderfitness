@@ -1,15 +1,28 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { and, asc, eq, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-orm';
 import { paymentEvents, paymentRecoveryJobs, paymentRefunds, payments } from '@tilana/db/schema';
 import { paystackRecoveryDisputeListSchema, paystackRecoveryRefundListSchema, paystackRecoveryDisputeSchema, paystackRecoveryRefundSchema } from '@tilana/contracts/payments';
 import { getDatabase } from '@server/utils/database';
 import { assertPaystackDatabaseEnvironment, getPaystackCredentials } from '@server/utils/paystack-configuration';
 import { processPaystackEvent, verifyPaystackCheckout } from './paystack';
 import { deliverPaymentRecoveryAlerts } from './payment-recovery-alerts';
+import { digestEventPayload, paymentEventExpiry, redactedPaymentEventPayload } from '@server/utils/paystack-event-evidence';
 
 /** Retry forever with bounded backoff, escalating instead of silently dropping uncertain money. */
 export function recoveryDelay(attempts: number) {
   return Math.min(6 * 60 * 60_000, 60_000 * 2 ** Math.min(Math.max(attempts - 1, 0), 12));
+}
+
+/** Remove replay details after their short retention window; keep ledger metadata and digest. */
+export async function redactExpiredPaymentEventPayloads(now = new Date()) {
+  await getDatabase().update(paymentEvents).set({
+    payload: redactedPaymentEventPayload,
+    payloadExpiresAt: null,
+  }).where(and(
+    inArray(paymentEvents.processingStatus, ['processed', 'ignored']),
+    isNotNull(paymentEvents.payloadExpiresAt),
+    lte(paymentEvents.payloadExpiresAt, now),
+  ));
 }
 
 /** Read every page before applying any evidence. Overflow is review work, never "no refund" proof. */
@@ -89,6 +102,7 @@ export async function runPaymentRecovery() {
   await assertPaystackDatabaseEnvironment();
   const database = getDatabase();
   const now = new Date();
+  await redactExpiredPaymentEventPayloads(now);
   await database.execute(sql`
     insert into payment_recovery_jobs (payment_id)
     select p.id from payments p left join payment_recovery_jobs j on j.payment_id = p.id
@@ -169,7 +183,10 @@ export async function requestPaymentRecovery(paymentId: number, administratorUse
     }
     await transaction.insert(paymentEvents).values({
       paymentId, provider: 'internal', providerEventKey: `recovery-request:${randomUUID()}`,
-      eventType: `admin.recovery.${action}`, processingStatus: 'processed', payload: { administratorUserId, previousReviewReason: job?.reviewReason ?? null }, processedAt: new Date(),
+      eventType: `admin.recovery.${action}`, processingStatus: 'processed',
+      payload: { administratorUserId, previousReviewReason: job?.reviewReason ?? null },
+      payloadDigest: digestEventPayload({ administratorUserId, previousReviewReason: job?.reviewReason ?? null }),
+      payloadExpiresAt: paymentEventExpiry(), processedAt: new Date(),
     });
     return action === 'acknowledge' ? { acknowledged: true } : { queued: true };
   });

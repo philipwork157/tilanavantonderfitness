@@ -3,7 +3,7 @@ import type { Database } from '@tilana/db/server';
 import { eq, sql } from 'drizzle-orm';
 import { paymentDisputes, paymentEvents, paymentRecoveryJobs, paymentRefunds } from '@tilana/db/schema';
 import { processPaystackEvent } from '@server/services/paystack';
-import { reconcilePayment, replayPaymentEvent, requestPaymentRecovery, runPaymentRecovery } from '@server/services/payment-recovery';
+import { reconcilePayment, redactExpiredPaymentEventPayloads, replayPaymentEvent, requestPaymentRecovery, runPaymentRecovery } from '@server/services/payment-recovery';
 import { deliverPaymentRecoveryAlerts } from '@server/services/payment-recovery-alerts';
 import { createBarrier, readPaymentState, seedPendingPayment, type PaymentFixture } from './paystack-database';
 
@@ -74,6 +74,28 @@ export function registerRecoveryCases(getDatabase: () => Database, send: ReturnT
       expect((await readPaymentState(getDatabase(), fixture)).payment?.status).toBe('refunded');
       expect((await getDatabase().select().from(paymentEvents).where(eq(paymentEvents.providerEventKey, key)))[0]?.processingStatus).toBe('processed');
       expect((await readPaymentState(getDatabase(), fixture)).access.every(row => row.status === 'revoked')).toBe(true);
+    });
+    it('persists allowlisted evidence and expires replay details without changing its digest', async () => {
+      const fixture = await seedPendingPayment(getDatabase());
+      const key = `minimal:${fixture.reference}`;
+      await processPaystackEvent({
+        event: 'charge.success',
+        data: {
+          ...charge(fixture),
+          customer: { email: 'private@example.test' },
+          authorization: { authorization_code: 'AUTH_reusable' },
+          metadata: { phone: 'private' },
+        },
+      }, key);
+      let [event] = await getDatabase().select().from(paymentEvents).where(eq(paymentEvents.providerEventKey, key));
+      expect(event?.payloadDigest).toMatch(/^[a-f0-9]{64}$/);
+      expect(event?.payloadExpiresAt).toBeInstanceOf(Date);
+      expect(JSON.stringify(event?.payload)).not.toMatch(/private|authorization|AUTH_|metadata|customer/);
+      const digest = event!.payloadDigest;
+      await getDatabase().update(paymentEvents).set({ payloadExpiresAt: new Date(0) }).where(eq(paymentEvents.id, event!.id));
+      await redactExpiredPaymentEventPayloads();
+      [event] = await getDatabase().select().from(paymentEvents).where(eq(paymentEvents.id, event!.id));
+      expect(event).toMatchObject({ payload: { redacted: true }, payloadDigest: digest, payloadExpiresAt: null });
     });
     it('persists timeout backoff without exposing arbitrary exceptions or failing the payment', async () => {
       const fixture = await seedPendingPayment(getDatabase());

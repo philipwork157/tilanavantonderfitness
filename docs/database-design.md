@@ -62,6 +62,12 @@ The customer-facing email should link to `/account/programs`. The Nuxt server ve
   payments retain null hashes. No extra UUID columns or application IDs are added.
 - `payment_events` is the idempotency and audit ledger for signed webhooks. Its
   provider event key prevents a retried event from fulfilling an order twice.
+  Signatures are checked against the untouched request, but the ledger stores
+  only event-specific reconciliation fields and a SHA-256 payload digest—never
+  Paystack customer, metadata, or reusable authorization objects. Processed and
+  ignored replay details expire after 30 days and the recovery worker replaces
+  them with a redaction marker while retaining the digest and normalized audit
+  columns. Deferred/failed evidence remains until it is resolved or reviewed.
 - `payment_refunds` records each full or partial refund independently. Its
   integer `payment_id`, provider, and currency must match the parent payment;
   active refund totals cannot exceed the original payment.

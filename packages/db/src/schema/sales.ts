@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { check, foreignKey, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { check, foreignKey, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 import { programVolumes } from './catalog';
 import { clients, users } from './identity';
 
@@ -185,6 +185,8 @@ export const paymentEvents = pgTable(
       .notNull()
       .default('received'),
     payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
+    payloadDigest: varchar('payload_digest', { length: 64 }).notNull(),
+    payloadExpiresAt: timestamp('payload_expires_at', { withTimezone: true }),
     errorMessage: text('error_message'),
     receivedAt: timestamp('received_at', { withTimezone: true }).notNull().defaultNow(),
     processedAt: timestamp('processed_at', { withTimezone: true }),
@@ -193,6 +195,7 @@ export const paymentEvents = pgTable(
     check('payment_events_provider_length', sql`char_length(${table.provider}) between 1 and 50`),
     check('payment_events_key_length', sql`char_length(${table.providerEventKey}) between 1 and 240`),
     check('payment_events_type_length', sql`char_length(${table.eventType}) between 1 and 120`),
+    check('payment_events_payload_digest_format', sql`${table.payloadDigest} ~ '^[a-f0-9]{64}$'`),
     check(
       'payment_events_processing_status_value',
       sql`${table.processingStatus} in ('received', 'processed', 'ignored', 'failed')`,

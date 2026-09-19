@@ -27,6 +27,7 @@ import { isCheckoutPriceCurrent } from './catalogue-policy';
 import { hashCheckoutIntent, resolvePaystackCheckout } from './paystack-checkout-intent';
 import { processPaystackDispute } from './paystack-disputes';
 import { createPaystackEventKey } from '@server/utils/paystack-webhook';
+import { digestEventPayload, paymentEventExpiry, sanitizePaystackEvent } from '@server/utils/paystack-event-evidence';
 import { queuePurchaseAccess } from './customer-notifications';
 import {
   getTerminalCheckoutResolution,
@@ -75,6 +76,7 @@ interface PaystackEvent {
     expected_at?: unknown;
     customer_note?: unknown;
     merchant_note?: unknown;
+    [key: string]: unknown;
   };
   [key: string]: unknown;
 }
@@ -334,7 +336,12 @@ async function markPaymentEvent(
 ) {
   await transaction
     .update(paymentEvents)
-    .set({ processingStatus, errorMessage, processedAt: new Date() })
+    .set({
+      processingStatus,
+      errorMessage,
+      processedAt: new Date(),
+      payloadExpiresAt: ['processed', 'ignored'].includes(processingStatus) ? paymentEventExpiry() : null,
+    })
     .where(eq(paymentEvents.id, eventId));
   if (processingStatus === 'failed' || processingStatus === 'received') {
     const [owner] = await transaction.select({ paymentId: paymentEvents.paymentId })
@@ -879,7 +886,11 @@ export async function initiatePaystackRefund(
   return result;
 }
 
-export async function processPaystackEvent(payload: PaystackEvent, providerEventKey: string): Promise<void> {
+export async function processPaystackEvent(
+  payload: PaystackEvent,
+  providerEventKey: string,
+  verifiedPayloadDigest?: string,
+): Promise<void> {
   getPaystackCredentials();
   await assertPaystackDatabaseEnvironment();
   const eventType = stringValue(payload.event) || 'unknown';
@@ -892,6 +903,8 @@ export async function processPaystackEvent(payload: PaystackEvent, providerEvent
       ? stringValue((disputeTransaction as Record<string, unknown>).reference)
       : stringValue(payload.data?.reference);
   const database = getDatabase();
+  const storedPayload = sanitizePaystackEvent(payload);
+  const payloadDigest = verifiedPayloadDigest || digestEventPayload(payload);
 
   await database.transaction(async (transaction) => {
     const [payment] = reference
@@ -917,7 +930,8 @@ export async function processPaystackEvent(payload: PaystackEvent, providerEvent
         provider: 'paystack',
         providerEventKey,
         eventType,
-        payload,
+        payload: storedPayload,
+        payloadDigest,
       })
       .onConflictDoNothing()
       .returning({ id: paymentEvents.id });
@@ -1041,7 +1055,8 @@ export async function verifyPaystackCheckout(reference: string, reconcileSettled
       };
       await transaction.insert(paymentEvents).values({
         paymentId: payment.id, provider: 'paystack', providerEventKey: `verify:reversal:${createPaystackEventKey(JSON.stringify(evidence))}`,
-        eventType: 'transaction.reversed', processingStatus: 'processed', payload: { data: evidence }, processedAt: now,
+        eventType: 'transaction.reversed', processingStatus: 'processed', payload: { data: evidence },
+        payloadDigest: digestEventPayload(evidence), payloadExpiresAt: paymentEventExpiry(now), processedAt: now,
       }).onConflictDoNothing();
       await transaction.insert(paymentRecoveryJobs).values({
         paymentId: payment.id, reviewReason: 'Verified payment reversal requires accounting review.', alertPending: true,

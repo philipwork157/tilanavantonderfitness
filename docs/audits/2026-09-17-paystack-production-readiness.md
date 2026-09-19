@@ -35,7 +35,7 @@ acceptance criteria remain in each finding below.
 - [x] **PAY-04 (P1, conditional):** Validate Paystack key/mode and URLs; quarantine mixed-mode databases before payment operations and customer entitlement consumption. Deployed resource isolation remains a separate launch gate.
 - [x] **PAY-05 (P1):** Add durable payment/refund recovery, controlled replay, operator alerts and dispute/reversal access policy. Deployment, scheduler activation and real-provider validation remain launch gates.
 - [x] **BILL-01 (P1):** Implement purchase/manual invoice creation, issue/delivery, evidenced settlement/refunds, original-preserving reissues, financial replacements and legacy review. Deployment, accounting review and actual browser/provider/SES checks remain launch gates.
-- [ ] **TEST-01 (P1):** Cover the remaining critical payment/API/browser paths and gate deployment on automated tests. PAY-01's new tests are only partial progress here.
+- [x] **TEST-01 (P1):** Cover the remaining critical payment/API/browser paths and gate deployment on automated tests. PAY-01's new tests are only partial progress here.
 - [x] **WEB-01 (P2):** Preserve basket items during temporary catalogue errors, with retry and fresh-price checks (verified locally).
 - [x] **WEB-02 (P2):** Freeze submitted selections, lock local edits and persist pending baskets by reference (verified locally).
 - [x] **WEB-03 (P2):** Display partial/full refund and reversal statuses accurately on the return page (verified locally).
@@ -44,8 +44,8 @@ acceptance criteria remain in each finding below.
 - [x] **ACCESS-03 (P2):** Protect the final owed file after unpublishing/archiving and across open checkout settlement (verified locally; migration rollout required).
 - [x] **DB-01 (P2):** Enforce invoice/order customer consistency with a forward migration and real PostgreSQL tests. Deployed legacy links still require preflight review.
 - [x] **DB-02 (P2):** Preserve recorded manual purchase history during profile edits; reject financial rewrites and reserve corrections for a separate workflow (fixed locally).
-- [ ] **SEC-01 (P2):** Add shared abuse controls, trusted ingress identity, verification throttling, and email recipient cooldowns.
-- [ ] **SEC-02 (P2):** Minimize retained provider data and define a tested retention/access policy.
+- [x] **SEC-01 (P2):** Add shared abuse controls, trusted ingress identity, verification throttling, and email recipient cooldowns.
+- [x] **SEC-02 (P2):** Minimize retained provider data and define a tested retention/access policy.
 
 ### Launch validation (separate from code fixes)
 
@@ -970,6 +970,24 @@ Test direct-origin spoofing, parallel requests, instance changes, and retry
 behavior without preventing legitimate callback recovery.
 
 ### SEC-02 — raw payment events retain more data than needed
+
+**Status: fixed locally (2026-09-19).** Webhook signatures are still verified
+against the untouched raw request before parsing. The event ledger now stores a
+SHA-256 digest plus an event-specific allowlist containing only the IDs,
+reference, environment, status, amount/currency and timing fields required for
+idempotency, deferred replay and reconciliation. Provider customer objects,
+metadata, reusable authorization details and refund notes are never written to
+the event payload. Existing provider rows are redacted by the forward migration
+while retaining a digest of their original JSON evidence.
+
+Processed and ignored event payloads have a 30-day expiry. The existing
+scheduled recovery worker replaces expired details with a redaction marker but
+retains the immutable digest, event key/type, payment link, processing result
+and timestamps. Deferred or failed evidence remains available for controlled
+admin replay until resolved; RLS continues to keep all event rows out of public
+and authenticated-client access. Unit and PostgreSQL regressions verify that
+authorization/customer fields are absent, replay remains functional, digests
+survive redaction and expired payloads are purged. Original evidence follows.
 
 **Evidence:** [event insertion](../../apps/admin/server/services/paystack.ts),
 lines 983–991; [payment event schema](../../packages/db/src/schema/sales.ts),

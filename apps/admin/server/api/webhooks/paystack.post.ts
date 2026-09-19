@@ -22,6 +22,6 @@ export default defineEventHandler(async (event) => {
   }
 
   const providerEventKey = createPaystackEventKey(rawBody);
-  await processPaystackEvent(payload, providerEventKey);
+  await processPaystackEvent(payload, providerEventKey, providerEventKey);
   return { ok: true };
 });
