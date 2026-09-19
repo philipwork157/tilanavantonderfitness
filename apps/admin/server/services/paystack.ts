@@ -14,7 +14,6 @@ import {
   paymentRefunds,
   paymentRecoveryJobs,
   payments,
-  programAccess,
   programFiles,
   programs,
   programVolumes,
@@ -33,8 +32,8 @@ import {
   getTerminalCheckoutResolution,
   isPaymentAlreadyFulfilled,
   isPaystackEnvironmentMatch,
-  isProgramAccessCurrent,
 } from './paystack-policy';
+import { grantPurchasedProgram, revokePurchasedPrograms } from './program-entitlements';
 
 type DatabaseTransaction = Parameters<Parameters<Database['transaction']>[0]>[0];
 
@@ -362,94 +361,14 @@ async function getOrderAccessItems(transaction: DatabaseTransaction, orderId: nu
     .where(eq(orderItems.orderId, orderId));
 }
 
-async function ensureAccessForItem(
-  transaction: DatabaseTransaction,
-  item: { id: number; clientId: number; programVolumeId: number | null },
-) {
-  if (!item.programVolumeId) return;
-
-  const [activeAccess] = await transaction
-    .select({ id: programAccess.id, expiresAt: programAccess.expiresAt })
-    .from(programAccess)
-    .where(and(
-      eq(programAccess.clientId, item.clientId),
-      eq(programAccess.programVolumeId, item.programVolumeId),
-      eq(programAccess.status, 'active'),
-    ))
-    .limit(1);
-  const now = new Date();
-  if (activeAccess && isProgramAccessCurrent(activeAccess.expiresAt, now)) return;
-  if (activeAccess) {
-    await transaction
-      .update(programAccess)
-      .set({ status: 'expired', updatedAt: now })
-      .where(eq(programAccess.id, activeAccess.id));
-  }
-
-  const [existingAccess] = await transaction
-    .select({ id: programAccess.id })
-    .from(programAccess)
-    .where(eq(programAccess.orderItemId, item.id))
-    .limit(1);
-
-  if (existingAccess) {
-    await transaction
-      .update(programAccess)
-      .set({ status: 'active', expiresAt: null, revokedAt: null, updatedAt: new Date() })
-      .where(eq(programAccess.id, existingAccess.id));
-    return;
-  }
-
-  await transaction
-    .insert(programAccess)
-    .values({
-      clientId: item.clientId,
-      programVolumeId: item.programVolumeId,
-      orderItemId: item.id,
-      source: 'purchase',
-    })
-    .onConflictDoNothing();
-}
-
 async function grantOrderAccess(transaction: DatabaseTransaction, orderId: number) {
   const items = await getOrderAccessItems(transaction, orderId);
-  for (const item of items) await ensureAccessForItem(transaction, item);
+  for (const item of items) await grantPurchasedProgram(transaction, item);
 }
 
 /** Shared refund boundary: revoke this sale's grants while retaining other paid purchases. */
 export async function revokeOrderAccess(transaction: DatabaseTransaction, orderId: number) {
-  const items = await getOrderAccessItems(transaction, orderId);
-  const itemIds = items.map((item) => item.id);
-  const now = new Date();
-
-  if (itemIds.length) {
-    await transaction
-      .update(programAccess)
-      .set({ status: 'revoked', revokedAt: now, updatedAt: now })
-      .where(and(inArray(programAccess.orderItemId, itemIds), eq(programAccess.status, 'active')));
-  }
-
-  // A second paid order for the same programme must keep the entitlement alive.
-  for (const item of items) {
-    if (!item.programVolumeId) continue;
-    const [replacement] = await transaction
-      .select({
-        id: orderItems.id,
-        clientId: orderItems.clientId,
-        programVolumeId: orderItems.programVolumeId,
-      })
-      .from(orderItems)
-      .innerJoin(orders, eq(orders.id, orderItems.orderId))
-      .where(and(
-        eq(orderItems.clientId, item.clientId),
-        eq(orderItems.programVolumeId, item.programVolumeId),
-        eq(orders.status, 'paid'),
-        ne(orders.id, orderId),
-      ))
-      .orderBy(desc(orders.paidAt))
-      .limit(1);
-    if (replacement) await ensureAccessForItem(transaction, replacement);
-  }
+  await revokePurchasedPrograms(transaction, orderId);
 }
 
 type PaymentEventRecord = {

@@ -46,10 +46,6 @@ export function isPaymentAlreadyFulfilled(status: string): boolean {
   return fulfilledPaymentStatuses.has(status);
 }
 
-export function isProgramAccessCurrent(expiresAt: Date | null, now: Date): boolean {
-  return expiresAt === null || expiresAt > now;
-}
-
 export function getTerminalCheckoutResolution(
   providerStatus: string | null,
 ): TerminalCheckoutResolution | null {

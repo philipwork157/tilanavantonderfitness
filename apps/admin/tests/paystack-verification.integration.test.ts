@@ -10,6 +10,7 @@ import { registerRecoveryCases } from './helpers/payment-recovery-cases';
 import { registerInvoiceCases } from './helpers/invoice-cases';
 import { registerClientManagementCases } from './helpers/client-management-cases';
 import { registerInvoiceAdministrationCases } from './helpers/invoice-administration-cases';
+import { registerProgramEntitlementCases, verifyEntitlementRepair } from './helpers/program-entitlement-cases';
 import { assertPaystackDatabaseEnvironment } from '@server/utils/paystack-configuration';
 import { linkVerifiedCustomerAccount, requireCustomer } from '@server/utils/customer-auth';
 import type { H3Event } from 'h3';
@@ -34,6 +35,7 @@ registerRecoveryCases(() => database, mocks.send);
 registerInvoiceCases(() => database, mocks.send, mocks.createSupabaseAuthClient);
 registerClientManagementCases(() => database);
 registerInvoiceAdministrationCases(() => database, mocks.createSupabaseAuthClient);
+registerProgramEntitlementCases(() => database);
 
 describe('Paystack database environment isolation', () => {
   it('permits the configured test database', async () => {
@@ -92,7 +94,10 @@ async function confirmRefund(fixture: PaymentFixture, amount: number) {
   }, `test-refund-${fixture.reference}`);
 }
 
-beforeAll(async () => { database = await createPaystackTestDatabase(); });
+beforeAll(async () => {
+  database = await createPaystackTestDatabase();
+  await verifyEntitlementRepair(database);
+});
 afterAll(async () => { await database?.$client.end(); });
 beforeEach(() => {
   vi.stubGlobal('useStorage', () => ({ getItemRaw: () => readFile(new URL('../server/assets/fonts/NotoSans-Regular.ttf', import.meta.url)) }));

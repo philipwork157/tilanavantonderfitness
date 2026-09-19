@@ -231,6 +231,13 @@ the order paid and program access active. A fully processed refund marks the
 payment/order refunded and revokes access tied to that order. If another paid
 order independently grants the same program, that valid entitlement is kept.
 
+Entitlements are independent grants per purchase/manual/promotion, not one
+active row per client/volume. Listing, downloads and active-customer reporting
+share an inclusive-start/exclusive-expiry predicate. Fulfillment preserves each
+purchase's order-item provenance, and refunds revoke only that order's grants;
+never resurrect revoked grants or borrow temporary promotional access for a
+purchase. See `docs/program-entitlements.md` for ACCESS-02 migration/rollout.
+
 Ambiguous network failures remain `needs-attention` and keep their amount
 reserved. This intentionally blocks another refund until the Paystack dashboard
 or a later webhook resolves the first request, preventing accidental duplicate

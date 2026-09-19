@@ -4,7 +4,6 @@ import {
   getTerminalCheckoutResolution,
   isPaymentAlreadyFulfilled,
   isPaystackEnvironmentMatch,
-  isProgramAccessCurrent,
 } from '@server/services/paystack-policy.ts';
 
 describe('Paystack lifecycle policy', () => {
@@ -23,14 +22,6 @@ describe('Paystack lifecycle policy', () => {
     for (const status of ['pending', 'failed', 'abandoned']) {
       assert.equal(isPaymentAlreadyFulfilled(status), false, status);
     }
-  });
-
-  it('treats access without an expiry or with a future expiry as current', () => {
-    const now = new Date('2026-09-15T10:00:00.000Z');
-    assert.equal(isProgramAccessCurrent(null, now), true);
-    assert.equal(isProgramAccessCurrent(new Date('2026-09-15T10:00:01.000Z'), now), true);
-    assert.equal(isProgramAccessCurrent(new Date('2026-09-15T10:00:00.000Z'), now), false);
-    assert.equal(isProgramAccessCurrent(new Date('2026-09-15T09:59:59.000Z'), now), false);
   });
 
   it('maps terminal verification states to the matching order action', () => {

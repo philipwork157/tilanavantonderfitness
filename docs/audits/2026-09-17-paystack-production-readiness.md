@@ -24,9 +24,8 @@ have been applied only to disposable local test databases.
 
 ## Production readiness checklist
 
-Check an item only after its fix and acceptance checks are complete. PAY-01,
-PAY-02, PAY-03, PAY-04, PAY-05, BILL-01, DB-01 and DB-02 are implemented locally.
-All other findings remain open. A checked code
+Check an item only after its fix and acceptance checks are complete. Checked
+findings below are implemented locally; unchecked findings remain open. A checked code
 fix means locally verified, not deployed. Detailed evidence, conditions, and
 acceptance criteria remain in each finding below.
 
@@ -41,7 +40,7 @@ acceptance criteria remain in each finding below.
 - [x] **WEB-02 (P2):** Freeze submitted selections, lock local edits and persist pending baskets by reference (verified locally).
 - [x] **WEB-03 (P2):** Display partial/full refund and reversal statuses accurately on the return page (verified locally).
 - [x] **ACCESS-01 (P2):** Implement post-payment instructions and durable login/email retries locally. Deployment and real-provider rollout remain gated.
-- [ ] **ACCESS-02 (P2):** Respect entitlement start times and preserve access across overlapping purchase/manual grants.
+- [x] **ACCESS-02 (P2):** Respect entitlement start times and preserve independent overlapping purchase/manual grants (verified locally; migration rollout required).
 - [ ] **ACCESS-03 (P2):** Prevent archived/unpublished programs from losing files owed to existing buyers.
 - [x] **DB-01 (P2):** Enforce invoice/order customer consistency with a forward migration and real PostgreSQL tests. Deployed legacy links still require preflight review.
 - [x] **DB-02 (P2):** Preserve recorded manual purchase history during profile edits; reject financial rewrites and reserve corrections for a separate workflow (fixed locally).
@@ -183,7 +182,7 @@ configuration.
 | WEB-02 | P2 | Fixed locally: submitted snapshots, locked checkout edits and reference-scoped pending baskets |
 | WEB-03 | P2 | Fixed locally: explicit payment/refund/reversal messages and support reference |
 | ACCESS-01 | P2 | Implemented locally: automatic purchase instructions and durable login/email retries; rollout gated |
-| ACCESS-02 | P2 | Entitlement start times and overlapping grants are mishandled |
+| ACCESS-02 | P2 | Fixed locally: shared interval checks and independent grant provenance; migration rollout required |
 | ACCESS-03 | P2 | Unpublishing enables removal of the last file owed to existing buyers |
 | DB-01 | P2 — fixed locally | Composite invoice/order customer FK and PostgreSQL regression test |
 | DB-02 | P2 | Fixed locally: profile edits preserve recorded manual purchase history |
@@ -756,6 +755,38 @@ monitoring. Explain the intended login flow. Test closed-browser purchases,
 duplicate webhooks, provider email failure, and later successful retry.
 
 ### ACCESS-02 — overlapping and future access grants are not fully enforced
+
+**Status: fixed locally (2026-09-18).** The shared server entitlement predicate
+requires active status, inclusive start and exclusive expiry. Customer listing,
+private downloads and admin active-customer reporting use it. Listings combine
+overlapping grants into one volume card with unique files.
+
+Each purchased order item now gets its own permanent grant rather than borrowing
+an active promotion/manual grant. The unique order-item/composite ownership
+constraints remain; single-active client/volume uniqueness is removed by forward
+migration `20260918075403_superb_paper_doll.sql`. Full refunds/reversals revoke
+only that order's grants, without resurrecting replacements. Other valid grants
+remain independent. Partial refunds retain purchase access. Replays cannot
+reactivate an explicitly revoked/expired grant.
+
+The migration repairs only missing grants for paid orders backed by matching
+settled Paystack evidence and consistent line subtotals, preserving existing
+revocations, promotions and manual grants. Review inconsistent/manual history
+separately. Pause writers and migrate before deploying the new API; old code
+must not remain serving financial/access writes. See
+[entitlement rules and rollout](../program-entitlements.md).
+
+Route regression tests cover linked authorization, ownership/time predicates,
+private-file constraints and signing, plus duplicate-card/file handling. Real
+PostgreSQL regressions cover temporary/future grants, interval boundaries,
+concurrent same-volume purchases/refunds, partial refunds, idempotency,
+non-resurrection and composite ownership. The suite also replays the actual
+repair SQL against old-index fixtures, including unconfirmed/mismatched payment
+exclusions and preserved revocations. Verification passed: `pnpm test` (229
+admin + 74 web), all 138 disposable PostgreSQL integration tests, `pnpm check`,
+`pnpm db:check`, the admin production build and `git diff --check`.
+No deployed migration, real provider/email writes, commit or deployment
+was performed. Original finding below is retained for traceability.
 
 **Evidence:** [access schema](../../packages/db/src/schema/access.ts), lines
 26–40; [ensureAccessForItem](../../apps/admin/server/services/paystack.ts),

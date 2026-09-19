@@ -17,10 +17,11 @@ import {
   programs,
   programVolumes,
 } from '@tilana/db/schema';
-import { and, asc, desc, eq, exists, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, inArray, ne, or, sql } from 'drizzle-orm';
 import { getDatabase } from '@server/utils/database';
 import { getCatalogueStorageConfiguration } from '@server/utils/r2';
 import { groupDistinctCatalogueCustomers } from './catalogue-reporting-policy';
+import { currentProgramAccess } from './program-entitlements';
 import {
   getCataloguePublicationIssues,
   getProgramVolumeAuditEvents,
@@ -285,8 +286,7 @@ export async function listAdminPrograms() {
           .from(programAccess)
           .where(and(
             inArray(programAccess.programVolumeId, volumeIds),
-            eq(programAccess.status, 'active'),
-            or(isNull(programAccess.expiresAt), gt(programAccess.expiresAt, now)),
+            currentProgramAccess(now),
           )),
   ]);
 

@@ -1,5 +1,6 @@
 import { programAccess, programFiles } from '@tilana/db/schema';
-import { and, eq, isNull, or, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
+import { currentProgramAccess } from '@server/services/program-entitlements';
 import { requireCustomer } from '@server/utils/customer-auth';
 import { getDatabase } from '@server/utils/database';
 import { parseDatabaseId } from '@server/utils/database-id';
@@ -27,8 +28,7 @@ export default defineEventHandler(async (event) => {
       eq(programFiles.uploadStatus, 'ready'),
       eq(programFiles.r2Bucket, storage.privateProgramBucket),
       eq(programAccess.clientId, customer.clientId),
-      eq(programAccess.status, 'active'),
-      or(isNull(programAccess.expiresAt), sql`${programAccess.expiresAt} > ${now}`),
+      currentProgramAccess(now),
     ))
     .limit(1);
 

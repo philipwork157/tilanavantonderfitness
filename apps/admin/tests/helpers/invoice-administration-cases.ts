@@ -202,6 +202,8 @@ export function registerInvoiceAdministrationCases(getDatabase: () => Database, 
       const [otherItem] = await f.db.insert(orderItems).values({ orderId: otherOrder!.id, clientId: client.id, programVolumeId: item!.programVolumeId,
         description: 'Independently paid same volume', quantity: 1, unitPriceCents: 10000, lineTotalCents: 10000 }).returning();
       await f.db.insert(payments).values({ orderId: otherOrder!.id, provider: 'manual', status: 'succeeded', amountCents: 10000, paidAt: new Date() });
+      // A second sale now owns its grant immediately, not lazily during another refund.
+      await f.db.insert(programAccess).values({ clientId: client.id, programVolumeId: item!.programVolumeId!, orderItemId: otherItem!.id, source: 'manual' });
       await applyInvoiceAction(result.invoiceId!, { ...command(), action: 'record-refund', amountCents: 10000, reference: randomUUID(), refundedAt: new Date().toISOString() }, f.actorId);
       const afterAccess = await f.db.select().from(programAccess).where(eq(programAccess.clientId, client.id));
       expect(afterAccess.find(grant => grant.id === access[0]!.id)?.status).toBe('revoked');

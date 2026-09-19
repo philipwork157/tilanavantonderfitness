@@ -30,9 +30,7 @@ export const programAccess = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex('program_access_client_volume_active_unique')
-      .on(table.clientId, table.programVolumeId)
-      .where(sql`${table.status} = 'active'`),
+    // Independent grants combine at read time; each sale retains its provenance.
     uniqueIndex('program_access_order_item_unique').on(table.orderItemId),
     check('program_access_source_value', sql`${table.source} in ('purchase', 'manual', 'promotion')`),
     check('program_access_status_value', sql`${table.status} in ('active', 'revoked', 'expired')`),

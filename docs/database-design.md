@@ -33,6 +33,10 @@ UUID is never used as an application foreign key outside `users.supabase_id`.
   ready, or failed upload lifecycle. Permanent public file URLs are never
   stored.
 - `program_access` is the entitlement checked before issuing a short-lived download response. Access can originate from a purchase, manual grant, or promotion.
+  Independent grants may overlap for the same customer/volume. Each sale keeps
+  its order-item provenance; authorization requires any active grant whose
+  inclusive start and exclusive expiry contain the current time. See
+  [program-entitlements.md](./program-entitlements.md).
 - `program_audit_events` is the append-only history of catalogue, price,
   publication, and file-management actions. It stores safe summaries rather
   than secrets or signed URLs.

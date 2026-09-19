@@ -1,5 +1,6 @@
 import { programAccess, programFiles, programs, programVolumes } from '@tilana/db/schema';
-import { and, asc, eq, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
+import { currentProgramAccess } from '@server/services/program-entitlements';
 import { requireCustomer } from '@server/utils/customer-auth';
 import { getDatabase } from '@server/utils/database';
 import { getCatalogueStorageConfiguration } from '@server/utils/r2';
@@ -11,6 +12,7 @@ export default defineEventHandler(async (event) => {
   const rows = await getDatabase()
     .select({
       accessId: programAccess.id,
+      volumeId: programVolumes.id,
       programName: programs.name,
       volumeName: programVolumes.name,
       fileId: programFiles.id,
@@ -27,22 +29,22 @@ export default defineEventHandler(async (event) => {
     ))
     .where(and(
       eq(programAccess.clientId, customer.clientId),
-      eq(programAccess.status, 'active'),
-      or(isNull(programAccess.expiresAt), sql`${programAccess.expiresAt} > ${now}`),
+      currentProgramAccess(now),
     ))
-    .orderBy(asc(programs.name), asc(programVolumes.volumeNumber), asc(programFiles.sortOrder));
+    .orderBy(asc(programs.name), asc(programVolumes.volumeNumber), asc(programFiles.sortOrder), asc(programAccess.id));
 
-  const byAccess = new Map<number, { id: number; programName: string; volumeName: string; files: Array<{ id: number; name: string }> }>();
+  const byVolume = new Map<number, { id: number; programName: string; volumeName: string; files: Array<{ id: number; name: string }> }>();
   for (const row of rows) {
-    const item = byAccess.get(row.accessId) ?? {
+    // Multiple independent grants authorize one volume, not duplicate cards/files.
+    const item = byVolume.get(row.volumeId) ?? {
       id: row.accessId,
       programName: row.programName,
       volumeName: row.volumeName,
       files: [],
     };
-    if (row.fileId && row.fileName) item.files.push({ id: row.fileId, name: row.fileName });
-    byAccess.set(row.accessId, item);
+    if (row.fileId && row.fileName && !item.files.some(file => file.id === row.fileId)) item.files.push({ id: row.fileId, name: row.fileName });
+    byVolume.set(row.volumeId, item);
   }
 
-  return { customer: { firstName: customer.firstName, email: customer.email }, programs: [...byAccess.values()] };
+  return { customer: { firstName: customer.firstName, email: customer.email }, programs: [...byVolume.values()] };
 });

@@ -182,6 +182,17 @@ future non-Fly deployment must establish the equivalent deployment-mode policy.
 
 ## Paystack and customer access
 
+### Entitlement rollout (ACCESS-02)
+
+Review/apply `20260918075403_superb_paper_doll.sql` before deploying the updated
+admin/API code. Pause financial/grant writers during the migration and version
+handover; it removes single-active-grant uniqueness and repairs only missing
+grants backed by matching settled Paystack purchases. Existing revoked/expired
+grants remain unchanged. Review repair candidates and inconsistent legacy
+histories first. See [program-entitlements.md](./program-entitlements.md).
+This migration was exercised only in a disposable local PostgreSQL cluster;
+no deployed migration, activation or real-provider check was performed.
+
 ### Purchase billing rollout (BILL-01)
 
 ACCESS-01 rollout is documented in [customer-access-delivery.md](./customer-access-delivery.md).
