@@ -289,6 +289,13 @@ Program PDFs are not attached to email and are not public. `program_files` store
 private Cloudflare R2 bucket/object metadata. After an entitlement check, the
 server returns a short-lived presigned download URL.
 
+Unpublishing/archiving never withdraws content owed to existing/future grants
+or an open Paystack checkout. The final ready file is protected in the service
+and database; replacement activates the new verified file before retiring the
+old one in one transaction. Archived programs may receive private replacement
+files. There is no unaudited withdrawal override. See
+`docs/program-delivery-protection.md` for ACCESS-03 rules and rollout.
+
 R2 configuration uses separate environment-specific credentials: an Object
 Read-only token for private customer downloads and an Object Read & Write token
 for authenticated admin uploads to the matching public and private buckets.

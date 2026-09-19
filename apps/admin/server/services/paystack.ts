@@ -146,7 +146,8 @@ async function getPurchasableVolume(
       eq(programVolumes.isPublished, true),
       eq(programs.status, 'published'),
     ))
-    .limit(1);
+    .limit(1)
+    .for('key share', { of: programVolumes });
 
   if (!volume || !volume.isPublished || volume.priceCents <= 0 || volume.currency !== 'ZAR') {
     throw createError({ statusCode: 409, statusMessage: 'This program is not available for purchase yet.' });

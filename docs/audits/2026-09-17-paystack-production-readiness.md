@@ -41,7 +41,7 @@ acceptance criteria remain in each finding below.
 - [x] **WEB-03 (P2):** Display partial/full refund and reversal statuses accurately on the return page (verified locally).
 - [x] **ACCESS-01 (P2):** Implement post-payment instructions and durable login/email retries locally. Deployment and real-provider rollout remain gated.
 - [x] **ACCESS-02 (P2):** Respect entitlement start times and preserve independent overlapping purchase/manual grants (verified locally; migration rollout required).
-- [ ] **ACCESS-03 (P2):** Prevent archived/unpublished programs from losing files owed to existing buyers.
+- [x] **ACCESS-03 (P2):** Protect the final owed file after unpublishing/archiving and across open checkout settlement (verified locally; migration rollout required).
 - [x] **DB-01 (P2):** Enforce invoice/order customer consistency with a forward migration and real PostgreSQL tests. Deployed legacy links still require preflight review.
 - [x] **DB-02 (P2):** Preserve recorded manual purchase history during profile edits; reject financial rewrites and reserve corrections for a separate workflow (fixed locally).
 - [ ] **SEC-01 (P2):** Add shared abuse controls, trusted ingress identity, verification throttling, and email recipient cooldowns.
@@ -183,7 +183,7 @@ configuration.
 | WEB-03 | P2 | Fixed locally: explicit payment/refund/reversal messages and support reference |
 | ACCESS-01 | P2 | Implemented locally: automatic purchase instructions and durable login/email retries; rollout gated |
 | ACCESS-02 | P2 | Fixed locally: shared interval checks and independent grant provenance; migration rollout required |
-| ACCESS-03 | P2 | Unpublishing enables removal of the last file owed to existing buyers |
+| ACCESS-03 | P2 | Fixed locally: final-file trigger, serialized checkout guard and atomic replacement; migration rollout required |
 | DB-01 | P2 — fixed locally | Composite invoice/order customer FK and PostgreSQL regression test |
 | DB-02 | P2 | Fixed locally: profile edits preserve recorded manual purchase history |
 | SEC-01 | P2 | Public verification and email abuse controls need strengthening |
@@ -807,6 +807,29 @@ during temporary promotional access, future grants, and refunding one of two
 paid orders for the same volume, including concurrent events.
 
 ### ACCESS-03 — archived programs can lose files for existing buyers
+
+**Status: fixed locally (2026-09-19).** Final-file protection now depends on
+delivery obligations, never publication status. Active/unexpired (including
+future-starting) grants and open or settled Paystack purchases retain a ready
+private file. Checkout takes a volume key-share lock before file validation and
+reservation; withdrawal locks the same volume before checking obligations.
+
+The service returns a clear conflict for the final owed PDF. A database trigger
+also rejects bypass updates/deletes. Archived programs can receive private
+maintenance uploads, and replacement makes the new verified PDF ready before
+retiring the old one in the same transaction. There is no unaudited override:
+use atomic replacement, or complete the established refund/reversal and grant
+revocation/expiry process. See [rules and rollout](../program-delivery-protection.md).
+
+Disposable PostgreSQL regressions cover archive then deactivate, open checkout,
+payment settlement after unpublishing, active/future grants, atomic replacement,
+sibling files, expired/cancelled release, audit events and direct trigger
+enforcement. Verification passed: `pnpm test` (229 admin + 74 web), all 144
+disposable PostgreSQL integration tests, `pnpm check`, `pnpm db:check`, the
+admin production build and `git diff --check`. No migration, deployment or real
+Paystack/SES/R2 operation was performed. Actual deployed browser/Paystack/R2
+evidence remains a launch gate.
+Original evidence and acceptance follow for traceability.
 
 **Evidence:** [file deactivation](../../apps/admin/server/services/program-storage.ts),
 lines 476–505; [publication guard](../../apps/admin/server/services/program-catalogue.ts),

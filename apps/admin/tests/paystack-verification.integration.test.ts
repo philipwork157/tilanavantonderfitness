@@ -11,6 +11,7 @@ import { registerInvoiceCases } from './helpers/invoice-cases';
 import { registerClientManagementCases } from './helpers/client-management-cases';
 import { registerInvoiceAdministrationCases } from './helpers/invoice-administration-cases';
 import { registerProgramEntitlementCases, verifyEntitlementRepair } from './helpers/program-entitlement-cases';
+import { registerProgramDeliveryCases } from './helpers/program-delivery-cases';
 import { assertPaystackDatabaseEnvironment } from '@server/utils/paystack-configuration';
 import { linkVerifiedCustomerAccount, requireCustomer } from '@server/utils/customer-auth';
 import type { H3Event } from 'h3';
@@ -36,6 +37,7 @@ registerInvoiceCases(() => database, mocks.send, mocks.createSupabaseAuthClient)
 registerClientManagementCases(() => database);
 registerInvoiceAdministrationCases(() => database, mocks.createSupabaseAuthClient);
 registerProgramEntitlementCases(() => database);
+registerProgramDeliveryCases(() => database);
 
 describe('Paystack database environment isolation', () => {
   it('permits the configured test database', async () => {

@@ -34,6 +34,7 @@ import {
   CatalogueConflictError,
   CatalogueNotFoundError,
 } from './program-catalogue';
+import { assertProgramFileCanDeactivate } from './program-delivery';
 
 export class CatalogueStorageError extends Error {
   readonly statusCode: number;
@@ -289,16 +290,12 @@ export async function initiateProgramFileUpload(
       .select({
         id: programVolumes.id,
         programId: programVolumes.programId,
-        programStatus: programs.status,
       })
       .from(programVolumes)
-      .innerJoin(programs, eq(programs.id, programVolumes.programId))
       .where(eq(programVolumes.id, volumeId))
       .limit(1);
     if (!volume) throw new CatalogueNotFoundError('Program volume not found.');
-    if (volume.programStatus === 'archived') {
-      throw new CatalogueConflictError('Archived programs cannot receive new files.');
-    }
+    // Private delivery files remain maintainable after sales are unpublished or archived.
 
     const [versionRow] = await transaction
       .select({ value: sql<number>`coalesce(max(${programFiles.version}), 0)::int` })
@@ -411,6 +408,13 @@ export async function finalizeProgramFileUpload(
 
   return getDatabase().transaction(async (transaction) => {
     let replacedFileId: number | null = null;
+    const [ready] = await transaction
+      .update(programFiles)
+      .set({ uploadStatus: 'ready', etag: verified.etag, updatedAt: new Date() })
+      .where(and(eq(programFiles.id, file.id), eq(programFiles.uploadStatus, 'pending')))
+      .returning({ id: programFiles.id, status: programFiles.uploadStatus, etag: programFiles.etag });
+    if (!ready) throw new CatalogueConflictError('The program file upload is no longer pending.');
+
     if (replaceFileId !== undefined) {
       const [replacement] = await transaction
         .select({
@@ -418,6 +422,7 @@ export async function finalizeProgramFileUpload(
           programVolumeId: programFiles.programVolumeId,
           uploadStatus: programFiles.uploadStatus,
           isActive: programFiles.isActive,
+          r2Bucket: programFiles.r2Bucket,
         })
         .from(programFiles)
         .where(eq(programFiles.id, replaceFileId))
@@ -436,6 +441,13 @@ export async function finalizeProgramFileUpload(
         throw new CatalogueConflictError('Only a ready, active program file can be replaced.');
       }
 
+      await assertProgramFileCanDeactivate(transaction, {
+        id: replacement!.id,
+        programVolumeId: replacement!.programVolumeId,
+        r2Bucket: replacement!.r2Bucket,
+        uploadStatus: replacement!.uploadStatus,
+      });
+
       const [deactivated] = await transaction
         .update(programFiles)
         .set({ isActive: false, updatedAt: new Date() })
@@ -450,13 +462,6 @@ export async function finalizeProgramFileUpload(
       }
       replacedFileId = deactivated.id;
     }
-
-    const [ready] = await transaction
-      .update(programFiles)
-      .set({ uploadStatus: 'ready', etag: verified.etag, updatedAt: new Date() })
-      .where(and(eq(programFiles.id, file.id), eq(programFiles.uploadStatus, 'pending')))
-      .returning({ id: programFiles.id, status: programFiles.uploadStatus, etag: programFiles.etag });
-    if (!ready) throw new CatalogueConflictError('The program file upload is no longer pending.');
 
     await addProgramAuditEvent(transaction, userId, 'program_file', file.id, 'upload_finalized', {
       volumeId: file.programVolumeId,
@@ -484,6 +489,8 @@ export async function deactivateProgramFile(
         id: programFiles.id,
         programVolumeId: programFiles.programVolumeId,
         isActive: programFiles.isActive,
+        uploadStatus: programFiles.uploadStatus,
+        r2Bucket: programFiles.r2Bucket,
         programId: programVolumes.programId,
       })
       .from(programFiles)
@@ -492,6 +499,8 @@ export async function deactivateProgramFile(
       .limit(1);
     if (!file) throw new CatalogueNotFoundError('Program file not found.');
     if (!file.isActive) return { id: file.id, isActive: false };
+
+    await assertProgramFileCanDeactivate(transaction, file);
 
     const [updated] = await transaction
       .update(programFiles)

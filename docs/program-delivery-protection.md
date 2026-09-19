@@ -1,0 +1,60 @@
+# Program delivery protection (ACCESS-03)
+
+## Delivery obligation
+
+Unpublishing or archiving stops new catalogue sales. It does not withdraw files
+already owed to customers. A volume has a delivery obligation while either:
+
+- it has an active entitlement that has not expired, including one whose start
+  date is still in the future; or
+- it belongs to an open Paystack checkout that can still settle, or to a paid
+  Paystack payment that remains succeeded/partially refunded.
+
+The status of the marketing program and volume does not affect this rule. The
+customer listing and download route continue to use active, ready private files
+after unpublishing.
+
+## File withdrawal and replacement
+
+The admin/API refuses to deactivate the final active, ready PDF in a bucket for
+an obligated volume. The guard locks the volume before evaluating sibling files
+and obligations. Checkout takes a matching key-share lock before validating the
+file and reserving the order, so a file cannot disappear between catalogue
+validation and order-item creation.
+
+Private PDFs can be uploaded to draft or archived programs so sold content can
+still be maintained. Replacement finalization makes the verified new PDF ready
+before deactivating the old PDF, inside one database transaction. Either both
+changes commit or neither does. Audit events record finalization and replacement.
+
+There is no unaudited override. If no replacement will be supplied, purchases
+must complete the established refund/reversal process and non-purchase grants
+must be explicitly revoked or allowed to expire before the final PDF can be
+withdrawn. Merely archiving the marketing program is insufficient.
+
+## Database boundary and rollout
+
+Migration `20260919132857_protect_program_delivery.sql` installs a trigger that
+independently rejects an update or delete that removes the final ready file
+while a delivery obligation exists. It protects direct/internal database writes
+in addition to the friendly application conflict. Historical inactive/pending
+file cleanup remains allowed. Multiple files and atomic replacement remain
+allowed.
+
+Review and apply the migration before deploying the updated admin/API. Pause
+checkout, webhook/recovery and catalogue writes during the migration/version
+handover. ACCESS-02 migration `20260918075403_superb_paper_doll.sql` must run
+first. Preflight obligated volumes with no active ready file and repair their
+metadata/R2 objects before activation; the trigger prevents new withdrawals but
+does not invent or upload missing PDFs. No migration or deployment was applied
+by this task.
+
+## Verification
+
+The disposable PostgreSQL suite verifies archived-program protection, pending
+checkout protection, payment settlement after unpublishing, active and future
+grants, atomic replacement, sibling-file withdrawal, expired/cancelled release,
+auditing, and direct update/delete trigger enforcement. Provider events use
+local fixtures and no Paystack, SES or R2 request is sent. Actual archived-file
+replacement and late-payment/download behavior still require a deployed browser,
+Paystack-test and private-R2 launch check.

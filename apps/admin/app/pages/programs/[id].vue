@@ -498,7 +498,7 @@ function requestMediaDeactivation(media: AdminCatalogueMedia) {
 function requestFileDeactivation(file: AdminCatalogueFile) {
   confirmation.value = {
     title: 'Deactivate this PDF?',
-    description: 'Customers will no longer see this file. Published volumes must retain at least one active, ready PDF.',
+    description: 'Customers will no longer see this file. Any volume owed to customers or an open checkout must retain an active, ready PDF. Replace the final PDF atomically before withdrawing it.',
     label: 'Deactivate PDF',
     color: 'error',
     run: async () => {

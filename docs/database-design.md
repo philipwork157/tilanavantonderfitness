@@ -31,7 +31,9 @@ UUID is never used as an application foreign key outside `users.supabase_id`.
   active media is eligible for the public catalogue.
 - `program_files` stores private Cloudflare R2 PDF metadata and its pending,
   ready, or failed upload lifecycle. Permanent public file URLs are never
-  stored.
+  stored. The final ready file cannot be withdrawn while active/future grants
+  or provider-confirmable Paystack orders still require delivery; replacement
+  is atomic. See [program delivery protection](./program-delivery-protection.md).
 - `program_access` is the entitlement checked before issuing a short-lived download response. Access can originate from a purchase, manual grant, or promotion.
   Independent grants may overlap for the same customer/volume. Each sale keeps
   its order-item provenance; authorization requires any active grant whose

@@ -193,6 +193,17 @@ histories first. See [program-entitlements.md](./program-entitlements.md).
 This migration was exercised only in a disposable local PostgreSQL cluster;
 no deployed migration, activation or real-provider check was performed.
 
+### Program delivery rollout (ACCESS-03)
+
+After ACCESS-02, review/apply `20260919132857_protect_program_delivery.sql`
+before deploying the updated admin/API. Pause checkout, webhook/recovery and
+catalogue writes for the migration/version handover. Preflight all active or
+future grants and open/paid Paystack orders for at least one ready private file
+in the correct environment bucket; repair missing metadata/R2 objects first.
+The trigger prevents new final-file withdrawals but cannot repair historical
+missing content. See [program-delivery-protection.md](./program-delivery-protection.md).
+No deployed migration or real R2/provider check was performed locally.
+
 ### Purchase billing rollout (BILL-01)
 
 ACCESS-01 rollout is documented in [customer-access-delivery.md](./customer-access-delivery.md).
