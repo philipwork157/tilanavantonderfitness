@@ -928,6 +928,24 @@ item IDs, prices, payment IDs, and paid time remain intact.
 
 ### SEC-01 — verification and email abuse controls are incomplete
 
+**Status: fixed locally (2026-09-19).** Public checkout, contact, newsletter,
+sign-in and status traffic now use atomic PostgreSQL counters rather than
+process-local maps, so restarts and multiple Fly instances share the same
+limits. Bucket identities are HMAC pseudonyms, expired rows are removed after a
+short retention window, and RLS plus explicit grants keep the table server-only.
+The customer sign-in path also claims a one-minute per-recipient delivery
+allowance without changing its enumeration-safe response.
+
+Checkout status requests have a per-IP limit and only one caller may claim a
+provider verification for a reference in each 15-second window. The atomic
+claim suppresses parallel cross-instance provider calls while webhook and
+scheduled reconciliation remain authoritative recovery paths. Public request
+identity no longer accepts `x-forwarded-for` or `cf-connecting-ip`; production
+requires the explicitly configured `fly-client-ip` header written by Fly Proxy,
+and missing/invalid identities fail closed. PostgreSQL tests cover parallel
+claims, cooldown expiry and pseudonymization; unit tests cover direct-origin
+spoofing and recipient suppression. Original evidence below is retained.
+
 **Evidence:** [status route](../../apps/admin/server/api/checkout/status.get.ts),
 lines 4–20; [contact security](../../apps/admin/server/utils/contact-security.ts),
 lines 15 and 53–99; [auth security](../../apps/admin/server/utils/auth-security.ts),

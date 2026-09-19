@@ -1,4 +1,5 @@
 export * from './access';
+export * from './abuse-controls';
 export * from './catalog';
 export * from './coaching';
 export * from './contact-submissions';

@@ -18,6 +18,7 @@ export default defineNuxtConfig({
       'http://127.0.0.1:4321,http://localhost:4321,https://tilanavantonder.co.za,https://www.tilanavantonder.co.za',
     turnstileSecretKey: '',
     contactIpHashSecret: '',
+    trustedClientIpHeader: process.env.NODE_ENV === 'production' ? 'fly-client-ip' : '',
     contactTurnstileRequired: process.env.NODE_ENV === 'production',
     emailFromAddress: '',
     emailFromName: 'Tilana van Tonder website',

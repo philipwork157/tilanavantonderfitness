@@ -137,6 +137,7 @@ secret store. Audit these names independently for development and production:
 - `NUXT_CONTACT_ALLOWED_ORIGINS`
 - `NUXT_TURNSTILE_SECRET_KEY`
 - `NUXT_CONTACT_IP_HASH_SECRET`
+- `NUXT_TRUSTED_CLIENT_IP_HEADER` (`fly-client-ip` on both Fly deployments)
 - `NUXT_CONTACT_NOTIFICATION_ENABLED`
 - `NUXT_EMAIL_FROM_ADDRESS`
 - `NUXT_NEWSLETTER_FROM_EMAIL`

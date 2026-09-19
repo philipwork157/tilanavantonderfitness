@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ enforceSameOrigin: vi.fn(), enforceLoginRateLimit: vi.fn(), getDatabase: vi.fn(),
+const mocks = vi.hoisted(() => ({ enforceSameOrigin: vi.fn(), enforceLoginRateLimit: vi.fn(), claimLoginRecipient: vi.fn(), getDatabase: vi.fn(),
   assertPaystackDatabaseEnvironment: vi.fn(), queueCustomerLogin: vi.fn(), deliverCustomerNotifications: vi.fn() }));
 vi.mock('@server/utils/auth-security', () => mocks);
 vi.mock('@server/utils/database', () => mocks);
@@ -18,6 +18,7 @@ beforeEach(() => {
   buyers = [{ id: 7, firstName: 'Buyer' }];
   mocks.getDatabase.mockReturnValue({ select: () => ({ from: () => ({ innerJoin: () => ({ where: () => ({ limit: async () => buyers }) }) }) }) });
   mocks.queueCustomerLogin.mockResolvedValue(12);
+  mocks.claimLoginRecipient.mockResolvedValue(true);
   mocks.deliverCustomerNotifications.mockResolvedValue({ failed: 0 });
   vi.stubGlobal('useRuntimeConfig', () => ({}));
   vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -30,6 +31,11 @@ describe('private customer login queue route', () => {
   });
   it('returns the same generic response for an unknown email', async () => {
     buyers = [];
+    expect(await handler({} as never)).toEqual({ ok: true });
+    expect(mocks.queueCustomerLogin).not.toHaveBeenCalled();
+  });
+  it('silently suppresses repeated delivery to the same recipient', async () => {
+    mocks.claimLoginRecipient.mockResolvedValueOnce(false);
     expect(await handler({} as never)).toEqual({ ok: true });
     expect(mocks.queueCustomerLogin).not.toHaveBeenCalled();
   });

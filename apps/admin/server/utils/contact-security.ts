@@ -1,7 +1,5 @@
-interface RateLimitEntry {
-  count: number;
-  resetAt: number;
-}
+import { abusePolicies, enforceSharedLimit } from '@server/services/abuse-controls';
+import { getTrustedRequestIp } from '@server/utils/request-identity';
 
 interface TurnstileResult {
   success: boolean;
@@ -9,10 +7,6 @@ interface TurnstileResult {
   'error-codes'?: string[];
 }
 
-const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
-const RATE_LIMIT_MAX_REQUESTS = 5;
-const MAX_RATE_LIMIT_ENTRIES = 5_000;
-const rateLimits = new Map<string, RateLimitEntry>();
 const isProduction = process.env.NODE_ENV === 'production';
 
 function getAllowedOrigins(): Set<string> {
@@ -51,56 +45,11 @@ export function handleContactOptions(event: Parameters<typeof getHeader>[0]): nu
 }
 
 export function getContactRequestIp(event: Parameters<typeof getHeader>[0]): string {
-  return (
-    getHeader(event, 'cf-connecting-ip') ||
-    getRequestIP(event, { xForwardedFor: true }) ||
-    'unknown'
-  );
-}
-
-async function hashIp(ip: string): Promise<string> {
-  const { contactIpHashSecret } = useRuntimeConfig();
-  const secret = String(contactIpHashSecret || 'local-development-only');
-
-  if (isProduction && secret === 'local-development-only') {
-    throw createError({
-      statusCode: 503,
-      statusMessage: 'The contact service is not configured.',
-    });
-  }
-
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(ip));
-  return Array.from(new Uint8Array(signature), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return getTrustedRequestIp(event);
 }
 
 export async function enforceContactRateLimit(ip: string, namespace = 'contact'): Promise<void> {
-  const key = `${namespace}:${await hashIp(ip)}`;
-  const now = Date.now();
-  const existing = rateLimits.get(key);
-
-  if (!existing || existing.resetAt <= now) {
-    if (rateLimits.size >= MAX_RATE_LIMIT_ENTRIES) {
-      const oldestKey = rateLimits.keys().next().value;
-      if (oldestKey) rateLimits.delete(oldestKey);
-    }
-    rateLimits.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return;
-  }
-
-  existing.count += 1;
-  if (existing.count > RATE_LIMIT_MAX_REQUESTS) {
-    throw createError({
-      statusCode: 429,
-      statusMessage: 'Too many requests. Please try again later.',
-    });
-  }
+  await enforceSharedLimit(ip, abusePolicies.contact(namespace), 'Too many requests. Please try again later.');
 }
 
 export async function verifyContactTurnstile(token: string, ip: string, action = 'contact'): Promise<void> {

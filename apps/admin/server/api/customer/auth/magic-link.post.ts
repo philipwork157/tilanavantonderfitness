@@ -1,7 +1,7 @@
 import { customerMagicLinkRequestSchema } from '@tilana/contracts/checkout';
 import { clients, orders } from '@tilana/db/schema';
 import { and, eq, sql } from 'drizzle-orm';
-import { enforceLoginRateLimit, enforceSameOrigin } from '@server/utils/auth-security';
+import { claimLoginRecipient, enforceLoginRateLimit, enforceSameOrigin } from '@server/utils/auth-security';
 import { getDatabase } from '@server/utils/database';
 import { readZodBody } from '@server/utils/route-validation';
 import { queueCustomerLogin, deliverCustomerNotifications } from '@server/services/customer-notifications';
@@ -10,7 +10,7 @@ import { customerPurchaseHistoryCondition } from '@server/utils/customer-purchas
 
 export default defineEventHandler(async (event) => {
   enforceSameOrigin(event);
-  enforceLoginRateLimit(event);
+  await enforceLoginRateLimit(event);
   const body = await readZodBody(
     event,
     customerMagicLinkRequestSchema,
@@ -19,6 +19,7 @@ export default defineEventHandler(async (event) => {
   );
 
   const email = body.email.toLowerCase();
+  const mayDeliver = await claimLoginRecipient(email);
   await assertPaystackDatabaseEnvironment();
   getCustomerAccountBaseUrl(useRuntimeConfig(event));
   const [buyer] = await getDatabase()
@@ -29,7 +30,7 @@ export default defineEventHandler(async (event) => {
     .limit(1);
 
   // Always return the same response so this endpoint cannot reveal customer emails.
-  if (buyer) {
+  if (buyer && mayDeliver) {
     try {
       const jobId = await queueCustomerLogin(buyer.id);
       await deliverCustomerNotifications(jobId);

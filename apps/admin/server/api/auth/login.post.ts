@@ -7,7 +7,7 @@ import { createSupabaseAuthClient } from '@server/utils/supabase-auth';
 
 export default defineEventHandler(async (event) => {
   enforceSameOrigin(event);
-  enforceLoginRateLimit(event);
+  await enforceLoginRateLimit(event);
 
   const body = await readZodBody(
     event,
@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'This account does not have administrator access.' });
   }
 
-  clearLoginRateLimit(event);
+  await clearLoginRateLimit(event);
   return {
     authenticated: true as const,
     user: {
