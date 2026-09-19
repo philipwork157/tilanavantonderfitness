@@ -1,0 +1,52 @@
+name: Quality and financial integration tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Checks and PostgreSQL integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: tilana_paystack_test_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d tilana_paystack_test_ci"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      PAYSTACK_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/tilana_paystack_test_ci
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run lint and type checks
+        run: pnpm check
+      - name: Validate migration history
+        run: pnpm db:check
+      - name: Run unit and client-flow tests
+        run: pnpm test
+      - name: Run financial PostgreSQL integration tests
+        run: pnpm test:integration

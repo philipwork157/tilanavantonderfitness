@@ -42,9 +42,13 @@ jobs:
             exit 1
           fi
 
+  quality:
+    name: Required quality gate
+    uses: ./.github/workflows/quality.yml
+
   build-public:
     name: Build public website
-    needs: validate
+    needs: [validate, quality]
     if: inputs.target == 'both' || inputs.target == 'public'
     runs-on: ubuntu-latest
     permissions:
@@ -91,7 +95,7 @@ jobs:
 
   build-admin:
     name: Build admin website
-    needs: validate
+    needs: [validate, quality]
     if: inputs.target == 'both' || inputs.target == 'admin'
     runs-on: ubuntu-latest
     permissions:

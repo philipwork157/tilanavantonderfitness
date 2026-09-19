@@ -562,6 +562,25 @@ do not alter it; partial/full refund adjustments remain traceable.
 
 ### TEST-01 — passing tests do not exercise the financial workflow
 
+**Status: fixed locally (2026-09-19).** A required reusable GitHub quality
+workflow now runs repository lint/type checks, migration-history validation,
+all ordinary Vitest suites and the isolated PostgreSQL financial integration
+suite. Both dev and production deployment workflows depend on this gate, so a
+failed check, schema test, payment lifecycle regression or client-flow state
+test prevents either application from deploying. Pull requests and pushes to
+`main` also run the same gate independently of deployment.
+
+The PostgreSQL suite applies the committed forward migrations to a fresh local
+database and covers checkout idempotency/concurrency, transactional
+fulfilment, signed-event replay, stale verification races, refund identity and
+overage protection, customer linking, billing, private-file authorization and
+database constraints. The web suite exercises the basket, checkout intent,
+selection freeze, return-page polling and recovery behavior. External Paystack,
+SES, Supabase and deployed-browser smoke checks intentionally remain launch
+validation; CI uses provider fixtures and never contacts production services.
+The root `pnpm test:integration` command and test README document the same safe
+local entry point. Original evidence below is retained for audit history.
+
 **Evidence:** [admin Vitest configuration](../../apps/admin/vitest.config.ts),
 [web Vitest configuration](../../apps/web/vitest.config.ts), existing tests,
 and [deployment workflows](../../.github/workflows/).

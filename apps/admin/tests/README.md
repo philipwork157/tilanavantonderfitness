@@ -4,6 +4,7 @@ From the repository root:
 
 ```sh
 pnpm test
+pnpm test:integration
 pnpm --filter @tilana/admin test
 pnpm check
 ```
@@ -22,7 +23,7 @@ to create schemas/tables and apply the repository migrations.
 
 ```sh
 PAYSTACK_TEST_DATABASE_URL='postgres://test_user:test_password@127.0.0.1:5432/tilana_paystack_test_run1' \
-  pnpm --filter @tilana/admin test:integration
+  pnpm test:integration
 ```
 
 Replace the example credentials with those for your disposable instance. Never
@@ -42,7 +43,9 @@ row-lock test that holds a real webhook transaction before commit and verifies
 that a concurrent stale verification cannot overwrite it, PAY-02 refund
 identity/reordering cases, and PAY-03 durable checkout intent/concurrency cases.
 The checkout cases share this entry point's empty database and actual migrations.
-These tests do not
-exercise live Paystack requests, HTTP signature handling, full Supabase auth,
-deployed RLS/grants, email delivery, or browser checkout. Those remain separate
-launch requirements in the [readiness audit](../../../docs/audits/2026-09-17-paystack-production-readiness.md).
+The required GitHub quality workflow runs this suite against a fresh PostgreSQL
+service after lint, type, migration-history and ordinary Vitest checks. Both
+development and production deployment workflows depend on that quality job, so
+a failing financial regression cannot deploy. Provider calls, Supabase and SES
+remain deterministic mocks; live-provider, deployed RLS, email-delivery and
+browser smoke checks remain separate launch validation rather than CI tests.
