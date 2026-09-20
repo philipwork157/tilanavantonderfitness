@@ -198,9 +198,10 @@ export function registerInvoiceAdministrationCases(getDatabase: () => Database, 
       expect(await f.db.select().from(payments).where(eq(payments.orderId, order!.id))).toHaveLength(1);
       expect(await f.db.select().from(programAccess).where(eq(programAccess.clientId, client.id))).toEqual(access);
       expect((await getInvoiceDocument(result.invoiceId!)).invoice).toMatchObject({ clientName: 'Manual Buyer', status: 'paid' });
-      const [otherOrder] = await f.db.insert(orders).values({ orderNumber: `MAN-OTHER-${randomUUID()}`, clientId: client.id, status: 'paid', subtotalCents: 10000, totalCents: 10000, paidAt: new Date() }).returning();
+      const [otherOrder] = await f.db.insert(orders).values({ orderNumber: `MAN-OTHER-${randomUUID()}`, clientId: client.id, status: 'pending', subtotalCents: 10000, totalCents: 10000 }).returning();
       const [otherItem] = await f.db.insert(orderItems).values({ orderId: otherOrder!.id, clientId: client.id, programVolumeId: item!.programVolumeId,
         description: 'Independently paid same volume', quantity: 1, unitPriceCents: 10000, lineTotalCents: 10000 }).returning();
+      await f.db.update(orders).set({ status: 'paid', paidAt: new Date() }).where(eq(orders.id, otherOrder!.id));
       await f.db.insert(payments).values({ orderId: otherOrder!.id, provider: 'manual', status: 'succeeded', amountCents: 10000, paidAt: new Date() });
       // A second sale now owns its grant immediately, not lazily during another refund.
       await f.db.insert(programAccess).values({ clientId: client.id, programVolumeId: item!.programVolumeId!, orderItemId: otherItem!.id, source: 'manual' });

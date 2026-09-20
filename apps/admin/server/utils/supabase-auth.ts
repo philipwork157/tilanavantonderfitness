@@ -2,7 +2,16 @@ import { createServerClient } from '@supabase/ssr';
 import type { H3Event } from 'h3';
 import { getRequestURL, parseCookies, setCookie, setResponseHeader } from 'h3';
 
+const requestAuthClient = Symbol('request-auth-client');
+type AuthContext = H3Event['context'] & { [requestAuthClient]?: ReturnType<typeof createServerClient> };
+
+/** Keep OTP verification and account linking on the same request-local session.
+ * Response cookies are not present in the incoming request; recreating the
+ * client during the callback would lose the just-verified session.
+ */
 export function createSupabaseAuthClient(event: H3Event) {
+  const context = event.context as AuthContext;
+  if (context[requestAuthClient]) return context[requestAuthClient];
   const config = useRuntimeConfig(event);
 
   if (!config.supabaseUrl || !config.supabasePublishableKey) {
@@ -12,7 +21,7 @@ export function createSupabaseAuthClient(event: H3Event) {
     });
   }
 
-  return createServerClient(config.supabaseUrl, config.supabasePublishableKey, {
+  const client = createServerClient(config.supabaseUrl, config.supabasePublishableKey, {
     cookieOptions: {
       httpOnly: true,
       path: '/',
@@ -39,4 +48,6 @@ export function createSupabaseAuthClient(event: H3Event) {
       },
     },
   });
+  context[requestAuthClient] = client;
+  return client;
 }

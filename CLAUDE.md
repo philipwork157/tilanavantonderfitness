@@ -326,6 +326,7 @@ Use pnpm from the repository root:
 pnpm dev             # public and admin development servers
 pnpm dev:stop        # stop managed development servers
 pnpm test            # run every Vitest suite through Turborepo
+pnpm test:e2e        # browser suite; requires a fresh disposable E2E_DATABASE_URL
 pnpm test:coverage   # run tests and write per-workspace coverage reports
 pnpm check           # lint and typecheck every workspace
 pnpm build:web       # public production build

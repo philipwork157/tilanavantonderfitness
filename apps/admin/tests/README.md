@@ -49,3 +49,8 @@ development and production deployment workflows depend on that quality job, so
 a failing financial regression cannot deploy. Provider calls, Supabase and SES
 remain deterministic mocks; live-provider, deployed RLS, email-delivery and
 browser smoke checks remain separate launch validation rather than CI tests.
+
+The served-app Playwright suite now covers real browser checkout, confirmation,
+email-link authentication and private-file HTTP authorization with local external
+provider fixtures. See [browser checkout tests](../../../docs/browser-checkout-tests.md)
+for `pnpm test:e2e`, safe database setup, CI gates and remaining live checks.

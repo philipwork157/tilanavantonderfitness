@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "types": ["node"],
+    "typeRoots": ["../../packages/db/node_modules/@types"],
+    "paths": {
+      "@fixtures/database": ["../../apps/admin/tests/helpers/paystack-database.ts"],
+      "@tilana/db/server": ["../../packages/db/src/server.ts"],
+      "@tilana/db/schema": ["../../packages/db/src/schema/index.ts"]
+    }
+  },
+  "include": ["./**/*.ts", "../../playwright.config.ts"]
+}

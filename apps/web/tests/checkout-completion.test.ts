@@ -7,6 +7,15 @@ const response = (status: CheckoutStatusResponse['status']) => new Response(JSON
 const setup = () => ({ fetch: vi.fn<typeof fetch>(), pause: vi.fn(async () => {}), clearPaid: vi.fn(async () => {}), retireIntent: vi.fn(async () => {}) });
 
 describe('verified checkout completion', () => {
+  it('does not bind native fetch to the injected dependency object', async () => {
+    const dependencies = setup();
+    dependencies.fetch.mockImplementation(async function (this: unknown) {
+      if (this !== undefined) throw new TypeError('Illegal invocation');
+      return response('succeeded');
+    });
+    expect(await confirmCheckoutStatus('https://admin.example/status', reference, dependencies)).toMatchObject({ heading: 'Payment received' });
+    expect(dependencies.clearPaid).toHaveBeenCalledExactlyOnceWith(reference);
+  });
   it.each([
     ['succeeded', 'Payment received', true],
     ['partially_refunded', 'Payment partially refunded', true],

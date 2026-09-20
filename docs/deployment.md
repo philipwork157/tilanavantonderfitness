@@ -183,6 +183,15 @@ future non-Fly deployment must establish the equivalent deployment-mode policy.
 
 ## Paystack and customer access
 
+### Settled-purchase guard rollout (REAUDIT-01)
+
+Review `20260920035033_protect_settled_purchases.sql` and follow the preflight and
+writer handover in [settled-purchase-protection.md](./settled-purchase-protection.md).
+It adds no tables and does not repair legacy mismatches automatically. Only
+disposable local databases have been migrated. The shared quality gate also
+runs [browser checkout tests](./browser-checkout-tests.md) against real local
+Astro/Nuxt processes and a separate disposable database.
+
 ### Entitlement rollout (ACCESS-02)
 
 Review/apply `20260918075403_superb_paper_doll.sql` before deploying the updated

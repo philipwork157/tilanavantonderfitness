@@ -197,6 +197,13 @@
       "when": 1789826017609,
       "tag": "20260919135337_shallow_flatman",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1789876233716,
+      "tag": "20260920035033_protect_settled_purchases",
+      "breakpoints": true
     }
   ]
 }

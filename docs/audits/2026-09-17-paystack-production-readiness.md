@@ -562,6 +562,15 @@ do not alter it; partial/full refund adjustments remain traceable.
 
 ### TEST-01 — passing tests do not exercise the financial workflow
 
+**Browser follow-up completed locally (2026-09-20, REAUDIT-02).** The served
+Astro/Nuxt Playwright suite now covers checkout, returns, cross-tab basket state,
+captured-email sign-in and private-file access against disposable PostgreSQL.
+Four browser scenarios pass and are included in the reusable deployment gate.
+They exposed and fixed native-fetch binding and request-local authentication
+session reuse bugs. See [browser test instructions](../browser-checkout-tests.md)
+and the [follow-up audit](./2026-09-20-paystack-remediation-review.md).
+Hosted CI and deployed provider/email smoke checks remain launch requirements.
+
 **Status: fixed locally (2026-09-19).** A required reusable GitHub quality
 workflow now runs repository lint/type checks, migration-history validation,
 all ordinary Vitest suites and the isolated PostgreSQL financial integration

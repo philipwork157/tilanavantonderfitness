@@ -13,6 +13,7 @@ import { registerInvoiceAdministrationCases } from './helpers/invoice-administra
 import { registerProgramEntitlementCases, verifyEntitlementRepair } from './helpers/program-entitlement-cases';
 import { registerProgramDeliveryCases } from './helpers/program-delivery-cases';
 import { registerAbuseControlCases } from './helpers/abuse-control-cases';
+import { registerSettledPurchaseCases } from './helpers/settled-purchase-cases';
 import { assertPaystackDatabaseEnvironment } from '@server/utils/paystack-configuration';
 import { linkVerifiedCustomerAccount, requireCustomer } from '@server/utils/customer-auth';
 import type { H3Event } from 'h3';
@@ -40,6 +41,7 @@ registerInvoiceAdministrationCases(() => database, mocks.createSupabaseAuthClien
 registerProgramEntitlementCases(() => database);
 registerProgramDeliveryCases(() => database);
 registerAbuseControlCases(() => database);
+registerSettledPurchaseCases(() => database);
 
 describe('Paystack database environment isolation', () => {
   it('permits the configured test database', async () => {
@@ -99,8 +101,7 @@ async function confirmRefund(fixture: PaymentFixture, amount: number) {
 }
 
 beforeAll(async () => {
-  database = await createPaystackTestDatabase();
-  await verifyEntitlementRepair(database);
+  database = await createPaystackTestDatabase(verifyEntitlementRepair);
 });
 afterAll(async () => { await database?.$client.end(); });
 beforeEach(() => {

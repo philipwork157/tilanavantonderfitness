@@ -4,15 +4,15 @@ Reviewed revision: `b737ed0a1c706888ba48f400895dbe1b72b38278`.
 
 Scope: follow-up code review of the basket, checkout, customer access, payment
 recovery, billing/database safeguards, security remediation, and test gates.
-This report records fixes to do; it does not implement them or certify the
-deployed environment.
+This report tracks review findings and subsequent remediation; it does not
+certify the deployed environment.
 
 ## Outcome
 
 The [original audit](./2026-09-17-paystack-production-readiness.md) has all 17
 implementation findings checked, but its launch-validation checklist is still
 open. Checked implementation tasks are not equivalent to production readiness.
-This review found six remaining gaps. TEST-01 is only partially delivered
+This review initially found six remaining gaps. TEST-01 was only partially delivered
 against its original browser-test requirement; SEC-01 and SEC-02 also need
 follow-up. The settled-snapshot boundary below carries forward an existing
 launch-validation concern rather than discovering a public authorization bypass.
@@ -27,12 +27,38 @@ below. No claim is made that an unauthenticated attacker can alter the ledger.
 Priority P1 means resolve before production sign-off; P2 means a concrete
 correctness/security-hardening issue to resolve before calling this audit closed.
 
-- [ ] REAUDIT-01 — P1: enforce settled purchase snapshots independently of invoice creation.
-- [ ] REAUDIT-02 — P1: complete browser checkout/access tests and gate CI on them.
+- [x] REAUDIT-01 — P1: enforce settled purchase snapshots independently of invoice creation.
+- [x] REAUDIT-02 — P1: complete browser checkout/access tests and gate CI on them.
 - [ ] REAUDIT-03 — P2: make the documented local request-identity configuration work.
 - [ ] REAUDIT-04 — P2: retain the administrator identity for recovery audit actions.
 - [ ] REAUDIT-05 — P2: validate evidence field types and bound retained values.
 - [ ] REAUDIT-06 — P2: cover malformed historical payloads in the SEC-02 upgrade path.
+
+## Remediation completed — 20 September 2026
+
+REAUDIT-01 and REAUDIT-02 are implemented and verified locally. The finding
+descriptions below preserve the original review evidence; REAUDIT-03–06 remain open.
+
+- **REAUDIT-01:** the new forward migration protects settled order, line and
+  payment snapshots independently of invoices, locks both endpoints of line
+  moves, and checks aggregate/amount/currency consistency at settlement.
+  Manual purchases create their lines before settlement. Regression tests cover
+  absent, draft and issued invoices plus concurrency and legitimate lifecycle
+  transitions. See [protection and rollout](../settled-purchase-protection.md).
+- **REAUDIT-02:** four served Astro/Nuxt Playwright scenarios use disposable
+  PostgreSQL and controlled external providers/email. They cover two-volume
+  checkout, retries/duplicate submit, cross-tab baskets, success/failure/pending
+  returns, email-link login and private-file authorization. The suite also found
+  and fixed native browser fetch binding and request-local Supabase session
+  reuse bugs. The reusable quality/deployment gate now runs the browser suite.
+  See [browser test instructions](../browser-checkout-tests.md).
+- **Verification:** `pnpm check`, `pnpm db:check`, 317 unit tests, 155 PostgreSQL
+  integration tests, four Chromium browser scenarios, and both application
+  production builds passed. Frozen-lockfile installation also passed.
+- **Not performed:** deployed migration, hosted CI execution, real provider
+  transaction, live email delivery or production security/configuration checks.
+  The launch checklist remains open; apply the reviewed migration with the
+  documented writer handover before relying on the new database guarantees.
 
 ### REAUDIT-01: paid purchase snapshots depend on later billing
 

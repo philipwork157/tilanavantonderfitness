@@ -4,9 +4,12 @@ import { createDatabase, type Database } from '@tilana/db/server';
 import { clients, orderItems, orders, payments, programAccess, programs, programVolumes } from '@tilana/db/schema';
 import { eq } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 /** Never fall back to the app's configured database; require an empty local test database. */
-export async function createPaystackTestDatabase() {
+export async function createPaystackTestDatabase(beforeSettlementProtection?: (database: Database) => Promise<void>) {
   const rawUrl = process.env.PAYSTACK_TEST_DATABASE_URL;
   if (!rawUrl) throw new Error('Set PAYSTACK_TEST_DATABASE_URL to an empty, disposable local PostgreSQL database.');
   const url = new URL(rawUrl);
@@ -30,9 +33,22 @@ export async function createPaystackTestDatabase() {
     // to apply the repository's actual migrations in an isolated test cluster.
     await database.$client`create schema auth`;
     await database.$client`create table auth.users (id uuid primary key)`;
-    await migrate(database, {
-      migrationsFolder: fileURLToPath(new URL('../../../../supabase/migrations', import.meta.url)),
-    });
+    const migrationsFolder = fileURLToPath(new URL('../../../../supabase/migrations', import.meta.url));
+    if (beforeSettlementProtection) {
+      // Legacy repair fixtures must exist before the new guards, never disable
+      // constraints in a database purporting to test the current application.
+      const temporary = await mkdtemp(join(tmpdir(), 'tilana-migration-fixture-'));
+      try {
+        await cp(migrationsFolder, temporary, { recursive: true });
+        const journalPath = join(temporary, 'meta/_journal.json');
+        const journal = JSON.parse(await readFile(journalPath, 'utf8'));
+        journal.entries = journal.entries.filter((entry: { idx: number }) => entry.idx < 28);
+        await writeFile(journalPath, JSON.stringify(journal));
+        await migrate(database, { migrationsFolder: temporary });
+        await beforeSettlementProtection(database);
+      } finally { await rm(temporary, { recursive: true, force: true }); }
+    }
+    await migrate(database, { migrationsFolder });
     return database;
   } catch (error) {
     await database.$client.end();

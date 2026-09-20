@@ -16,21 +16,20 @@ export function registerInvoiceCases(getDatabase: () => Database, send: ReturnTy
       vi.stubGlobal('useRuntimeConfig', () => ({ paystackEnvironment: 'test', invoiceDevelopmentRecipient: 'safe@example.test', accountBaseUrl: 'http://127.0.0.1:3001' }));
       send.mockResolvedValue({ messageId: 'fixture-only' });
     });
-    const seed = async () => {
+    const seed = async (options: { secondLine?: boolean; missingName?: boolean } = {}) => {
       const database = getDatabase();
       const fixture = await seedPendingPayment(database);
       const [order] = await database.select().from(orders).where(eq(orders.id, fixture.orderId));
       const [client] = await database.select().from(clients).where(eq(clients.id, order!.clientId));
-      await database.update(orders).set({ customerName: 'Original Buyer', customerEmail: client!.email, customerPhone: '0123456789', status: 'paid', paidAt: new Date() }).where(eq(orders.id, order!.id));
-      await database.update(payments).set({ status: 'succeeded', paidAt: new Date(), verifiedAt: new Date() }).where(eq(payments.id, fixture.paymentId));
+      if (options.secondLine) await database.insert(orderItems).values({ orderId: fixture.orderId, clientId: client!.id, description: 'Second volume', unitPriceCents: 5000, lineTotalCents: 5000 });
+      const totalCents = options.secondLine ? 15000 : 10000;
+      await database.update(orders).set({ subtotalCents: totalCents, totalCents, customerName: options.missingName ? null : 'Original Buyer', customerEmail: client!.email, customerPhone: '0123456789', status: 'paid', paidAt: new Date() }).where(eq(orders.id, order!.id));
+      await database.update(payments).set({ amountCents: totalCents, status: 'succeeded', paidAt: new Date(), verifiedAt: new Date() }).where(eq(payments.id, fixture.paymentId));
       return { ...fixture, clientId: client!.id };
     };
     it('issues one paid invoice with two original lines under concurrent replay', async () => {
       const database = getDatabase();
-      const fixture = await seed();
-      await database.insert(orderItems).values({ orderId: fixture.orderId, clientId: fixture.clientId, description: 'Second volume', unitPriceCents: 5000, lineTotalCents: 5000 });
-      await database.update(orders).set({ subtotalCents: 15000, totalCents: 15000 }).where(eq(orders.id, fixture.orderId));
-      await database.update(payments).set({ amountCents: 15000 }).where(eq(payments.id, fixture.paymentId));
+      const fixture = await seed({ secondLine: true });
       const ids = await Promise.all([reconcileOrderInvoice(fixture.orderId), reconcileOrderInvoice(fixture.orderId)]);
       expect(ids[0]).toBe(ids[1]);
       const document = await getInvoiceDocument(ids[0]!, fixture.clientId);
@@ -52,10 +51,9 @@ export function registerInvoiceCases(getDatabase: () => Database, send: ReturnTy
     });
     it('rejects missing original buyer data and multiple settled attempts', async () => {
       const database = getDatabase();
+      const missing = await seed({ missingName: true });
+      await expect(reconcileOrderInvoice(missing.orderId)).rejects.toThrow('snapshot');
       const fixture = await seed();
-      await database.update(orders).set({ customerName: null }).where(eq(orders.id, fixture.orderId));
-      await expect(reconcileOrderInvoice(fixture.orderId)).rejects.toThrow('snapshot');
-      await database.update(orders).set({ customerName: 'Original Buyer' }).where(eq(orders.id, fixture.orderId));
       await database.insert(payments).values({ orderId: fixture.orderId, provider: 'paystack', providerReference: `second-${fixture.reference}`, environment: 'test', amountCents: 10000, status: 'succeeded', paidAt: new Date() });
       await expect(reconcileOrderInvoice(fixture.orderId)).rejects.toThrow('Multiple settled');
     });
@@ -181,8 +179,7 @@ export function registerInvoiceCases(getDatabase: () => Database, send: ReturnTy
     });
     it('records issuance review and backoff rather than blocking every subsequent run', async () => {
       const database = getDatabase();
-      const fixture = await seed();
-      await database.update(orders).set({ customerName: null }).where(eq(orders.id, fixture.orderId));
+      const fixture = await seed({ missingName: true });
       const failed: number[] = [];
       for (let index = 0; index < 4 && !failed.includes(fixture.orderId); index++) failed.push(...(await reconcilePurchaseInvoices()).failedOrderIds);
       expect(failed).toContain(fixture.orderId);

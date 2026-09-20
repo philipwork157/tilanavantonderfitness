@@ -50,3 +50,13 @@ jobs:
         run: pnpm test
       - name: Run financial PostgreSQL integration tests
         run: pnpm test:integration
+      - name: Create isolated browser database
+        env:
+          PGPASSWORD: postgres
+        run: createdb --host=127.0.0.1 --username=postgres tilana_paystack_test_browser_ci
+      - name: Install browser runtime
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run served-app checkout and customer access tests
+        env:
+          E2E_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/tilana_paystack_test_browser_ci
+        run: pnpm test:e2e

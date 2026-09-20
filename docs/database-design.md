@@ -80,6 +80,12 @@ The customer-facing email should link to `/account/programs`. The Nuxt server ve
 
 For example, R400 is stored as `40000`. If Nourish Volume 1 later costs R500, the old `order_items.unit_price_cents` remains `40000`, so purchase history stays accurate.
 
+Settlement-based triggers protect paid order/line/payment snapshots even before
+invoicing, serialize child writes against settlement, and check line sums and
+settled payment amount/currency at commit. Manual creation builds lines before
+settling. See [settled purchase protection](./settled-purchase-protection.md)
+for forward migration, legacy preflight and rollout requirements.
+
 The public website provides a browser-side basket for up to ten different
 programme volumes, with a maximum quantity of one for each digital product.
 Guest checkout creates or reuses the unique `clients` record by email and links

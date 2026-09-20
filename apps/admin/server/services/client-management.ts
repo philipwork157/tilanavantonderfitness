@@ -183,13 +183,13 @@ export async function createManualClient(
         customerName: `${input.firstName} ${input.lastName}`,
         customerEmail: email,
         customerPhone: input.phone || null,
-        status: input.purchaseStatus,
+        status: isPaid ? 'pending' : input.purchaseStatus,
         currency: 'ZAR',
         subtotalCents: totalCents,
         totalCents,
         notes: 'Created manually in the admin portal.',
         createdByUserId: administratorUserId,
-        paidAt: isPaid ? now : null,
+        paidAt: null,
       })
       .returning({ id: orders.id, orderNumber: orders.orderNumber });
 
@@ -204,7 +204,9 @@ export async function createManualClient(
       shouldGrantManualProgramAccess(input.purchaseStatus),
     );
 
-    if (isPaid && totalCents > 0) {
+    // Build the complete purchase before crossing the immutable settlement boundary.
+    if (isPaid) {
+      await transaction.update(orders).set({ status: 'paid', paidAt: now }).where(eq(orders.id, order.id));
       await insertManualPayment(transaction, order.id, totalCents, now);
     }
 
@@ -302,13 +304,13 @@ export async function updateManualClient(
           customerName: `${input.firstName} ${input.lastName}`,
           customerEmail: email,
           customerPhone: input.phone || null,
-          status: input.purchaseStatus,
+          status: isPaid ? 'pending' : input.purchaseStatus,
           currency: 'ZAR',
           subtotalCents: totalCents,
           totalCents,
           notes: 'Created manually in the admin portal.',
           createdByUserId: administratorUserId,
-          paidAt: isPaid ? now : null,
+          paidAt: null,
         })
         .returning({ id: orders.id, orderNumber: orders.orderNumber, status: orders.status, paidAt: orders.paidAt });
     } else {
@@ -324,13 +326,13 @@ export async function updateManualClient(
       await transaction
         .update(orders)
         .set({
-          status: input.purchaseStatus,
+          status: isPaid ? 'pending' : input.purchaseStatus,
           subtotalCents: totalCents,
           customerName: `${input.firstName} ${input.lastName}`,
           customerEmail: email,
           customerPhone: input.phone || null,
           totalCents,
-          paidAt: isPaid ? now : null,
+          paidAt: null,
           updatedAt: now,
         })
         .where(eq(orders.id, order.id));
@@ -345,7 +347,10 @@ export async function updateManualClient(
       administratorUserId,
       shouldGrantManualProgramAccess(input.purchaseStatus),
     );
-    if (isPaid) await insertManualPayment(transaction, order.id, totalCents, now);
+    if (isPaid) {
+      await transaction.update(orders).set({ status: 'paid', paidAt: now }).where(eq(orders.id, order.id));
+      await insertManualPayment(transaction, order.id, totalCents, now);
+    }
 
     return { id: clientId, orderNumber: order.orderNumber };
   });

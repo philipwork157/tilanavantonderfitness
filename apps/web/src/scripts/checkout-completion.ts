@@ -23,11 +23,14 @@ export async function confirmCheckoutStatus(apiUrl: string, reference: string, d
   clearPaid: (reference: string) => Promise<void>;
   retireIntent: (reference: string) => Promise<void>;
 }) {
+  // Native browser fetch rejects a plain dependency object as its receiver.
+  // Invoke it as a function, not dependencies.fetch(...).
+  const request = dependencies.fetch;
   for (let attempt = 0; attempt < 10; attempt += 1) {
     try {
       const url = new URL(apiUrl);
       url.searchParams.set('reference', reference);
-      const response = await dependencies.fetch(url.toString(), { cache: 'no-store', signal: AbortSignal.timeout(10000) });
+      const response = await request(url.toString(), { cache: 'no-store', signal: AbortSignal.timeout(10000) });
       const result = await readCheckoutStatus(response);
       if (result.status !== 'pending') {
         // Partial refunds retain the successful purchase's basket/access semantics.
