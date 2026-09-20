@@ -110,6 +110,23 @@ No `wrangler.toml` is required.
 
 ## Fly.io configuration
 
+### Local versus deployed request identity (REAUDIT-03)
+
+For direct local `pnpm dev`, leave `NUXT_TRUSTED_CLIENT_IP_HEADER` **unset**.
+The committed admin environment example deliberately comments it out. If an
+older copy of `apps/admin/.env` sets it to `fly-client-ip`, remove that override
+(including any shell override) and restart the development server. Local requests
+then use the socket address; arbitrary forwarded headers are ignored.
+
+Both deployed Fly apps run production builds and must use
+`NUXT_TRUSTED_CLIENT_IP_HEADER=fly-client-ip` in runtime secrets. Never copy a
+local empty override to a deployment. The production default also selects that
+header, and missing, invalid or multi-address values fail with HTTP 403 without
+falling back to another header or the proxy socket. Restrict ingress to the
+trusted proxy and verify its header overwrite behavior before launch; a header
+name alone does not authenticate a proxy. A different hosting/proxy chain needs
+its own reviewed configuration. This local fix does not verify deployed ingress.
+
 Both Fly configurations use the same Dockerfile and Nitro Node server:
 
 | Setting | Development | Production |

@@ -29,7 +29,7 @@ correctness/security-hardening issue to resolve before calling this audit closed
 
 - [x] REAUDIT-01 — P1: enforce settled purchase snapshots independently of invoice creation.
 - [x] REAUDIT-02 — P1: complete browser checkout/access tests and gate CI on them.
-- [ ] REAUDIT-03 — P2: make the documented local request-identity configuration work.
+- [x] REAUDIT-03 — P2: make the documented local request-identity configuration work.
 - [ ] REAUDIT-04 — P2: retain the administrator identity for recovery audit actions.
 - [ ] REAUDIT-05 — P2: validate evidence field types and bound retained values.
 - [ ] REAUDIT-06 — P2: cover malformed historical payloads in the SEC-02 upgrade path.
@@ -37,7 +37,8 @@ correctness/security-hardening issue to resolve before calling this audit closed
 ## Remediation completed — 20 September 2026
 
 REAUDIT-01 and REAUDIT-02 are implemented and verified locally. The finding
-descriptions below preserve the original review evidence; REAUDIT-03–06 remain open.
+descriptions below preserve the original review evidence. REAUDIT-03 is also
+completed below; REAUDIT-04–06 remain open.
 
 - **REAUDIT-01:** the new forward migration protects settled order, line and
   payment snapshots independently of invoices, locks both endpoints of line
@@ -112,6 +113,19 @@ not only mocked helper functions. Record the original TEST-01 browser requiremen
 as incomplete until this passes.
 
 ### REAUDIT-03: copying the example environment breaks local public requests
+
+**Completed locally (2026-09-20).** The example now leaves the trusted-header
+override unset for direct development; the production default and identity
+validator remain unchanged. Tests read the committed example and actual Nuxt
+configuration for both development and production, verify local socket identity,
+and reject missing/invalid/multi-address trusted headers without falling back to
+forwarded headers. Existing local overrides must be removed and the dev server
+restarted; no private `.env` or deployed configuration was edited. See
+[deployment instructions](../deployment.md#local-versus-deployed-request-identity-reaudit-03).
+
+Verification: seven identity tests and `pnpm check` passed; `pnpm test` passed
+(245 admin tests plus 75 cached web tests); `pnpm build:admin` passed. Production ingress remains an
+unverified launch requirement, not a guarantee established by these unit tests.
 
 Evidence: [`apps/admin/.env.example`](../../apps/admin/.env.example),
 [`nuxt.config.ts`](../../apps/admin/nuxt.config.ts), and
