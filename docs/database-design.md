@@ -68,6 +68,10 @@ The customer-facing email should link to `/account/programs`. The Nuxt server ve
   ignored replay details expire after 30 days and the recovery worker replaces
   them with a redaction marker while retaining the digest and normalized audit
   columns. Deferred/failed evidence remains until it is resolved or reviewed.
+  Retained values use bounded scalar contracts, including nested dispute
+  transactions; rejected evidence keeps a safe marker and cannot mutate money
+  on replay. Forward cleanup and the pre-SEC-02 repair path preserve original
+  digests. See [payment evidence upgrade](./payment-evidence-upgrade.md).
 - `payment_refunds` records each full or partial refund independently. Its
   integer `payment_id`, provider, and currency must match the parent payment;
   active refund totals cannot exceed the original payment.

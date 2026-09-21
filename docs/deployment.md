@@ -200,6 +200,15 @@ future non-Fly deployment must establish the equivalent deployment-mode policy.
 
 ## Paystack and customer access
 
+### Evidence retention upgrade (REAUDIT-05/06)
+
+Follow [payment evidence upgrade](./payment-evidence-upgrade.md) before applying
+`20260921052610_bound_payment_evidence.sql`. If the database is blocked before
+SEC-02 by non-object JSON `data`, use the reviewed preparatory SQL on that
+preceding schema; do not rewrite or skip the existing migration. Pause all
+payment writers for the digest-column/application handover. No deployed
+migration or preparation was performed locally.
+
 ### Settled-purchase guard rollout (REAUDIT-01)
 
 Review `20260920035033_protect_settled_purchases.sql` and follow the preflight and

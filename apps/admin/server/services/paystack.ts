@@ -887,13 +887,15 @@ export async function initiatePaystackRefund(
 }
 
 export async function processPaystackEvent(
-  payload: PaystackEvent,
+  rawPayload: unknown,
   providerEventKey: string,
   verifiedPayloadDigest?: string,
 ): Promise<void> {
   getPaystackCredentials();
   await assertPaystackDatabaseEnvironment();
-  const eventType = stringValue(payload.event) || 'unknown';
+  const storedPayload = sanitizePaystackEvent(rawPayload);
+  const payload: PaystackEvent = storedPayload;
+  const eventType = storedPayload.event;
   const isRefundEvent = eventType in refundEventStatuses;
   const isDisputeEvent = ['charge.dispute.create', 'charge.dispute.remind', 'charge.dispute.resolve'].includes(eventType);
   const disputeTransaction = payload.data?.transaction;
@@ -903,8 +905,7 @@ export async function processPaystackEvent(
       ? stringValue((disputeTransaction as Record<string, unknown>).reference)
       : stringValue(payload.data?.reference);
   const database = getDatabase();
-  const storedPayload = sanitizePaystackEvent(payload);
-  const payloadDigest = verifiedPayloadDigest || digestEventPayload(payload);
+  const payloadDigest = verifiedPayloadDigest || digestEventPayload(rawPayload);
 
   await database.transaction(async (transaction) => {
     const [payment] = reference
@@ -942,6 +943,11 @@ export async function processPaystackEvent(
         .limit(1).for('update');
       if (deferred?.processingStatus !== 'received') return;
       event = deferred;
+    }
+
+    if (storedPayload.evidenceRejected) {
+      await markPaymentEvent(transaction, event.id, 'failed', 'Provider evidence failed retention validation.');
+      return;
     }
 
     if (isDisputeEvent) {

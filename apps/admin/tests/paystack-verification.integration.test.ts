@@ -8,6 +8,7 @@ import { registerCheckoutCases } from './helpers/paystack-checkout-cases';
 import { registerCustomerNotificationCases } from './helpers/customer-notification-cases';
 import { registerRecoveryCases } from './helpers/payment-recovery-cases';
 import { registerRecoveryAuditCases, seedLegacyRecoveryAudit } from './helpers/recovery-audit-cases';
+import { prepareEvidenceUpgrade, registerEvidenceUpgradeCases } from './helpers/evidence-upgrade-cases';
 import { registerInvoiceCases } from './helpers/invoice-cases';
 import { registerClientManagementCases } from './helpers/client-management-cases';
 import { registerInvoiceAdministrationCases } from './helpers/invoice-administration-cases';
@@ -37,6 +38,7 @@ registerCheckoutCases(() => database);
 registerCustomerNotificationCases(() => database, mocks.send, mocks.generateLink);
 registerRecoveryCases(() => database, mocks.send);
 registerRecoveryAuditCases(() => database);
+registerEvidenceUpgradeCases(() => database);
 registerInvoiceCases(() => database, mocks.send, mocks.createSupabaseAuthClient);
 registerClientManagementCases(() => database);
 registerInvoiceAdministrationCases(() => database, mocks.createSupabaseAuthClient);
@@ -106,7 +108,7 @@ beforeAll(async () => {
   database = await createPaystackTestDatabase(async db => {
     await verifyEntitlementRepair(db);
     await seedLegacyRecoveryAudit(db);
-  });
+  }, prepareEvidenceUpgrade);
 });
 afterAll(async () => { await database?.$client.end(); });
 beforeEach(() => {

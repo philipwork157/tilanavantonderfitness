@@ -16,6 +16,7 @@
     "./newsletter": "./src/newsletter.ts",
     "./newsletter.messages": "./src/newsletter.messages.ts",
     "./payments": "./src/payments.ts",
+    "./payment-evidence": "./src/payment-evidence.ts",
     "./programs": "./src/programs.ts"
   },
   "scripts": {

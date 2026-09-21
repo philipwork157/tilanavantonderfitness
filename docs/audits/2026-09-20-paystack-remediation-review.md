@@ -31,14 +31,15 @@ correctness/security-hardening issue to resolve before calling this audit closed
 - [x] REAUDIT-02 — P1: complete browser checkout/access tests and gate CI on them.
 - [x] REAUDIT-03 — P2: make the documented local request-identity configuration work.
 - [x] REAUDIT-04 — P2: retain the administrator identity for recovery audit actions.
-- [ ] REAUDIT-05 — P2: validate evidence field types and bound retained values.
-- [ ] REAUDIT-06 — P2: cover malformed historical payloads in the SEC-02 upgrade path.
+- [x] REAUDIT-05 — P2: validate evidence field types and bound retained values.
+- [x] REAUDIT-06 — P2: cover malformed historical payloads in the SEC-02 upgrade path.
 
 ## Remediation completed — 20 September 2026
 
 REAUDIT-01 and REAUDIT-02 are implemented and verified locally. The finding
 descriptions below preserve the original review evidence. REAUDIT-03 is also
-completed below, followed by REAUDIT-04 on 21 September; REAUDIT-05–06 remain open.
+completed below, followed by REAUDIT-04–06 on 21 September. All six implementation
+findings are complete locally; deployed migration and launch evidence remain open.
 
 - **REAUDIT-01:** the new forward migration protects settled order, line and
   payment snapshots independently of invoices, locks both endpoints of line
@@ -194,6 +195,21 @@ Cover existing rows as well as newly created events.
 
 ### REAUDIT-05: the evidence allowlist copies arbitrary nested values
 
+**Completed locally (2026-09-21).** Retention now uses bounded, non-coercing
+Zod scalar contracts and explicitly shaped dispute transactions. Free-text
+gateway responses and unrelated fields are omitted. Malformed retained values
+produce a safe rejection marker; the financial processor refuses them, including
+on replay, so removing an invalid refund ID cannot convert it into an accepted
+identifier-less refund. The original input digest is preserved. Forward migration
+`20260921052610_bound_payment_evidence.sql` applies equivalent typed cleanup to
+historical Paystack payloads without changing internal actor audit metadata.
+
+Verification for REAUDIT-05/06: 341 unit tests, 166 disposable PostgreSQL
+integration tests, `pnpm check`, `pnpm db:check`, and both production builds
+passed. This includes runtime/SQL projection parity, nested and oversized values,
+and rejected-refund replay. See [policy and rollout](../payment-evidence-upgrade.md).
+Original finding evidence follows.
+
 Evidence: `pick` and `sanitizePaystackEvent` in
 [`paystack-event-evidence.ts`](../../apps/admin/server/utils/paystack-event-evidence.ts).
 
@@ -218,6 +234,22 @@ sensitive unexpected fields are not retained. Valid deferred refunds/disputes
 must still replay successfully after sanitization.
 
 ### REAUDIT-06: historical non-object `data` can block the retention migration
+
+**Completed locally (2026-09-21).** The original SEC-02 migration remains
+unchanged. A reviewed, explicit pre-migration preparation script repairs only
+impossible charge/refund data shapes and saves their original JSONB digests in
+an upgrade-only column. The forward migration restores those digests, removes
+the temporary column and applies typed cleanup. Preparation is retry-safe before
+SEC-02 and rejects an already-upgraded database. Writers must remain paused
+through the mandatory-digest-column/new-application handover.
+
+The populated preceding-schema test reproduces the original migration failure,
+runs preparation twice, applies the actual migration chain and verifies original
+digests, malformed/missing/null/array/scalar data, internal metadata and expired
+processed details. Valid deferred refund and dispute evidence replays after
+fulfillment. No deployed preparation, migration or provider operation was run.
+See [preflight and upgrade instructions](../payment-evidence-upgrade.md).
+Original finding evidence follows.
 
 Evidence: charge/refund branches in
 [`20260919135337_shallow_flatman.sql`](../../supabase/migrations/20260919135337_shallow_flatman.sql),
