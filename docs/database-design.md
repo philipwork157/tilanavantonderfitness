@@ -146,6 +146,12 @@ Disputes do not create ordinary refund reservations. Deferred prerequisite
 events retain `received` status; controlled replay preserves the original event.
 See [recovery operations](./paystack-recovery.md) for policy and activation.
 
+Internal reconcile/acknowledge events also retain `payment_events.actor_user_id`
+as an integer FK to `users.id`, independently of expiring payloads. Database
+guards preserve actor/action/payment/timestamps and prevent deleting that audit
+history. Legacy unresolved attribution remains an explicit review exception.
+See [recovery audit retention](./recovery-audit-retention.md).
+
 ## Invoices
 
 Manual client profile edits preserve all recorded sale rows and timestamps.

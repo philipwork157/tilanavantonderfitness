@@ -177,6 +177,8 @@ export const paymentEvents = pgTable(
   {
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
     paymentId: integer('payment_id').references(() => payments.id, { onDelete: 'set null' }),
+    // Durable attribution is independent of short-lived provider/recovery payloads.
+    actorUserId: integer('actor_user_id').references(() => users.id, { onDelete: 'restrict' }),
     provider: text('provider').notNull(),
     providerEventKey: text('provider_event_key').notNull(),
     eventType: text('event_type').notNull(),

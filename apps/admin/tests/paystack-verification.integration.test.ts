@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { registerCheckoutCases } from './helpers/paystack-checkout-cases';
 import { registerCustomerNotificationCases } from './helpers/customer-notification-cases';
 import { registerRecoveryCases } from './helpers/payment-recovery-cases';
+import { registerRecoveryAuditCases, seedLegacyRecoveryAudit } from './helpers/recovery-audit-cases';
 import { registerInvoiceCases } from './helpers/invoice-cases';
 import { registerClientManagementCases } from './helpers/client-management-cases';
 import { registerInvoiceAdministrationCases } from './helpers/invoice-administration-cases';
@@ -35,6 +36,7 @@ let database: Database;
 registerCheckoutCases(() => database);
 registerCustomerNotificationCases(() => database, mocks.send, mocks.generateLink);
 registerRecoveryCases(() => database, mocks.send);
+registerRecoveryAuditCases(() => database);
 registerInvoiceCases(() => database, mocks.send, mocks.createSupabaseAuthClient);
 registerClientManagementCases(() => database);
 registerInvoiceAdministrationCases(() => database, mocks.createSupabaseAuthClient);
@@ -101,7 +103,10 @@ async function confirmRefund(fixture: PaymentFixture, amount: number) {
 }
 
 beforeAll(async () => {
-  database = await createPaystackTestDatabase(verifyEntitlementRepair);
+  database = await createPaystackTestDatabase(async db => {
+    await verifyEntitlementRepair(db);
+    await seedLegacyRecoveryAudit(db);
+  });
 });
 afterAll(async () => { await database?.$client.end(); });
 beforeEach(() => {

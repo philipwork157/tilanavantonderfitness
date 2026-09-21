@@ -264,6 +264,12 @@ historical data or automatic financial ownership edits.
 
 ### Recovery worker rollout (PAY-05)
 
+REAUDIT-04 adds `20260921051739_retain_recovery_actor.sql`. Pause scheduler and
+administrator recovery actions for the migration/application handover, review
+legacy unattributed rows, and follow [recovery audit retention](./recovery-audit-retention.md).
+Do not resume old writers or cleanup code after migration. No deployed database
+was migrated by the local implementation.
+
 Review and apply `20260917151828_bored_sebastian_shaw.sql` before deploying the
 recovery service. It has been applied only in disposable local test databases.
 Recovery defaults to disabled and requires new Fly runtime secrets plus a

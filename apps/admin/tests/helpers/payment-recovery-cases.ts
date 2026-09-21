@@ -6,9 +6,11 @@ import { processPaystackEvent } from '@server/services/paystack';
 import { reconcilePayment, redactExpiredPaymentEventPayloads, replayPaymentEvent, requestPaymentRecovery, runPaymentRecovery } from '@server/services/payment-recovery';
 import { deliverPaymentRecoveryAlerts } from '@server/services/payment-recovery-alerts';
 import { createBarrier, readPaymentState, seedPendingPayment, type PaymentFixture } from './paystack-database';
+import { seedRecoveryActor } from './recovery-audit-cases';
 
 /** Real financial records and locks; mocked provider/email transport, never external money or mail. */
 export function registerRecoveryCases(getDatabase: () => Database, send: ReturnType<typeof vi.fn>) {
+  let actor: number;
   const config = { paystackEnvironment: 'test', paystackSecretKey: 'sk_test_fixture', paystackRecoveryAlertTo: '' };
   const charge = (fixture: PaymentFixture) => ({
     id: fixture.paymentId, reference: fixture.reference, amount: 10000, currency: 'ZAR', domain: 'test', status: 'success',
@@ -36,6 +38,7 @@ export function registerRecoveryCases(getDatabase: () => Database, send: ReturnT
 
   describe('durable payment recovery against PostgreSQL', () => {
     beforeEach(async () => {
+      actor = await seedRecoveryActor(getDatabase());
       vi.stubGlobal('useRuntimeConfig', () => config);
       // Isolate due work, not financial data, in this explicitly disposable database.
       await getDatabase().execute(sql`
@@ -99,7 +102,7 @@ export function registerRecoveryCases(getDatabase: () => Database, send: ReturnT
     });
     it('persists timeout backoff without exposing arbitrary exceptions or failing the payment', async () => {
       const fixture = await seedPendingPayment(getDatabase());
-      await requestPaymentRecovery(fixture.paymentId, 1);
+      await requestPaymentRecovery(fixture.paymentId, actor);
       vi.stubGlobal('$fetch', vi.fn().mockRejectedValue(new Error('Bearer secret and customer@email.test')));
       expect(await runPaymentRecovery()).toMatchObject({ retried: 1 });
       expect(await jobFor(fixture)).toMatchObject({ attempts: 1, leaseUntil: null });
@@ -108,7 +111,7 @@ export function registerRecoveryCases(getDatabase: () => Database, send: ReturnT
     });
     it('alerts after repeated provider failures while keeping uncertain money recoverable', async () => {
       const fixture = await seedPendingPayment(getDatabase());
-      await requestPaymentRecovery(fixture.paymentId, 1);
+      await requestPaymentRecovery(fixture.paymentId, actor);
       await getDatabase().update(paymentRecoveryJobs).set({ attempts: 7 }).where(eq(paymentRecoveryJobs.paymentId, fixture.paymentId));
       vi.stubGlobal('$fetch', vi.fn().mockRejectedValue(new Error('Timeout')));
       await runPaymentRecovery();
@@ -116,7 +119,7 @@ export function registerRecoveryCases(getDatabase: () => Database, send: ReturnT
     });
     it('leases one payment across concurrent workers without duplicate fulfillment', async () => {
       const fixture = await seedPendingPayment(getDatabase());
-      await requestPaymentRecovery(fixture.paymentId, 1);
+      await requestPaymentRecovery(fixture.paymentId, actor);
       const requested = createBarrier();
       const release = createBarrier();
       const fetch = provider(fixture);
@@ -130,7 +133,7 @@ export function registerRecoveryCases(getDatabase: () => Database, send: ReturnT
     });
     it('recovers an expired lease left by a crashed worker', async () => {
       const fixture = await seedPendingPayment(getDatabase());
-      await requestPaymentRecovery(fixture.paymentId, 1);
+      await requestPaymentRecovery(fixture.paymentId, actor);
       await getDatabase().update(paymentRecoveryJobs).set({ leaseVersion: 4, leaseUntil: new Date(0) }).where(eq(paymentRecoveryJobs.paymentId, fixture.paymentId));
       provider(fixture);
       await runPaymentRecovery();
@@ -192,7 +195,7 @@ export function registerRecoveryCases(getDatabase: () => Database, send: ReturnT
     });
     it('keeps failed alert delivery durable and retries without customer data', async () => {
       const fixture = await seedPendingPayment(getDatabase());
-      await requestPaymentRecovery(fixture.paymentId, 1);
+      await requestPaymentRecovery(fixture.paymentId, actor);
       await getDatabase().update(paymentRecoveryJobs).set({ alertPending: true, reviewReason: 'Review payment.' }).where(eq(paymentRecoveryJobs.paymentId, fixture.paymentId));
       vi.stubGlobal('useRuntimeConfig', () => ({ ...config, paystackRecoveryAlertTo: 'ops@example.test' }));
       send.mockRejectedValueOnce(new Error('SES unavailable'));
@@ -207,17 +210,17 @@ export function registerRecoveryCases(getDatabase: () => Database, send: ReturnT
       const fixture = await seedPendingPayment(getDatabase());
       await processPaystackEvent({ event: 'charge.success', data: { ...charge(fixture), amount: 1 } }, `invalid:${fixture.reference}`);
       expect(await jobFor(fixture)).toMatchObject({ alertPending: true });
-      expect(await requestPaymentRecovery(fixture.paymentId, 7, 'acknowledge')).toEqual({ acknowledged: true });
+      expect(await requestPaymentRecovery(fixture.paymentId, actor, 'acknowledge')).toEqual({ acknowledged: true });
       expect(await jobFor(fixture)).toMatchObject({ alertPending: false, reviewReason: null });
       expect((await readPaymentState(getDatabase(), fixture)).payment?.status).toBe('pending');
       const audit = await getDatabase().select().from(paymentEvents).where(eq(paymentEvents.paymentId, fixture.paymentId));
-      expect(audit.some(event => event.eventType === 'admin.recovery.acknowledge' && event.payload.administratorUserId === 7)).toBe(true);
+      expect(audit.some(event => event.eventType === 'admin.recovery.acknowledge' && event.actorUserId === actor)).toBe(true);
     });
     it('does not let an operator steal an active recovery lease', async () => {
       const fixture = await seedPendingPayment(getDatabase());
-      await requestPaymentRecovery(fixture.paymentId, 7);
+      await requestPaymentRecovery(fixture.paymentId, actor);
       await getDatabase().update(paymentRecoveryJobs).set({ leaseUntil: new Date(Date.now() + 60_000) }).where(eq(paymentRecoveryJobs.paymentId, fixture.paymentId));
-      await expect(requestPaymentRecovery(fixture.paymentId, 7)).rejects.toMatchObject({ statusCode: 409 });
+      await expect(requestPaymentRecovery(fixture.paymentId, actor)).rejects.toMatchObject({ statusCode: 409 });
     });
     it('rejects replay of already-processed evidence', async () => {
       const fixture = await seedPendingPayment(getDatabase());

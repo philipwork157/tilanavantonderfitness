@@ -22,6 +22,11 @@ export async function redactExpiredPaymentEventPayloads(now = new Date()) {
     inArray(paymentEvents.processingStatus, ['processed', 'ignored']),
     isNotNull(paymentEvents.payloadExpiresAt),
     lte(paymentEvents.payloadExpiresAt, now),
+    // Preserve unresolved legacy attribution for review rather than erasing its
+    // last remaining evidence. New recovery actions always have a durable actor.
+    sql`(${paymentEvents.provider} <> 'internal'
+      or ${paymentEvents.eventType} not in ('admin.recovery.reconcile', 'admin.recovery.acknowledge')
+      or ${paymentEvents.actorUserId} is not null)`,
   ));
 }
 
@@ -182,7 +187,7 @@ export async function requestPaymentRecovery(paymentId: number, administratorUse
       });
     }
     await transaction.insert(paymentEvents).values({
-      paymentId, provider: 'internal', providerEventKey: `recovery-request:${randomUUID()}`,
+      paymentId, actorUserId: administratorUserId, provider: 'internal', providerEventKey: `recovery-request:${randomUUID()}`,
       eventType: `admin.recovery.${action}`, processingStatus: 'processed',
       payload: { administratorUserId, previousReviewReason: job?.reviewReason ?? null },
       payloadDigest: digestEventPayload({ administratorUserId, previousReviewReason: job?.reviewReason ?? null }),

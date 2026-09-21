@@ -117,6 +117,10 @@ database to force a financial outcome.
 
 ## Alerts and activation checklist
 
+Recovery actor attribution now survives payload expiry in an integer user FK.
+See [recovery audit retention](./recovery-audit-retention.md) for immutable
+metadata, unresolved legacy exceptions and the required coordinated rollout.
+
 Alerts contain internal payment IDs and generic summaries, not customer emails,
 magic links, keys, card details or raw provider errors. Delivery is at-least-once:
 SES failure/ten-second timeout keeps the alert pending. The scheduler receives

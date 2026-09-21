@@ -30,7 +30,7 @@ correctness/security-hardening issue to resolve before calling this audit closed
 - [x] REAUDIT-01 — P1: enforce settled purchase snapshots independently of invoice creation.
 - [x] REAUDIT-02 — P1: complete browser checkout/access tests and gate CI on them.
 - [x] REAUDIT-03 — P2: make the documented local request-identity configuration work.
-- [ ] REAUDIT-04 — P2: retain the administrator identity for recovery audit actions.
+- [x] REAUDIT-04 — P2: retain the administrator identity for recovery audit actions.
 - [ ] REAUDIT-05 — P2: validate evidence field types and bound retained values.
 - [ ] REAUDIT-06 — P2: cover malformed historical payloads in the SEC-02 upgrade path.
 
@@ -38,7 +38,7 @@ correctness/security-hardening issue to resolve before calling this audit closed
 
 REAUDIT-01 and REAUDIT-02 are implemented and verified locally. The finding
 descriptions below preserve the original review evidence. REAUDIT-03 is also
-completed below; REAUDIT-04–06 remain open.
+completed below, followed by REAUDIT-04 on 21 September; REAUDIT-05–06 remain open.
 
 - **REAUDIT-01:** the new forward migration protects settled order, line and
   payment snapshots independently of invoices, locks both endpoints of line
@@ -150,6 +150,25 @@ headers; production missing/invalid trusted identity still fails closed. Verify
 the actual production ingress separately.
 
 ### REAUDIT-04: payload expiry removes recovery-action attribution
+
+**Completed locally (2026-09-21).** `payment_events.actor_user_id` now links
+internal reconcile/acknowledge actions to the integer application user in the
+same transaction as the operation. A forward migration backfills valid existing
+JSON actor IDs; malformed, orphaned and already-erased identities remain
+explicitly unknown. Cleanup preserves unresolved legacy payloads for review,
+while valid actions retain immutable actor/action/payment/timestamp metadata
+after payload redaction. Database guards reject new unattributed actions,
+metadata rewrites and deletion of the linked audit identity/history. No new
+table or application UUID is introduced.
+
+Verification: 160 disposable PostgreSQL integration tests passed, including
+populated-schema backfill, 31-day cleanup, provider cleanup, mutation/deletion
+rejection and rollback on invalid actor. `pnpm check`, `pnpm db:check` and
+`pnpm test` passed (245 admin tests and 75 cached web tests), as did
+`pnpm build:admin`. See
+[retention policy and coordinated rollout](../recovery-audit-retention.md).
+No deployed migration or cleanup was performed; legacy gaps require review,
+not guessed attribution. Original finding evidence follows.
 
 Evidence: `requestPaymentRecovery` and `redactExpiredPaymentEventPayloads` in
 [`payment-recovery.ts`](../../apps/admin/server/services/payment-recovery.ts).
