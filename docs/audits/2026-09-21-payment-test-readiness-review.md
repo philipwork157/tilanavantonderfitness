@@ -73,3 +73,16 @@ Remediation verification: `pnpm test` passed (270 admin tests freshly run; 75 un
 Earlier findings remain recorded in the [20 September remediation review](./2026-09-20-paystack-remediation-review.md). No other new defect was confirmed in this scoped review; that is not a claim that no other defect exists.
 
 Remaining count: **0 open code findings in this review; 14 unchecked readiness checklist items** (4 environment preparation, 6 manual acceptance, 4 live-approval gates). These overlap historical launch checklists and are not 14 additional confirmed software defects. Hosted CI remains unverified even when local checks pass.
+
+## Development preflight follow-up — 21 September 2026
+
+**Blocked before purchase submission.** Read-only inspection found that the hosted development environment is not yet ready to exercise the current implementation:
+
+- Local HEAD is `140cf14` (REAUDIT-07 committed). Fly development machine image metadata reports `a714e2a`, an ancestor 26 commits behind this checkout. The machines are configured to auto-start, so their stopped state alone is not a fault.
+- The public development `/program/` page renders the older single-programme **Buy now** links, with no basket control. Its exact deployed revision was not determined.
+- `fly secrets list --app tilanavantonder-admin-dev` lists database, Supabase, AWS/SES sender, contact and newsletter settings, but no Paystack, R2, recovery, invoice-delivery or customer-notification settings. Inspected machine configuration only supplies general server settings and the development public site URL. Secret values were not retrieved; runtime credential validity remains unverified.
+- The local admin `.env` has a test-mode Paystack key, localhost callbacks, development-named R2 buckets and a customer-access test recipient. Its recovery/customer-notification/billing enable flags, recovery token and invoice test recipient are unset. These local settings are not proof of hosted configuration or database/resource isolation.
+
+No payment, email, remote database query/migration, deployment or configuration change was performed. No readiness checkbox was marked complete. Database migration state, resource isolation, scheduler operation and actual SES delivery remain unverified.
+
+Next requires an authorized coordinated **development-only** rollout: verify resource identity and migration preflight, apply reviewed pending migrations with the documented writer handover, configure the matching test credentials/private storage/safe inbox and worker settings, and deploy both applications at the reviewed revision. Then repeat preflight before the two-programme test purchase. Confirm the intended inbox before sending test messages. Do not substitute a purchase on the old deployed application or enable production payments.
