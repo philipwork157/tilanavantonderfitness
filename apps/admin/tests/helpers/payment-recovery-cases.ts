@@ -183,6 +183,35 @@ export function registerRecoveryCases(getDatabase: () => Database, send: ReturnT
       expect(await getDatabase().select().from(paymentDisputes).where(eq(paymentDisputes.paymentId, fixture.paymentId))).toHaveLength(0);
       expect((await readPaymentState(getDatabase(), fixture)).access[0]?.status).toBe('active');
     });
+    it('rejects mismatched dispute transaction IDs through event processing and admin replay without changing money or access', async () => {
+      const fixture = await seedPendingPayment(getDatabase());
+      await confirm(fixture);
+      const before = await readPaymentState(getDatabase(), fixture);
+      const row = dispute(fixture, 'resolved', 'merchant-accepted');
+      row.transaction.id += 1000000;
+      const key = `mismatched-dispute:${fixture.reference}`;
+      await processPaystackEvent({ event: 'charge.dispute.resolve', data: row }, key);
+      const [event] = await getDatabase().select().from(paymentEvents).where(eq(paymentEvents.providerEventKey, key));
+      expect(event?.processingStatus).toBe('failed');
+      expect(await replayPaymentEvent(event!.id, actor)).toMatchObject({ processingStatus: 'failed' });
+      expect(await readPaymentState(getDatabase(), fixture)).toEqual(before);
+      expect(await getDatabase().select().from(paymentDisputes).where(eq(paymentDisputes.paymentId, fixture.paymentId))).toHaveLength(0);
+    });
+    it('defers a dispute without stored transaction identity and applies matching evidence on admin replay after confirmation', async () => {
+      const fixture = await seedPendingPayment(getDatabase());
+      const before = await readPaymentState(getDatabase(), fixture);
+      const key = `early-dispute:${fixture.reference}`;
+      await processPaystackEvent({ event: 'charge.dispute.resolve', data: dispute(fixture, 'resolved', 'merchant-accepted') }, key);
+      const [event] = await getDatabase().select().from(paymentEvents).where(eq(paymentEvents.providerEventKey, key));
+      expect(event?.processingStatus).toBe('received');
+      expect(await replayPaymentEvent(event!.id, actor)).toMatchObject({ processingStatus: 'received' });
+      expect(await readPaymentState(getDatabase(), fixture)).toEqual(before);
+      expect(await getDatabase().select().from(paymentDisputes).where(eq(paymentDisputes.paymentId, fixture.paymentId))).toHaveLength(0);
+      await confirm(fixture);
+      expect(await replayPaymentEvent(event!.id, actor)).toMatchObject({ processingStatus: 'processed' });
+      expect(await readPaymentState(getDatabase(), fixture)).toMatchObject({ payment: { status: 'reversed' }, order: { status: 'refunded' } });
+      expect((await readPaymentState(getDatabase(), fixture)).access[0]?.status).toBe('revoked');
+    });
     it('replays trusted deferred evidence and preserves the original ledger row', async () => {
       const fixture = await seedPendingPayment(getDatabase());
       const key = `operator-early:${fixture.reference}`;

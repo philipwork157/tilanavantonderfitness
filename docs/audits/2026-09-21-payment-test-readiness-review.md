@@ -4,7 +4,7 @@ Reviewed revision: `23aa25d`. This is a scoped source review and local verificat
 
 ## Verdict
 
-Ready for controlled **isolated test-mode acceptance testing**, subject to the environment checks below. **Not yet approved for live payments.** One additional evidence-validation gap was confirmed. Completion of the previous six remediation tasks does not replace deployed-environment verification.
+Ready for controlled **isolated test-mode acceptance testing**, subject to the environment checks below. **Not yet approved for live payments.** The additional evidence-validation gap below has now been fixed locally. Completion of the previous six remediation tasks does not replace deployed-environment verification.
 
 ## Fresh verification
 
@@ -22,9 +22,9 @@ Type checks and production builds were not rerun in this review. These results d
 
 ## REAUDIT-07 — Compare dispute transaction identity on every processing path
 
-- [ ] **P2: Require the dispute transaction ID to match the stored payment transaction ID before recording or applying a dispute.**
+- [x] **P2: Require the dispute transaction ID to match the stored payment transaction ID before recording or applying a dispute.**
 
-Evidence:
+Original finding evidence (before remediation):
 
 - `apps/admin/server/services/paystack.ts:896` derives the payment reference from the nested dispute transaction. Its payment lookup selects amount, currency, environment and status, but not `providerTransactionId`.
 - `apps/admin/server/services/paystack-disputes.ts:7` likewise omits that ID from its payment type. The checks at lines 15–20 validate environment and money, but never compare transaction IDs.
@@ -37,10 +37,14 @@ Impact: contradictory trusted-provider evidence could be attached to the wrong t
 
 Acceptance criteria:
 
-- [ ] Include stored `providerTransactionId` in the payment lookup and shared dispute input.
-- [ ] Reject or safely defer mismatched/missing identity before dispute, payment, order, or entitlement mutations; do not guess a missing ID.
-- [ ] Add webhook/shared-path and admin replay regression tests for matching reference/money but a different transaction ID.
-- [ ] Cover legitimate matching evidence and missing stored identity; verify mismatch leaves financial and access state unchanged.
+- [x] Include stored `providerTransactionId` in the payment lookup and shared dispute input.
+- [x] Reject or safely defer mismatched/missing identity before dispute, payment, order, or entitlement mutations; do not guess a missing ID.
+- [x] Add webhook/shared-path and admin replay regression tests for matching reference/money but a different transaction ID.
+- [x] Cover legitimate matching evidence and missing stored identity; verify mismatch leaves financial and access state unchanged.
+
+Remediation: shared processing now rejects contradictory IDs before mutation. Pending payments without confirmed identity remain deferred; settled payments without identity fail for review. Admin replay uses the same guard. Four unit regressions cover missing/mismatched identity, including pending evidence. Two PostgreSQL regressions cover event processing and replay, unchanged financial/access state on rejection, and successful deferred replay after matching charge confirmation. No schema migration is required.
+
+Remediation verification: `pnpm test` passed (270 admin tests freshly run; 75 unchanged web tests cached), `pnpm check` and `pnpm build:admin` passed, and all 168 disposable PostgreSQL integration tests passed. The browser suite was not rerun for this server-only change. No external payments, emails, deployment, or commit was performed.
 
 ## Before isolated test-mode acceptance testing
 
@@ -60,10 +64,12 @@ Acceptance criteria:
 
 ## Before live approval
 
-- [ ] Resolve REAUDIT-07 and rerun relevant regression checks.
+- [x] Resolve REAUDIT-07 and rerun relevant regression checks.
 - [ ] Record successful current CI/type checks and production builds.
 - [ ] Verify deployed ingress/proxy trust, RLS, private storage permissions, secrets and strict test/live separation.
 - [ ] Record scheduler/alert operation and completed manual acceptance results above.
 - [ ] Obtain explicit launch approval and perform an authorized low-value live smoke test with reconciliation and cleanup procedures.
 
 Earlier findings remain recorded in the [20 September remediation review](./2026-09-20-paystack-remediation-review.md). No other new defect was confirmed in this scoped review; that is not a claim that no other defect exists.
+
+Remaining count: **0 open code findings in this review; 14 unchecked readiness checklist items** (4 environment preparation, 6 manual acceptance, 4 live-approval gates). These overlap historical launch checklists and are not 14 additional confirmed software defects. Hosted CI remains unverified even when local checks pass.

@@ -4,7 +4,7 @@ import { paystackRecoveryDisputeSchema } from '@tilana/contracts/payments';
 import { eq } from 'drizzle-orm';
 
 type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
-type Payment = Pick<typeof payments.$inferSelect, 'id' | 'orderId' | 'amountCents' | 'currency' | 'environment' | 'status'>;
+type Payment = Pick<typeof payments.$inferSelect, 'id' | 'orderId' | 'amountCents' | 'currency' | 'environment' | 'status' | 'providerTransactionId'>;
 
 /** Open disputes alert the operator without pretending money has been refunded.
  * Only a resolved merchant-accepted debit revokes this order; unknown bank outcomes require review.
@@ -18,7 +18,15 @@ export async function processPaystackDispute(transaction: Transaction, data: unk
     || (dispute.refund_amount != null && dispute.refund_amount > payment.amountCents)) {
     return { status: 'failed' as const, error: 'Dispute environment, amount, or currency did not match.' };
   }
+  // A signed reference alone cannot override contradictory provider transaction identity.
+  if (payment.providerTransactionId && dispute.transaction.id !== payment.providerTransactionId) {
+    return { status: 'failed' as const, error: 'Dispute transaction identity did not match.' };
+  }
   if (payment.status === 'pending') return { status: 'received' as const, error: 'Awaiting charge fulfillment.' };
+  // Legacy settled payments without identity require review, never inference from a dispute.
+  if (!payment.providerTransactionId) {
+    return { status: 'failed' as const, error: 'Stored payment transaction identity is missing.' };
+  }
   const [existing] = await transaction.select().from(paymentDisputes)
     .where(eq(paymentDisputes.providerDisputeId, dispute.id)).limit(1);
   if (existing && existing.paymentId !== payment.id) return { status: 'failed' as const, error: 'Dispute belongs to another payment.' };

@@ -917,6 +917,7 @@ export async function processPaystackEvent(
             amountCents: payments.amountCents,
             currency: payments.currency,
             environment: payments.environment,
+            providerTransactionId: payments.providerTransactionId,
           })
           .from(payments)
           .where(and(eq(payments.provider, 'paystack'), eq(payments.providerReference, reference)))
