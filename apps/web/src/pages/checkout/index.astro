@@ -64,7 +64,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
           <label>Phone number <small>(optional)</small><input name="phone" type="tel" autocomplete="tel" maxlength="30" /></label>
           <label class="consent">
             <input name="consent" type="checkbox" required />
-            <span>I agree to the <a href="/privacy">privacy policy</a> and understand these are digital programmes providing general education, not clinical care.</span>
+            <span>I agree to the <a href="/refund-policy" target="_blank" rel="noopener">refund and cancellation policy</a> and <a href="/privacy" target="_blank" rel="noopener">privacy policy</a>, and understand these are digital programmes providing general education, not clinical care.</span>
           </label>
           {turnstileSiteKey && <div class="cf-turnstile" data-sitekey={turnstileSiteKey} data-action="checkout" data-theme="auto"></div>}
           <button class="button button-primary" type="submit"><span>Pay securely for my programmes</span></button>
@@ -251,7 +251,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     });
 
     if (!parsed.success) {
-      status.textContent = 'Please complete all required details and accept the privacy agreement.';
+      status.textContent = 'Please complete all required details and accept the policy agreement.';
       status.dataset.state = 'error';
       return;
     }

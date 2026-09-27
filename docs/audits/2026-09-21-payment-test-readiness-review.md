@@ -86,3 +86,28 @@ Remaining count: **0 open code findings in this review; 14 unchecked readiness c
 No payment, email, remote database query/migration, deployment or configuration change was performed. No readiness checkbox was marked complete. Database migration state, resource isolation, scheduler operation and actual SES delivery remain unverified.
 
 Next requires an authorized coordinated **development-only** rollout: verify resource identity and migration preflight, apply reviewed pending migrations with the documented writer handover, configure the matching test credentials/private storage/safe inbox and worker settings, and deploy both applications at the reviewed revision. Then repeat preflight before the two-programme test purchase. Confirm the intended inbox before sending test messages. Do not substitute a purchase on the old deployed application or enable production payments.
+
+## Local public/admin code recheck — 21 September 2026
+
+Reviewed checkout: `784823d`. The operator's ordered deployment tasks are now saved separately in [development rollout checklist](../development-rollout-checklist.md). No hosted configuration or application code was changed during this recheck.
+
+### Scope and conclusion
+
+No additional actionable defect was confirmed in this targeted review. The inspected purchase/access flow is coherent and suitable for isolated development acceptance testing, subject to the deployment prerequisites. This is not a guarantee of a bug-free system or a security certification.
+
+- Public checkout: basket intent persistence, submission handling, server-priced volume eligibility and ready-file checks, serialized checkout reservations, and completion based on server status rather than the browser redirect.
+- Payment boundaries: request origin/challenge/rate controls, raw-body webhook signatures, durable event processing and REAUDIT-07 identity validation.
+- Admin: server-verified Supabase identity plus administrator role, same-origin mutation guards, programme upload/finalization/replacement services, and purchase invoice issuance from settled snapshots.
+- Customer: verified email-to-client linking, customer-role/session checks, active entitlement/private-bucket checks on downloads, and invoice ownership checks independent of programme access.
+- Automated regression coverage: refund/recovery, billing, settled-purchase constraints, programme delivery/entitlements, abuse controls and evidence-upgrade cases in the existing suites.
+
+### Fresh verification
+
+- `pnpm test --force`: 270 admin and 75 web unit tests passed, both freshly executed.
+- Disposable PostgreSQL suite: 168 integration tests passed.
+- Local browser suite: all 4 scenarios passed, using real local Astro/Nuxt HTTP and cookies with fixture provider/auth/email transports and disposable data. Scenarios cover two-volume checkout and sign-in, cross-tab/double-submit behaviour, pending payment, and origin/challenge rejection.
+- `pnpm check` and `pnpm db:check` passed. An additional `pnpm exec turbo run lint typecheck build --filter=@tilana/admin --filter=@tilana/web --force` completed all 16 tasks successfully with zero cached tasks. Both production builds passed. Nuxt/Rollup emitted non-fatal generated-code annotation warnings; browser startup also emitted colour-environment warnings.
+
+### Limits still requiring operator evidence
+
+The browser suite does not exercise every admin screen or the real R2 upload interface. Admin coverage here is source/API/service/integration coverage, not a complete manual browser acceptance pass. Real Paystack, SES, Supabase authentication and R2 permissions/delivery, hosted migration state, deployment configuration, monitoring and billing/accounting approval remain unverified. No fresh dependency-vulnerability database scan or external penetration test was performed. Do not close the hosted readiness checkboxes based on these local results.

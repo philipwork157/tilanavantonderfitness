@@ -1,0 +1,131 @@
+---
+import PageHero from '@tilana/ui-astro/PageHero.astro';
+import BaseLayout from '@web/layouts/BaseLayout.astro';
+import { site } from '@web/data/site';
+
+const policySections = [
+  {
+    title: 'What this policy covers',
+    body: [
+      'This policy applies to once-off purchases of digital programmes sold by Tilana van Tonder through this website. The programmes contain downloadable digital material and general educational content. They are not subscriptions and do not renew automatically.',
+      'Nothing in this policy limits any right or remedy that cannot lawfully be excluded under South African consumer law.',
+    ],
+  },
+  {
+    title: 'Changing your mind',
+    body: [
+      `Please email ${site.email} within 7 calendar days of purchase if you would like to request a change-of-mind cancellation. Include the purchase email address, order or Paystack reference, and the programme name.`,
+      'Where the programme has not been accessed or downloaded, a change-of-mind refund will ordinarily be approved. Once access has been provided and the digital material has been accessed or downloaded, a change-of-mind refund will generally not be available, except where required by law.',
+    ],
+  },
+  {
+    title: 'When a refund will be considered',
+    body: [
+      'Please contact us if you were charged more than once for the same intended purchase, paid the wrong amount because of a website error, did not receive access after a successful payment, or received digital material that is materially different from its description or cannot reasonably be used.',
+      'We may first try to correct a delivery or access problem. If the problem cannot be resolved within a reasonable time, an appropriate full or partial refund will be considered. A partial refund will be agreed with you before it is processed.',
+    ],
+  },
+  {
+    title: 'Cancellations and failed payments',
+    body: [
+      'There is no recurring membership to cancel. You may leave checkout before completing payment without creating an ongoing payment obligation.',
+      'A pending, failed or abandoned payment is not treated as a completed purchase. If your bank shows a debit but the website does not confirm payment, please do not submit repeated payments. Contact us with the Paystack reference so the transaction can be investigated first.',
+    ],
+  },
+  {
+    title: 'How to request a refund',
+    body: [
+      `Email ${site.email} with your full name, purchase email address, programme name, order or Paystack reference, purchase date, and a short explanation of the request. Do not send card numbers, bank login details or one-time PINs.`,
+      'We will acknowledge the request and may ask for information reasonably needed to locate the transaction or understand an access problem. Approval is based on the purchase record, delivery and access evidence, this policy, and applicable law.',
+    ],
+  },
+  {
+    title: 'Refund processing and programme access',
+    body: [
+      'Approved refunds are returned through Paystack to the original payment method. Paystack advises that customers can generally expect a processed refund within 3 to 10 working days, although the customer bank may affect the final timing.',
+      'A full refund or confirmed payment reversal removes access granted by that purchase. A partial refund normally leaves programme access active unless a different outcome is agreed in writing. Access obtained through another valid purchase or grant is not removed by refunding a separate order.',
+    ],
+  },
+  {
+    title: 'Contact and business details',
+    body: [
+      `Seller: ${site.name}, sole proprietor. Email: ${site.email}. Business address: Ternberry Village, Cleveland 31, Cape Town, Western Cape, 7580, South Africa.`,
+      'Please contact us first if you have a question or complaint about a purchase. We will try to resolve it fairly and keep a written record of the outcome.',
+    ],
+  },
+] as const;
+---
+
+<BaseLayout
+  title="Refund & Cancellation Policy"
+  description="Read Tilana van Tonder's refund and cancellation policy for once-off digital programme purchases."
+  showNewsletter={false}
+>
+  <PageHero
+    eyebrow="Purchasing with confidence"
+    title="Refunds,"
+    script="explained clearly."
+    intro="How cancellations, delivery problems, duplicate payments and refund requests are handled for digital programme purchases."
+  />
+
+  <section class="section policy-section">
+    <div class="container policy-layout">
+      <aside class="policy-summary" data-reveal>
+        <p class="eyebrow">At a glance</p>
+        <h2 class="heading-md">A fair, clear process.</h2>
+        <ul>
+          <li>Once-off digital purchases</li>
+          <li>No recurring subscription</li>
+          <li>Duplicate charges investigated</li>
+          <li>Access problems corrected or reviewed</li>
+          <li>Statutory rights remain protected</li>
+        </ul>
+        <p class="effective-date">Effective date: 27 September 2026</p>
+      </aside>
+
+      <div class="policy-content">
+        {policySections.map((section, index) => (
+          <article data-reveal>
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <div>
+              <h2>{section.title}</h2>
+              {section.body.map((paragraph) => <p>{paragraph}</p>)}
+            </div>
+          </article>
+        ))}
+
+        <article class="contact" data-reveal>
+          <span>08</span>
+          <div>
+            <h2>Start a request</h2>
+            <p>
+              Email <a href={`mailto:${site.email}?subject=Refund%20request`}>{site.email}</a> and
+              keep your order or Paystack reference available so the payment can be located safely.
+            </p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .policy-section { background: color-mix(in srgb, var(--cream) 86%, var(--sand)); }
+  .policy-layout { display: grid; align-items: start; gap: clamp(2rem, 6vw, 5rem); grid-template-columns: minmax(13rem, 0.62fr) minmax(0, 1.38fr); }
+  .policy-summary { position: sticky; top: 7rem; padding: clamp(1.5rem, 3vw, 2rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--sage); box-shadow: var(--shadow-sm); }
+  .policy-summary h2 { margin-bottom: 1.5rem; }
+  .policy-summary ul { display: grid; gap: 0.8rem; margin: 0; padding: 0; list-style: none; }
+  .policy-summary li { position: relative; padding-left: 1.3rem; color: var(--chocolate); font-size: 0.8rem; }
+  .policy-summary li::before { position: absolute; top: 0.62em; left: 0; width: 0.42rem; height: 0.42rem; border-radius: 50%; background: var(--caramel); content: ''; }
+  .effective-date { margin: 1.8rem 0 0; padding-top: 1rem; border-top: 1px solid color-mix(in srgb, var(--chocolate) 18%, transparent); font-size: 0.69rem; font-weight: 650; }
+  .policy-content { display: grid; gap: 1rem; }
+  .policy-content article { display: grid; gap: 1.25rem; padding: clamp(1.4rem, 3vw, 2.1rem); border: 1px solid color-mix(in srgb, var(--caramel) 24%, transparent); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--white) 76%, var(--cream)); box-shadow: var(--shadow-sm); grid-template-columns: 2rem minmax(0, 1fr); }
+  .policy-content article > span { color: var(--caramel); font-size: 0.69rem; font-weight: 750; letter-spacing: 0.08em; }
+  .policy-content h2 { margin: 0 0 0.8rem; color: var(--ink); font-family: var(--font-heading); font-size: clamp(1.35rem, 2.4vw, 1.75rem); line-height: 1.2; }
+  .policy-content p { margin: 0 0 0.8rem; font-size: 0.86rem; }
+  .policy-content p:last-child { margin-bottom: 0; }
+  .policy-content a { color: var(--caramel); font-weight: 650; text-decoration: underline; text-underline-offset: 0.18em; }
+  .policy-content .contact { background: color-mix(in srgb, var(--terracotta) 20%, var(--cream)); }
+  @media (max-width: 48rem) { .policy-layout { grid-template-columns: 1fr; } .policy-summary { position: static; } }
+  @media (max-width: 30rem) { .policy-content article { gap: 0.75rem; grid-template-columns: 1fr; } }
+</style>
