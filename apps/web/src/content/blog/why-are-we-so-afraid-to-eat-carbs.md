@@ -25,7 +25,7 @@ But why are we so afraid of them?
 
 Somewhere along the way, carbohydrates became the naughty child of the nutrition world. We’re told to cut them, avoid them, only eat them at certain times or somehow “earn” them through exercise.
 
-Yet carbohydrates are one of our three main macronutrients and an incredibly useful source of fuel—particularly when you’re active.
+Yet carbohydrates are one of our three main macronutrients and an incredibly useful source of fuel - particularly when you’re active.
 
 Yes, carbs are delicious. Yes, some carbohydrate-rich foods can be very easy to overeat. And yes, lower-carbohydrate approaches can have a place for certain people and certain goals.
 
@@ -135,11 +135,11 @@ If you’ve ever been halfway through a long run and suddenly felt as though som
 
 For longer runs, I don’t like waiting until I’m exhausted before remembering that food exists.
 
-I generally start taking in fuel around 30–40 minutes into my run, or roughly every 5–6 km depending on the session, and continue from there.
+I generally start taking in fuel around 30-40 minutes into my run, or roughly every 5-6 km depending on the session, and continue from there.
 
 It might be a gel, banana or part of an energy bar, alongside fluids.
 
-Sports-nutrition recommendations commonly suggest approximately 30–60 g of carbohydrate per hour during prolonged endurance exercise, with higher amounts sometimes used during very long events.
+Sports-nutrition recommendations commonly suggest approximately 30-60 g of carbohydrate per hour during prolonged endurance exercise, with higher amounts sometimes used during very long events.
 
 That doesn’t mean you need to copy my exact timing or suddenly force down gels every 30 minutes.
 
@@ -163,7 +163,7 @@ Excuse me?!
 
 Before deciding that last night’s pasta somehow destroyed months of progress overnight, there’s something important to understand.
 
-Your body stores carbohydrate as glycogen, and water is stored alongside that glycogen. Research commonly estimates roughly three grams of water—or sometimes more—alongside each gram of stored glycogen.
+Your body stores carbohydrate as glycogen, and water is stored alongside that glycogen. Research commonly estimates roughly three grams of water - or sometimes more - alongside each gram of stored glycogen.
 
 So if you’ve eaten more carbohydrates and replenished glycogen, your body weight may temporarily increase because you’re carrying more glycogen and associated water.
 
@@ -225,7 +225,7 @@ The traditional pre-race pasta party.
 
 Carb-loading is actually a little more scientific than eating the biggest bowl of pasta you can find the night before a marathon.
 
-For well-trained athletes preparing for endurance events such as a marathon, established sports-nutrition recommendations support approximately 10–12 g of carbohydrate per kilogram of body weight per day during the final 36–48 hours before competition when the goal is to maximise glycogen stores.
+For well-trained athletes preparing for endurance events such as a marathon, established sports-nutrition recommendations support approximately 10-12 g of carbohydrate per kilogram of body weight per day during the final 36-48 hours before competition when the goal is to maximise glycogen stores.
 
 Yes.
 
@@ -235,7 +235,7 @@ For a 70 kg runner, 10 g/kg equals 700 g of carbohydrate per day.
 
 That’s a lot.
 
-And that’s why this is a specific endurance-performance strategy—not a recommendation that everyone needs to eat that amount before their Saturday 5 km.
+And that’s why this is a specific endurance-performance strategy - not a recommendation that everyone needs to eat that amount before their Saturday 5 km.
 
 It’s also something you should practise rather than suddenly attempting for the first time before race day.
 
@@ -263,7 +263,7 @@ That’s not the point either.
 
 Nutrition doesn’t need another extreme.
 
-Most of the time, prioritise nutritious carbohydrate sources that provide fibre, vitamins and minerals—fruit, vegetables, oats, potatoes, rice, whole grains and legumes.
+Most of the time, prioritise nutritious carbohydrate sources that provide fibre, vitamins and minerals - fruit, vegetables, oats, potatoes, rice, whole grains and legumes.
 
 But there can also be room for bread.
 
@@ -299,7 +299,7 @@ So the next time you look at a piece of bread and wonder whether you “should�
 
 Learn what fuels your body. Learn what portions support your goals. Learn how different foods make you feel. Learn when you need more fuel and when you need less.
 
-And most importantly, build a relationship with food that you could realistically maintain for years—not just until the next eight-week challenge ends.
+And most importantly, build a relationship with food that you could realistically maintain for years - not just until the next eight-week challenge ends.
 
 One pizza won’t destroy your progress.
 
@@ -316,7 +316,7 @@ And sometimes…
 just keep the burger bun.
 
 <div class="article-closing">
-  <p><strong>Food is fuel—not something you need to earn.</strong></p>
+  <p><strong>Food is fuel - not something you need to earn.</strong></p>
   <div class="article-signature">
     <span>With love,</span>
     <strong>Tilana 🤍</strong>

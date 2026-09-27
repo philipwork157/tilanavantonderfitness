@@ -29,3 +29,4 @@ This repository is a pnpm/Turborepo monorepo for Tilana van Tonder's public webs
 - Follow the backend flow `API route -> Zod contract -> service -> Drizzle`. Routes own HTTP and security checks; services own business rules and database mapping; `packages/db` owns tables and inferred row/insert types.
 - Keep changes compatible with `pnpm lint`, `pnpm typecheck`, and `pnpm build`.
 - Preserve the existing public-site design system, accessibility, responsive behaviour, and reduced-motion support.
+- Do not use em dashes (`—`) or en dashes (`–`) in user-facing copy. Use a standard hyphen (`-`) instead, with spaces around it when it separates parts of a sentence.

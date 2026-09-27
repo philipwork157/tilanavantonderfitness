@@ -1,6 +1,6 @@
 ---
 title: "When Life Gets in the Way"
-description: "A gentle reminder that one imperfect day does not erase your progress—and that lasting strength is built by continuing, not starting over."
+description: "A gentle reminder that one imperfect day does not erase your progress - and that lasting strength is built by continuing, not starting over."
 publishedAt: 2026-08-28
 category: "Movement"
 readingTime: "5 min read"
@@ -131,7 +131,7 @@ Because your future isn't built by perfect days. It's built by ordinary days whe
 
 I truly believe that strength isn't measured by how many perfect days we string together. It's measured by our willingness to get back up after the imperfect ones.
 
-Your goals were never meant to be achieved in a straight line. They are built over months. Over years. Sometimes even over decades. Every workout, every balanced meal, every walk, every choice to begin again—or rather, to continue—becomes another brick laid in the foundation of the person you're becoming.
+Your goals were never meant to be achieved in a straight line. They are built over months. Over years. Sometimes even over decades. Every workout, every balanced meal, every walk, every choice to begin again - or rather, to continue - becomes another brick laid in the foundation of the person you're becoming.
 
 So today, if all you can do is take one small step forward, let that be enough.
 

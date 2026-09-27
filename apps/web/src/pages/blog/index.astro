@@ -7,15 +7,23 @@ const getPostImage = (post: (typeof posts)[number]) =>
   post.data.image ?? (post.id === 'welcome-a-little-about-me' ? '/tilana-blog-welcome.jpg' : undefined);
 ---
 <BaseLayout title="Strength & Healthy Habits Blog" description="Practical strength-training guidance from Tilana van Tonder for building confidence, sound movement patterns, and sustainable progress.">
-  <PageHero eyebrow="The blog" title="Useful notes for" script="real life." intro="Simple, encouraging writing about strength, movement, and sustainable progress—without miracle claims." />
-  <section class="section"><div class="container post-grid">{posts.map((post, index) => <article><div class="art">{getPostImage(post) && <img src={getPostImage(post)} alt={post.data.imageAlt ?? 'Tilana van Tonder smiling in a white shirt'} width={post.data.imageWidth ?? 944} height={post.data.imageHeight ?? 1104} loading="lazy" decoding="async" />}</div><div class="copy">{index === 0 && <span class="new-badge">New this week</span>}<span>{post.data.category} · {post.data.readingTime}</span><h2>{post.data.title}</h2><p>{post.data.description}</p><a href={`/blog/${post.id}`}>Read article →</a></div></article>)}</div></section>
+  <PageHero eyebrow="The blog" title="Useful notes for" script="real life." intro="Simple, encouraging writing about strength, movement, and sustainable progress - without miracle claims." />
+  <section class="section"><div class="container post-grid">{posts.map((post, index) => {
+    const image = getPostImage(post);
+    return <article><div class:list={['art', { 'art-fallback': !image }]}>{image ? <img src={image} alt={post.data.imageAlt ?? 'Tilana van Tonder smiling in a white shirt'} width={post.data.imageWidth ?? 944} height={post.data.imageHeight ?? 1104} loading="lazy" decoding="async" /> : <div class="fallback-cover"><span>{post.data.category}</span><strong>{post.data.title}</strong><small>Tilana van Tonder</small></div>}</div><div class="copy">{index === 0 && <span class="new-badge">New this week</span>}<span>{post.data.category} · {post.data.readingTime}</span><h2>{post.data.title}</h2><p>{post.data.description}</p><a href={`/blog/${post.id}`}>Read article →</a></div></article>;
+  })}</div></section>
 </BaseLayout>
 <style>
-  .post-grid { display: flex; max-width: 78rem; align-items: stretch; justify-content: center; gap: clamp(1rem, 2vw, 1.5rem); margin-inline: auto; }
-  article { display: flex; width: calc((100% - 3rem) / 3); min-width: 0; max-width: 25rem; overflow: hidden; flex: 1 1 calc((100% - 3rem) / 3); flex-direction: column; border: 1px solid color-mix(in srgb, var(--caramel) 20%, transparent); border-radius: var(--radius-md); background: color-mix(in srgb, var(--sand) 45%, var(--cream)); box-shadow: var(--shadow-sm); transition: transform 260ms ease, box-shadow 260ms ease, border-color 260ms ease; }
+  .post-grid { display: grid; max-width: 78rem; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; gap: clamp(1rem, 2vw, 1.5rem); margin-inline: auto; }
+  article { display: flex; min-width: 0; overflow: hidden; flex-direction: column; border: 1px solid color-mix(in srgb, var(--caramel) 20%, transparent); border-radius: var(--radius-md); background: color-mix(in srgb, var(--sand) 45%, var(--cream)); box-shadow: var(--shadow-sm); transition: transform 260ms ease, box-shadow 260ms ease, border-color 260ms ease; }
   article:hover, article:focus-within { border-color: color-mix(in srgb, var(--caramel) 46%, transparent); box-shadow: var(--shadow-md); transform: translateY(-0.35rem); }
   .art { position: relative; aspect-ratio: 4/5; min-height: 0; overflow: hidden; flex: none; background: var(--sage); }
   .art img { position: absolute; width: 100%; height: 100%; object-fit: cover; object-position: center 34%; transition: transform 500ms ease; inset: 0; }
+  .art-fallback { display: grid; place-items: center; padding: clamp(1.5rem, 3vw, 2.5rem); background: radial-gradient(circle at 18% 15%, color-mix(in srgb, var(--cream) 75%, transparent), transparent 28%), linear-gradient(145deg, var(--sage), color-mix(in srgb, var(--sand) 72%, var(--terracotta))); }
+  .fallback-cover { display: grid; width: 100%; min-height: 100%; align-content: center; justify-items: center; gap: 1.15rem; border: 1px solid color-mix(in srgb, var(--caramel) 36%, transparent); border-radius: calc(var(--radius-md) - 0.3rem); color: var(--ink); background: color-mix(in srgb, var(--white) 42%, transparent); text-align: center; }
+  .fallback-cover span { color: var(--caramel); font-size: 0.58rem; letter-spacing: 0.14em; }
+  .fallback-cover strong { max-width: 11ch; font-family: var(--font-heading); font-size: clamp(1.8rem, 3vw, 2.7rem); font-weight: 600; line-height: 1.05; }
+  .fallback-cover small { color: var(--chocolate); font-family: var(--font-script); font-size: 1.65rem; }
   article:hover .art img, article:focus-within .art img { transform: scale(1.035); }
   .copy { display: flex; flex: 1; flex-direction: column; padding: clamp(1.2rem, 2.2vw, 1.65rem); }
   span { color: var(--caramel); font-size: 0.63rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -23,7 +31,7 @@ const getPostImage = (post: (typeof posts)[number]) =>
   h2 { margin: 0.8rem 0; color: var(--ink); font-family: var(--font-heading); font-size: 1.45rem; line-height: 1.25; }
   p { flex: 1; margin: 0; font-size: 0.8rem; }
   a { display: inline-block; margin-top: 1.2rem; color: var(--caramel); font-size: 0.75rem; font-weight: 650; }
-  @media (max-width: 64rem) { .post-grid { max-width: 52rem; } article { width: calc((100% - 1.5rem) / 2); max-width: 25rem; flex-basis: calc((100% - 1.5rem) / 2); } }
-  @media (max-width: 42rem) { .post-grid { max-width: 26rem; flex-direction: column; } article { width: 100%; max-width: none; flex-basis: auto; } }
+  @media (max-width: 64rem) { .post-grid { max-width: 52rem; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 42rem) { .post-grid { max-width: 26rem; grid-template-columns: minmax(0, 1fr); } }
   @media (prefers-reduced-motion: reduce) { article, .art img { transition: none; } article:hover, article:focus-within, article:hover .art img, article:focus-within .art img { transform: none; } }
 </style>
