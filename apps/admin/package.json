@@ -29,7 +29,7 @@
     "@tilana/email": "workspace:*",
     "@tilana/ui-nuxt": "workspace:*",
     "chart.js": "^4.5.1",
-    "drizzle-orm": "^0.45.2",
+    "drizzle-orm": "^0.45.3",
     "nuxt": "latest",
     "pdf-lib": "1.17.1",
     "vue-chartjs": "^5.3.4"

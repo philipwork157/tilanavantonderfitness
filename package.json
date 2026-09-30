@@ -32,6 +32,6 @@
     "@playwright/test": "^1.63.0",
     "tsx": "4.23.12",
     "turbo": "latest",
-    "undici": "8.10.0"
+    "undici": "8.11.2"
   }
 }
