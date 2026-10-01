@@ -269,7 +269,13 @@ const defaultInterestOption = contactInterestOptions[0];
   };
 
   if (selectWrap && selectTrigger && selectMenu && selectInput && selectValue) {
-    const requestedInterest = new URLSearchParams(window.location.search).get('interest');
+    const enquiryParams = new URLSearchParams(window.location.search);
+    const requestedInterest = enquiryParams.get('interest');
+    const requestedMessage = enquiryParams.get('message');
+    const messageInput = contactForm?.elements.namedItem('message');
+    if (requestedMessage && messageInput instanceof HTMLTextAreaElement && !messageInput.value) {
+      messageInput.value = requestedMessage.slice(0, 3000);
+    }
 
     const setOpen = (isOpen: boolean) => {
       selectWrap.classList.toggle('is-open', isOpen);

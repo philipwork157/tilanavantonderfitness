@@ -1,4 +1,5 @@
 import type { ProgrammeKey } from '@tilana/contracts/programs';
+import type { ContactInterest } from '@tilana/contracts/contact';
 
 export type MarketingProgram = {
   name: string;
@@ -7,8 +8,9 @@ export type MarketingProgram = {
   description: string;
   accent: 'beginner' | 'intermediate' | 'advanced' | 'reconnect' | 'nourish';
   catalogueKey?: ProgrammeKey;
-  interest?: 'move' | 'reconnect' | 'nourish';
-  status?: 'Coming soon';
+  displayPriceCents?: number;
+  interest?: ContactInterest;
+  enquiryMessage?: string;
 };
 
 export const marketingPrograms: MarketingProgram[] = [
@@ -24,22 +26,26 @@ export const marketingPrograms: MarketingProgram[] = [
   },
   {
     name: 'Intermediate',
-    label: 'The next step',
+    label: 'Intermediate · Volume 1',
     title: 'Turn your foundation into progress.',
     description:
-      'Designed for people who feel comfortable with the basics and want a structured next step. The program will introduce more training volume, thoughtful exercise progressions, and new challenges while keeping technique and sustainable progress at the centre.',
+      'Designed for people who feel comfortable with the basics and want a structured next step. The program introduces more training volume, thoughtful exercise progressions, and new challenges while keeping technique and sustainable progress at the centre.',
     accent: 'intermediate',
-    status: 'Coming soon',
+    displayPriceCents: 79_900,
+    interest: 'general',
+    enquiryMessage: "I'd like to ask about Intermediate Volume 1.",
   },
   {
     name: 'Advanced',
     label: 'Advanced · Volume 1',
     title: 'Train with greater purpose.',
     description:
-      'A focused strength program for experienced women and men who already have an established training base. Advanced will use purposeful sessions, progressive overload, and clear performance goals to help you continue building strength with confidence.',
+      'A focused strength program for experienced women and men who already have an established training base. Advanced uses purposeful sessions, progressive overload, and clear performance goals to help you continue building strength with confidence.',
     accent: 'advanced',
+    displayPriceCents: 79_900,
     catalogueKey: 'strong-volume-1',
-    status: 'Coming soon',
+    interest: 'strong',
+    enquiryMessage: "I'd like to ask about Advanced Volume 1.",
   },
   {
     name: 'Reconnect',

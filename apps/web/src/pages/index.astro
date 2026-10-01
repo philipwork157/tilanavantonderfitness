@@ -1,15 +1,50 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { marketingPrograms } from '../data/programs';
 import { Image } from 'astro:assets';
 import heroImage from '../assets/tilana-home.jpg';
 ---
 <BaseLayout title="Strength, Movement & Healthy Habits">
+  <div class="sale-banner-spacer" aria-hidden="true"></div>
+  <aside class="sale-banner" aria-label="Programme sale">
+    <div class="sale-banner-inner">
+      <a class="sale-marquee" href="/program" aria-label="30% sale, 2-4 October 2026. Don't miss this opportunity. Explore the sale.">
+        <div class="sale-track" aria-hidden="true">
+          {[0, 1].map(() => <div class="sale-group">
+            {[0, 1].map(() => <span class="sale-message"><strong>30% SALE</strong><span class="sale-dates">2-4 October 2026</span><span>Don't miss this opportunity.</span><span class="sale-link">Explore the sale &rarr;</span></span>)}
+          </div>)}
+        </div>
+      </a>
+      <button class="sale-pause" type="button" aria-pressed="false" aria-label="Pause sale banner" data-sale-pause>Pause</button>
+    </div>
+  </aside>
   <section class="hero"><div class="container hero-grid"><div class="hero-copy"><p class="eyebrow">Realistic strength for every body</p><h1 class="display"><span class="hero-line">Move better.</span><span class="hero-line">Feel stronger.</span><span class="hero-line script">Live healthier.</span></h1><p class="lede">Whether you are a woman or a man, lasting strength is built through purposeful movement and maintainable systems that work in real life. There is no perfection to chase and no quick fix to sell - only practical habits, steady progress, and a lifelong investment in moving well, feeling capable, and living with greater confidence.</p><div class="actions"><a class="button button-primary" href="/program">Explore the program</a><a class="button button-secondary" href="/about">Meet Tilana</a></div></div><div class="hero-visual"><Image src={heroImage} alt="Tilana van Tonder smiling with her arms crossed" widths={[432, 768, 1023]} sizes="(max-width: 48rem) 92vw, 27rem" loading="eager" fetchpriority="high" /></div></div></section>
-  <section class="section approach"><div class="container" data-reveal><p class="eyebrow">Programs for real life</p><div class="approach-head"><h2 class="heading-xl">Choose your next step.</h2><div class="rail-nav"><button type="button" class="rail-btn" data-rail-prev aria-label="Previous programs" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg></button><button type="button" class="rail-btn" data-rail-next aria-label="Next programs"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></div></div><div class="approach-grid" data-rail>{marketingPrograms.map((program) => <article class:list={['card', 'program-tile', `card-${program.accent}`]}><div class="tile-top"><span class="badge">{program.label}</span>{program.status && <span class="status">{program.status}</span>}</div><h3 class="heading-md">{program.name}</h3><h4>{program.title}</h4><p>{program.description}</p></article>)}</div><a class="button button-dark approach-cta" href="/program">Explore all programs</a></div></section>
   <section class="simple-cta"><div class="container" data-reveal><h2 class="heading-xl">Want to train one-on-one?</h2><p class="cta-copy">Please contact me to discuss private training.</p><a class="button button-dark" href="/contact?interest=one-on-one">Get in touch</a></div></section>
 </BaseLayout>
 <style>
+  .sale-banner { position: fixed; top: calc(5.5rem + 1px); left: 0; z-index: 25; width: 100%; border-bottom: 1px solid #b6c6a3; color: #35462f; background: #dce5ce; box-shadow: 0 4px 14px rgb(67 88 61 / 10%); }
+  .sale-banner-spacer { height: 4rem; }
+  .sale-banner-inner { display: flex; align-items: center; gap: 0.75rem; padding-block: 0.9rem; }
+  .sale-marquee { flex: 1; min-width: 0; overflow: hidden; }
+  .sale-track { display: flex; width: max-content; animation: sale-scroll 36s linear infinite; }
+  .sale-group { display: flex; flex: none; gap: 3rem; padding-right: 3rem; }
+  .sale-message { display: inline-flex; align-items: center; gap: 1rem; white-space: nowrap; font-size: 0.85rem; line-height: 1.5; }
+  .sale-link { font-weight: 750; text-decoration: underline; text-underline-offset: 0.2rem; }
+  .sale-banner:hover .sale-track, .sale-banner:focus-within .sale-track, .sale-banner.is-paused .sale-track { animation-play-state: paused; }
+  .sale-pause { flex: none; margin-right: var(--page-pad); padding: 0.4rem 0.65rem; border: 1px solid #a8b994; border-radius: var(--radius-pill); color: #35462f; background: transparent; font: inherit; font-size: 0.7rem; cursor: pointer; }
+  .sale-pause:focus-visible { outline: 2px solid #35462f; outline-offset: 3px; }
+  @keyframes sale-scroll { to { transform: translateX(-50%); } }
+  @media (prefers-reduced-motion: reduce) {
+    .sale-banner-inner { padding-inline: var(--page-pad); }
+    .sale-track { width: 100%; animation: none; }
+    .sale-group { width: 100%; padding: 0; }
+    .sale-message { justify-content: center; flex-wrap: wrap; white-space: normal; }
+    .sale-group:nth-child(2), .sale-message:nth-child(2), .sale-pause { display: none; }
+  }
+  .sale-banner strong { padding: 0.3rem 0.65rem; border-radius: var(--radius-pill); color: #fff; background: #43583d; font-size: 0.8rem; letter-spacing: 0.06em; }
+  .sale-dates { font-weight: 750; }
+  .sale-banner a { color: #35462f; text-decoration: none; }
+  .sale-banner a:hover { text-decoration-thickness: 2px; }
+  .sale-banner a:focus-visible { outline: 2px solid #35462f; outline-offset: 5px; border-radius: 2px; }
   .hero { display: grid; min-height: calc(100svh - 5.5rem); align-items: center; overflow: hidden; padding-block: clamp(2rem, 5vh, 4.5rem); }
   .hero-grid { display: grid; align-items: center; gap: clamp(2.5rem, 5vw, 5rem); grid-template-columns: minmax(0, 1.08fr) minmax(19rem, 0.92fr); }
   .hero-copy { max-width: 41rem; }
@@ -23,59 +58,16 @@ import heroImage from '../assets/tilana-home.jpg';
   .hero-visual { width: min(100%, 27rem); overflow: hidden; justify-self: center; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--sand); box-shadow: var(--shadow-md); animation: visual-in 900ms 160ms cubic-bezier(0.22, 1, 0.36, 1) both; }
   .hero-visual img { display: block; width: 100%; height: auto; }
   .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
-  .approach { background: color-mix(in srgb, var(--sand) 60%, var(--cream)); }
-  .approach .heading-xl { margin-bottom: 0; }
-  .approach-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1.5rem; margin-bottom: 2.4rem; }
-  .rail-nav { display: flex; gap: 0.6rem; flex: none; }
-  .rail-btn { display: grid; place-items: center; width: 3rem; height: 3rem; padding: 0; border: 1px solid var(--color-border); border-radius: 50%; color: var(--ink); background: color-mix(in srgb, var(--white) 82%, var(--cream)); cursor: pointer; transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease, transform var(--motion-fast) ease, opacity var(--motion-fast) ease; }
-  .rail-btn svg { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-width: 2.25; stroke-linecap: round; stroke-linejoin: round; }
-  .rail-btn:hover:not(:disabled) { border-color: var(--caramel); background: var(--caramel); color: var(--color-on-primary); transform: translateY(-2px); }
-  .rail-btn:disabled { opacity: 0.35; cursor: default; }
-  .approach-grid {
-    display: grid;
-    gap: 1.25rem;
-    grid-auto-flow: column;
-    grid-auto-columns: clamp(17rem, 20vw, 20rem);
-    margin-inline: auto;
-    overflow-x: auto;
-    overscroll-behavior-inline: contain;
-    padding: 0.4rem 0 1.2rem;
-    scroll-snap-type: x proximity;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    -webkit-overflow-scrolling: touch;
-  }
-  .approach-grid::-webkit-scrollbar { display: none; }
-  .program-tile { min-height: 31rem; scroll-snap-align: start; }
-  .tile-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
-  .status { padding: 0.4rem 0.55rem; border-radius: 999px; color: var(--ink); background: var(--cream); font-size: 0.58rem; font-weight: 750; letter-spacing: 0.07em; text-transform: uppercase; }
-  .card .heading-md { margin: 2rem 0 0.8rem; }
-  /* Keep program names on one line: no mid-word breaking, sized to fit the card. */
-  .program-tile .badge { flex: none; white-space: nowrap; }
-  .program-tile .heading-md { overflow-wrap: normal; word-break: keep-all; hyphens: none; font-size: 1.25rem; line-height: 1.25; }
-  .card h4 { min-height: 3rem; margin: 0 0 0.85rem; color: var(--caramel); font-size: 0.78rem; line-height: 1.45; }
-  .card p { margin: 0; font-size: 0.88rem; }
-  .card-beginner { --card-accent: var(--terracotta); }
-  .card-intermediate { --card-accent: var(--sage); }
-  .card-advanced { --card-accent: var(--caramel); }
-  .card-reconnect { --card-accent: var(--caramel); }
-  .card-nourish { --card-accent: var(--sage); }
-  .approach-cta { display: flex; width: fit-content; margin: 2rem auto 0; }
   .simple-cta { padding-block: var(--section-space); text-align: center; background: var(--terracotta); }
   .simple-cta :is(.heading-xl, .cta-copy) { color: var(--color-on-primary); }
   .simple-cta .heading-xl { margin-bottom: 0.75rem; }
   .simple-cta .cta-copy { margin: 0 auto 2rem; font-size: 1.05rem; }
   @keyframes hero-in { from { opacity: 0; transform: translateY(1.8rem); } }
   @keyframes visual-in { from { opacity: 0; transform: translateX(2rem) scale(0.96); } }
-  @media (max-width: 68rem) {
-    .approach-grid { grid-auto-columns: minmax(18rem, 42vw); grid-template-columns: none; }
-  }
   @media (max-width: 48rem) {
+    .sale-banner { top: calc(4.75rem + 1px); }
     .hero { min-height: auto; padding-block: 3.5rem 4.5rem; }
-    .approach-head { gap: 1rem; align-items: center; }
-    .rail-btn { width: 2.6rem; height: 2.6rem; }
     .hero-grid { grid-template-columns: 1fr; }
-    .approach-grid { grid-auto-columns: minmax(17rem, 84vw); }
     .hero-line { white-space: normal; }
   }
   @media (max-width: 30rem) {
@@ -85,27 +77,25 @@ import heroImage from '../assets/tilana-home.jpg';
 </style>
 
 <script>
-  const rail = document.querySelector<HTMLElement>('[data-rail]');
-  const prev = document.querySelector<HTMLButtonElement>('[data-rail-prev]');
-  const next = document.querySelector<HTMLButtonElement>('[data-rail-next]');
-
-  if (rail && prev && next) {
-    const step = () => {
-      const card = rail.querySelector<HTMLElement>('.program-tile');
-      const gap = parseFloat(getComputedStyle(rail).columnGap || '20') || 20;
-      return card ? card.offsetWidth + gap : rail.clientWidth * 0.8;
-    };
-
-    const sync = () => {
-      const maxScroll = rail.scrollWidth - rail.clientWidth - 1;
-      prev.disabled = rail.scrollLeft <= 0;
-      next.disabled = rail.scrollLeft >= maxScroll;
-    };
-
-    prev.addEventListener('click', () => rail.scrollBy({ left: -step(), behavior: 'smooth' }));
-    next.addEventListener('click', () => rail.scrollBy({ left: step(), behavior: 'smooth' }));
-    rail.addEventListener('scroll', sync, { passive: true });
-    window.addEventListener('resize', sync);
-    sync();
+  const saleBanner = document.querySelector<HTMLElement>('.sale-banner');
+  const saleSpacer = document.querySelector<HTMLElement>('.sale-banner-spacer');
+  const siteHeader = document.querySelector<HTMLElement>('.site-header');
+  const syncSalePosition = () => {
+    if (!saleBanner || !saleSpacer) return;
+    if (siteHeader) saleBanner.style.top = `${siteHeader.getBoundingClientRect().height}px`;
+    saleSpacer.style.height = `${saleBanner.getBoundingClientRect().height}px`;
+  };
+  if (saleBanner) {
+    const saleResizeObserver = new ResizeObserver(syncSalePosition);
+    saleResizeObserver.observe(saleBanner);
+    if (siteHeader) saleResizeObserver.observe(siteHeader);
+    syncSalePosition();
   }
+  const salePause = document.querySelector<HTMLButtonElement>('[data-sale-pause]');
+  salePause?.addEventListener('click', () => {
+    const paused = saleBanner?.classList.toggle('is-paused') ?? false;
+    salePause.setAttribute('aria-pressed', String(paused));
+    salePause.setAttribute('aria-label', paused ? 'Resume sale banner' : 'Pause sale banner');
+    salePause.textContent = paused ? 'Resume' : 'Pause';
+  });
 </script>

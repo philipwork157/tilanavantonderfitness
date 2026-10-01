@@ -4,16 +4,22 @@ import PageHero from '@tilana/ui-astro/PageHero.astro';
 import { formatZar, programmeCatalogByKey } from '@tilana/contracts/programs';
 import { marketingPrograms } from '../data/programs';
 
-const programs = marketingPrograms.map((program) => ({
-  ...program,
-  price:
-    program.catalogueKey && !program.status
-      ? formatZar(programmeCatalogByKey[program.catalogueKey].suggestedPriceCents)
-      : null,
-}));
+const programs = marketingPrograms.map((program) => {
+  const priceCents = program.displayPriceCents ?? (
+    program.catalogueKey
+      ? programmeCatalogByKey[program.catalogueKey].suggestedPriceCents
+      : null
+  );
+
+  return {
+    ...program,
+    price: priceCents !== null ? formatZar(priceCents) : null,
+    salePrice: priceCents !== null ? formatZar(Math.round(priceCents * 70 / 10_000) * 100) : null,
+  };
+});
 ---
 
-<BaseLayout title="Programs & Pricing" description="Explore Beginner, Reconnect and Nourish programs from Tilana van Tonder, with Intermediate and Advanced strength programs coming soon.">
+<BaseLayout title="Programs & Pricing" description="Explore Beginner, Intermediate, Advanced, Reconnect and Nourish programs from Tilana van Tonder.">
   <PageHero eyebrow="Programs for real life" title="Find your" script="next step." intro="Start where you are and choose the support that suits you - from foundational movement and nourishment to pelvic-floor connection and progressive strength." />
   <section class="section program-collection">
     <div class="container">
@@ -29,17 +35,24 @@ const programs = marketingPrograms.map((program) => ({
           <article class:list={['card', 'program-tile', `program-${program.accent}`]}>
             <div class="tile-top">
               <span class="badge">{program.label}</span>
-              {'status' in program && <span class="status">{program.status}</span>}
             </div>
             <div class="program-copy">
               <p class="program-level">{program.name}</p>
               <h2>{program.title}</h2>
               <p>{program.description}</p>
             </div>
-            {program.price && program.interest && (
+            {program.price && (
               <div class="program-footer">
-                <div class="program-price"><span>Once-off</span><strong>{program.price}</strong></div>
-                <a class="button button-secondary" href={`/contact?interest=${program.interest}`}>Ask about {program.name}</a>
+                <div class="program-price">
+                  <span class="sale-badge">30% OFF</span>
+                  <span>Once-off</span>
+                  <div class="price-pair">
+                    <del aria-label={`Original price ${program.price}`}>{program.price}</del>
+                    <strong aria-label={`Sale price ${program.salePrice}`}>{program.salePrice}</strong>
+                  </div>
+                  <p class="sale-offer">2-4 October 2026 only</p>
+                </div>
+                {program.interest && <a class="button button-secondary" href={`/contact?interest=${program.interest}${program.enquiryMessage ? `&message=${encodeURIComponent(program.enquiryMessage)}` : ''}`}>Ask about {program.name}</a>}
               </div>
             )}
           </article>
@@ -51,7 +64,8 @@ const programs = marketingPrograms.map((program) => ({
 </BaseLayout>
 
 <style>
-  .program-collection { background: var(--cream); }
+  .program-collection { --sale-accent: #43583d; --sale-pastel: #dce5ce; background: var(--cream); }
+  :global(.dark) .program-collection { --sale-accent: #dce5ce; --sale-pastel: #35412f; }
   .program-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 2rem; margin-bottom: 2.5rem; }
   .program-toolbar .heading-lg { font-size: clamp(2rem, 4vw, 3.5rem); }
   .rail-nav { display: flex; gap: 0.65rem; flex: none; }
@@ -63,15 +77,18 @@ const programs = marketingPrograms.map((program) => ({
   .program-grid::-webkit-scrollbar { display: none; }
   .program-tile { display: flex; min-height: 38rem; flex-direction: column; padding: clamp(1.7rem, 2.5vw, 2.15rem); scroll-snap-align: start; }
   .tile-top { display: flex; min-height: 4.5rem; align-items: flex-start; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
-  .status { padding: 0.45rem 0.65rem; border-radius: 999px; color: var(--ink); background: color-mix(in srgb, var(--cream) 70%, transparent); font-size: 0.62rem; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; }
   .program-copy { margin-top: 1.5rem; }
   .program-level { margin: 0 0 0.65rem; color: var(--caramel); font-size: 0.68rem; font-weight: 750; letter-spacing: 0.12em; text-transform: uppercase; }
   .program-tile h2 { margin: 0 0 1.2rem; color: var(--ink); font-family: var(--font-heading); font-size: clamp(2rem, 3vw, 2.65rem); line-height: 1.04; }
   .program-copy > p:last-child { margin: 0; font-size: 0.92rem; line-height: 1.75; }
   .program-footer { margin-top: auto; padding-top: 2rem; }
-  .program-price { display: grid; gap: 0.2rem; margin-bottom: 1.1rem; }
+  .program-price { display: grid; gap: 0.2rem; margin-bottom: 1.1rem; padding: 1rem; border: 1px solid color-mix(in srgb, var(--sale-accent) 22%, transparent); border-radius: var(--radius-md); background: color-mix(in srgb, var(--sale-pastel) 70%, var(--white)); }
   .program-price span { color: var(--caramel); font-size: 0.64rem; font-weight: 750; letter-spacing: 0.1em; text-transform: uppercase; }
-  .program-price strong { color: var(--ink); font-family: var(--font-heading); font-size: 2rem; line-height: 1; }
+  .program-price strong { color: var(--sale-accent); font-family: var(--font-heading); font-size: clamp(2.3rem, 3.2vw, 2.65rem); font-weight: 700; line-height: 1; }
+  .program-price .sale-badge { justify-self: start; margin-bottom: 0.6rem; padding: 0.45rem 0.75rem; border: 1px solid #b6c6a3; border-radius: var(--radius-pill); color: #35462f; background: #c9d8b7; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; box-shadow: 0 4px 12px rgb(67 88 61 / 12%); }
+  .price-pair { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.75rem; margin-block: 0.35rem; }
+  .price-pair del { color: var(--color-text-muted); font-size: 1.05rem; }
+  .program-price .sale-offer { margin: 0.2rem 0 0; color: var(--sale-accent); font-size: 0.75rem; font-weight: 700; line-height: 1.5; }
   .program-tile .button { width: 100%; padding-inline: 0.8rem; }
   .program-beginner { --card-accent: var(--terracotta); }
   .program-intermediate { --card-accent: var(--sage); }
