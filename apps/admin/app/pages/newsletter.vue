@@ -86,7 +86,7 @@ const filteredSubscribers = computed(() => {
 });
 
 function formatDate(value: string | Date | null) {
-  if (!value) return '—';
+  if (!value) return '-';
   return new Intl.DateTimeFormat('en-ZA', {
     dateStyle: 'medium',
     timeZone: 'Africa/Johannesburg',
@@ -231,7 +231,7 @@ useSeoMeta({ title: 'Newsletter | Tilana Admin', robots: 'noindex, nofollow' });
       <div>
         <p class="eyebrow">Audience</p>
         <h1>Newsletter signups</h1>
-        <p>Everyone who asked to hear from you through the website. Double opt-in keeps this list clean — only confirmed people count as subscribed.</p>
+        <p>Everyone who asked to hear from you through the website. Double opt-in keeps this list clean - only confirmed people count as subscribed.</p>
       </div>
       <span class="subscriber-total">
         <strong>{{ counts.subscribed }}</strong>
@@ -251,7 +251,7 @@ useSeoMeta({ title: 'Newsletter | Tilana Admin', robots: 'noindex, nofollow' });
         <div class="campaign-fields">
           <UFormField label="Email subject" required><UInput v-model="campaignForm.subject" placeholder="A new note from Tilana" class="w-full" /></UFormField>
           <UFormField label="Preview text" help="The short line shown beside the subject in an inbox."><UInput v-model="campaignForm.previewText" placeholder="A thoughtful note for your week" class="w-full" /></UFormField>
-          <UFormField label="Blog title" required><UInput v-model="campaignForm.blogTitle" placeholder="Welcome — a little about me" class="w-full" /></UFormField>
+          <UFormField label="Blog title" required><UInput v-model="campaignForm.blogTitle" placeholder="Welcome - a little about me" class="w-full" /></UFormField>
           <UFormField label="Published blog link" required><UInput v-model="campaignForm.blogUrl" type="url" placeholder="https://tilanavantonder.co.za/blog/..." class="w-full" /></UFormField>
           <UFormField label="Personal introduction" required class="full-field"><UTextarea v-model="campaignForm.introduction" :rows="5" placeholder="Write a short, personal reason to read this post…" class="w-full" /></UFormField>
         </div>

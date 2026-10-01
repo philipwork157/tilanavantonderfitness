@@ -39,7 +39,7 @@ export async function sendNewsletterConfirmation(email: string, token: string) {
 
   const delivery = getNewsletterRecipient(email);
   const developmentNotice = delivery.redirected
-    ? `Development preview — intended subscriber: ${email}`
+    ? `Development preview - intended subscriber: ${email}`
     : '';
 
   const confirmUrl = `${apiBaseUrl}/api/newsletter/confirm?token=${encodeURIComponent(token)}`;

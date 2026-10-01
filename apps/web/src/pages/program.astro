@@ -73,7 +73,8 @@ const programs = marketingPrograms.map((program) => {
   .rail-btn svg { width: 1.3rem; height: 1.3rem; fill: none; stroke: currentColor; stroke-width: 2.25; stroke-linecap: round; stroke-linejoin: round; }
   .rail-btn:hover:not(:disabled) { border-color: var(--caramel); color: var(--color-on-primary); background: var(--caramel); box-shadow: var(--shadow-sm); transform: translateY(-2px); }
   .rail-btn:disabled { opacity: 0.32; cursor: default; }
-  .program-grid { display: grid; gap: 1.25rem; grid-auto-columns: clamp(20rem, 26vw, 24rem); grid-auto-flow: column; overflow-x: auto; overscroll-behavior-inline: contain; padding: 0.4rem 0 1.25rem; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; }
+  /* Let card shadows fade inside the scroll area while preserving the section spacing. */
+  .program-grid { display: grid; gap: 1.25rem; grid-auto-columns: clamp(20rem, 26vw, 24rem); grid-auto-flow: column; overflow-x: auto; overscroll-behavior-inline: contain; margin: -2.6rem -1.5rem -4.75rem; padding: 3rem 1.5rem 6rem; scroll-padding-inline: 1.5rem; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; }
   .program-grid::-webkit-scrollbar { display: none; }
   .program-tile { display: flex; min-height: 38rem; flex-direction: column; padding: clamp(1.7rem, 2.5vw, 2.15rem); scroll-snap-align: start; }
   .tile-top { display: flex; min-height: 4.5rem; align-items: flex-start; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }

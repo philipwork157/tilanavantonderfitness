@@ -14,7 +14,6 @@ import heroImage from '../assets/tilana-home.jpg';
           </div>)}
         </div>
       </a>
-      <button class="sale-pause" type="button" aria-pressed="false" aria-label="Pause sale banner" data-sale-pause>Pause</button>
     </div>
   </aside>
   <section class="hero"><div class="container hero-grid"><div class="hero-copy"><p class="eyebrow">Realistic strength for every body</p><h1 class="display"><span class="hero-line">Move better.</span><span class="hero-line">Feel stronger.</span><span class="hero-line script">Live healthier.</span></h1><p class="lede">Whether you are a woman or a man, lasting strength is built through purposeful movement and maintainable systems that work in real life. There is no perfection to chase and no quick fix to sell - only practical habits, steady progress, and a lifelong investment in moving well, feeling capable, and living with greater confidence.</p><div class="actions"><a class="button button-primary" href="/program">Explore the program</a><a class="button button-secondary" href="/about">Meet Tilana</a></div></div><div class="hero-visual"><Image src={heroImage} alt="Tilana van Tonder smiling with her arms crossed" widths={[432, 768, 1023]} sizes="(max-width: 48rem) 92vw, 27rem" loading="eager" fetchpriority="high" /></div></div></section>
@@ -29,16 +28,14 @@ import heroImage from '../assets/tilana-home.jpg';
   .sale-group { display: flex; flex: none; gap: 3rem; padding-right: 3rem; }
   .sale-message { display: inline-flex; align-items: center; gap: 1rem; white-space: nowrap; font-size: 0.85rem; line-height: 1.5; }
   .sale-link { font-weight: 750; text-decoration: underline; text-underline-offset: 0.2rem; }
-  .sale-banner:hover .sale-track, .sale-banner:focus-within .sale-track, .sale-banner.is-paused .sale-track { animation-play-state: paused; }
-  .sale-pause { flex: none; margin-right: var(--page-pad); padding: 0.4rem 0.65rem; border: 1px solid #a8b994; border-radius: var(--radius-pill); color: #35462f; background: transparent; font: inherit; font-size: 0.7rem; cursor: pointer; }
-  .sale-pause:focus-visible { outline: 2px solid #35462f; outline-offset: 3px; }
+  .sale-banner:hover .sale-track, .sale-banner:focus-within .sale-track { animation-play-state: paused; }
   @keyframes sale-scroll { to { transform: translateX(-50%); } }
   @media (prefers-reduced-motion: reduce) {
     .sale-banner-inner { padding-inline: var(--page-pad); }
     .sale-track { width: 100%; animation: none; }
     .sale-group { width: 100%; padding: 0; }
     .sale-message { justify-content: center; flex-wrap: wrap; white-space: normal; }
-    .sale-group:nth-child(2), .sale-message:nth-child(2), .sale-pause { display: none; }
+    .sale-group:nth-child(2), .sale-message:nth-child(2) { display: none; }
   }
   .sale-banner strong { padding: 0.3rem 0.65rem; border-radius: var(--radius-pill); color: #fff; background: #43583d; font-size: 0.8rem; letter-spacing: 0.06em; }
   .sale-dates { font-weight: 750; }
@@ -91,11 +88,4 @@ import heroImage from '../assets/tilana-home.jpg';
     if (siteHeader) saleResizeObserver.observe(siteHeader);
     syncSalePosition();
   }
-  const salePause = document.querySelector<HTMLButtonElement>('[data-sale-pause]');
-  salePause?.addEventListener('click', () => {
-    const paused = saleBanner?.classList.toggle('is-paused') ?? false;
-    salePause.setAttribute('aria-pressed', String(paused));
-    salePause.setAttribute('aria-label', paused ? 'Resume sale banner' : 'Pause sale banner');
-    salePause.textContent = paused ? 'Resume' : 'Pause';
-  });
 </script>

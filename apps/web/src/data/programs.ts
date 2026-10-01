@@ -32,7 +32,7 @@ export const marketingPrograms: MarketingProgram[] = [
       'Designed for people who feel comfortable with the basics and want a structured next step. The program introduces more training volume, thoughtful exercise progressions, and new challenges while keeping technique and sustainable progress at the centre.',
     accent: 'intermediate',
     displayPriceCents: 79_900,
-    interest: 'general',
+    interest: 'intermediate',
     enquiryMessage: "I'd like to ask about Intermediate Volume 1.",
   },
   {

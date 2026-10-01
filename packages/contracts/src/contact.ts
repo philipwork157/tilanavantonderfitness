@@ -3,6 +3,7 @@ import { programmeCatalogByKey } from './programs';
 
 export const contactInterestValues = [
   'move',
+  'intermediate',
   'strong',
   'nourish',
   'reconnect',
@@ -18,6 +19,7 @@ export type ContactInterest = z.infer<typeof contactInterestSchema>;
 export const contactInterestLabels = {
   strong: programmeCatalogByKey['strong-volume-1'].volumeName,
   move: programmeCatalogByKey['move-volume-1'].volumeName,
+  intermediate: 'Intermediate · Volume 1',
   nourish: programmeCatalogByKey['nourish-volume-1'].volumeName,
   reconnect: programmeCatalogByKey['reconnect-volume-1'].volumeName,
   'one-on-one': 'One-on-one training',

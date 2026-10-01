@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
     if (!target) {
       throw createError({
         statusCode: 409,
-        statusMessage: 'Log a check-in first — there is no weight to calculate from.',
+        statusMessage: 'Log a check-in first - there is no weight to calculate from.',
       });
     }
     return { ok: true, target };

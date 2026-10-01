@@ -250,15 +250,15 @@ const fullName = computed(() => {
 });
 
 function fmtKg(grams: number | null | undefined) {
-  if (grams == null) return '—';
+  if (grams == null) return '-';
   return `${(grams / 1000).toFixed(1)} kg`;
 }
 function fmtCm(mm: number | null | undefined) {
-  if (mm == null) return '—';
+  if (mm == null) return '-';
   return `${(mm / 10).toFixed(1)} cm`;
 }
 function fmtDate(value: string | Date | null | undefined) {
-  if (!value) return '—';
+  if (!value) return '-';
   return new Intl.DateTimeFormat('en-ZA', { dateStyle: 'medium', timeZone: 'Africa/Johannesburg' }).format(
     new Date(value),
   );
@@ -345,7 +345,7 @@ useSeoMeta({ title: () => `${fullName.value} | Tilana Admin`, robots: 'noindex, 
             <div><dt>Activity</dt><dd>{{ activityLevelLabels[profile.activityLevel as ActivityLevel] }}</dd></div>
             <div><dt>Goal</dt><dd>{{ coachingGoalLabels[profile.goal as CoachingGoal] }}</dd></div>
             <div><dt>Target weight</dt><dd>{{ fmtKg(profile.targetWeightGrams) }}</dd></div>
-            <div><dt>Weekly rate</dt><dd>{{ profile.weeklyRateGrams ? fmtKg(profile.weeklyRateGrams) + '/week' : '—' }}</dd></div>
+            <div><dt>Weekly rate</dt><dd>{{ profile.weeklyRateGrams ? fmtKg(profile.weeklyRateGrams) + '/week' : '-' }}</dd></div>
             <div v-if="profile.dietaryNotes" class="span-2"><dt>Dietary notes</dt><dd>{{ profile.dietaryNotes }}</dd></div>
             <div v-if="profile.medicalNotes" class="span-2"><dt>Medical notes</dt><dd>{{ profile.medicalNotes }}</dd></div>
           </dl>

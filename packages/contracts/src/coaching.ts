@@ -37,11 +37,11 @@ export const activityMultipliers: Record<ActivityLevel, number> = {
 };
 
 export const activityLevelLabels: Record<ActivityLevel, string> = {
-  sedentary: 'Sedentary — little or no exercise',
-  light: 'Light — exercise 1–3 days/week',
-  moderate: 'Moderate — exercise 3–5 days/week',
-  active: 'Active — exercise 6–7 days/week',
-  very_active: 'Very active — hard exercise or physical job',
+  sedentary: 'Sedentary - little or no exercise',
+  light: 'Light - exercise 1-3 days/week',
+  moderate: 'Moderate - exercise 3-5 days/week',
+  active: 'Active - exercise 6-7 days/week',
+  very_active: 'Very active - hard exercise or physical job',
 };
 
 export const coachingGoalLabels: Record<CoachingGoal, string> = {

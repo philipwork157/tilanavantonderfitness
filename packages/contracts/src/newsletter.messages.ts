@@ -1,5 +1,5 @@
 /**
- * Plain validation messages + field type — no zod import, so this can be pulled
+ * Plain validation messages + field type - no zod import, so this can be pulled
  * into the browser bundle without shipping the whole schema library. The server
  * still validates with the full zod schema in ./newsletter.
  */
