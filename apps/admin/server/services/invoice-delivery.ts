@@ -1,7 +1,8 @@
 import { and, asc, eq, isNull, lte, or } from 'drizzle-orm';
 import { invoiceDeliveries } from '@tilana/db/schema';
-import { formatInvoiceMoney, invoiceEmailSchema } from '@tilana/contracts/invoices';
+import { formatInvoiceMoney } from '@tilana/contracts/invoices';
 import { getDatabase } from '@server/utils/database';
+import { getEmailRecipient } from '@server/utils/email-delivery';
 import { getServerEmail } from '@server/utils/email';
 import { getCustomerAccountBaseUrl, getPaystackEnvironment } from '@server/utils/paystack-configuration';
 import { escapeEmailHtml } from '@server/email-templates/html';
@@ -10,8 +11,7 @@ import { getInvoiceDocument } from './invoice-records';
 /** Test billing must use a safe inbox; a production deployment cannot redirect live invoices. */
 export function getInvoiceRecipient(intendedEmail: string, config = useRuntimeConfig()) {
   const mode = getPaystackEnvironment(config);
-  const email = mode === 'test' ? String(config.invoiceDevelopmentRecipient || '') : intendedEmail;
-  return invoiceEmailSchema.parse(email);
+  return getEmailRecipient(intendedEmail, { test: mode === 'test', live: mode === 'live' }, config);
 }
 
 /** At-least-once SES delivery with durable backoff and versioned leases. */

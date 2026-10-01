@@ -37,10 +37,9 @@ const admin = spawn('pnpm', ['exec', 'nuxt', 'dev', '--extends', '../../tests/e2
     NUXT_CONTACT_IP_HASH_SECRET: 'browser-fixture-secret-not-a-production-secret',
     NUXT_TURNSTILE_SECRET_KEY: 'fixture', NUXT_CONTACT_TURNSTILE_REQUIRED: 'true',
     NUXT_PAYSTACK_SECRET_KEY: 'sk_test_browser_fixture', NUXT_PAYSTACK_ENVIRONMENT: 'test',
-    NUXT_PAYSTACK_CALLBACK_URL: 'http://127.0.0.1:4310/checkout/complete',
     NUXT_PUBLIC_SITE_URL: 'http://127.0.0.1:4310', NUXT_ACCOUNT_BASE_URL: 'http://127.0.0.1:4311',
     NUXT_SUPABASE_URL: 'http://127.0.0.1:4312', NUXT_SUPABASE_PUBLISHABLE_KEY: 'fixture', NUXT_SUPABASE_SERVICE_ROLE_KEY: 'fixture',
-    NUXT_CUSTOMER_ACCESS_DEVELOPMENT_RECIPIENT: 'inbox@example.test', NUXT_EMAIL_FROM_ADDRESS: 'sender@example.test',
+    NUXT_EMAIL_DEVELOPMENT_ENABLED: 'true', NUXT_EMAIL_DEVELOPMENT_RECIPIENT: 'inbox@example.test', NUXT_EMAIL_FROM_ADDRESS: 'sender@example.test',
     AWS_REGION: 'eu-west-1', AWS_ACCESS_KEY_ID: 'fixture', AWS_SECRET_ACCESS_KEY: 'fixture',
     AWS_ENDPOINT_URL: 'http://127.0.0.1:4312', AWS_EC2_METADATA_DISABLED: 'true',
     NUXT_R2_PUBLIC_MEDIA_BUCKET: 'browser-public', NUXT_R2_PUBLIC_MEDIA_BASE_URL: 'https://media.example.test', NUXT_R2_PRIVATE_PROGRAM_BUCKET: 'browser-private',
@@ -49,10 +48,8 @@ const admin = spawn('pnpm', ['exec', 'nuxt', 'dev', '--extends', '../../tests/e2
 });
 const web = spawn('pnpm', ['exec', 'astro', 'dev', '--config', '../../tests/e2e/astro.config.mjs', '--ignore-lock', '--host', '127.0.0.1', '--port', '4310'], {
   cwd: resolve('apps/web'), stdio: 'inherit', env: {
-    ...base, ASTRO_DEV_BACKGROUND: '1', ASTRO_TELEMETRY_DISABLED: '1', PUBLIC_CATALOGUE_API_BASE_URL: 'http://127.0.0.1:4311/api/public',
-    PUBLIC_CHECKOUT_API_URL: 'http://127.0.0.1:4311/api/checkout/paystack',
-    PUBLIC_CHECKOUT_STATUS_API_URL: 'http://127.0.0.1:4311/api/checkout/status',
-    PUBLIC_ACCOUNT_URL: 'http://127.0.0.1:4311/account/sign-in', PUBLIC_TURNSTILE_SITE_KEY: 'browser-fixture',
+    ...base, PUBLIC_API_BASE_URL: 'http://127.0.0.1:4311', ASTRO_DEV_BACKGROUND: '1', ASTRO_TELEMETRY_DISABLED: '1',
+    PUBLIC_TURNSTILE_SITE_KEY: 'browser-fixture',
   },
 });
 /** Bound readiness without reusing any existing process on these ports. */

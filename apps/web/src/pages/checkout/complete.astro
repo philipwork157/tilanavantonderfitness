@@ -1,8 +1,9 @@
 ---
+import { publicApiUrl } from '@web/utils/public-api';
 import BaseLayout from '@web/layouts/BaseLayout.astro';
 
-const statusApiUrl = import.meta.env.PUBLIC_CHECKOUT_STATUS_API_URL ?? 'http://127.0.0.1:3001/api/checkout/status';
-const accountUrl = import.meta.env.PUBLIC_ACCOUNT_URL ?? 'http://127.0.0.1:3001/account/sign-in';
+const statusApiUrl = publicApiUrl('/api/checkout/status');
+const accountUrl = publicApiUrl('/account/sign-in');
 ---
 
 <BaseLayout title="Payment status" description="Check the status of your program payment." showNewsletter={false}>

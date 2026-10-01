@@ -1,7 +1,8 @@
 ---
+import { publicApiUrl } from '@web/utils/public-api';
 import BaseLayout from '@web/layouts/BaseLayout.astro';
 
-const newsletterApiUrl = (import.meta.env.PUBLIC_NEWSLETTER_API_URL || 'http://127.0.0.1:3001/api/newsletter').replace(/\/$/, '');
+const newsletterApiUrl = publicApiUrl('/api/newsletter');
 ---
 
 <BaseLayout

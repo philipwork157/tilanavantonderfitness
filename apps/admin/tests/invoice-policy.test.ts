@@ -8,7 +8,7 @@ const payment = { currency: 'ZAR', amountCents: 39900 };
 const items = [{ quantity: 1, unitPriceCents: 39900, lineTotalCents: 39900 }];
 beforeEach(() => {
   vi.stubGlobal('createError', (input: object) => Object.assign(new Error('Invalid configuration'), input));
-  vi.stubGlobal('useRuntimeConfig', () => ({ paystackEnvironment: 'test', invoiceDevelopmentRecipient: 'safe@example.test' }));
+  vi.stubGlobal('useRuntimeConfig', () => ({ paystackEnvironment: 'test', emailDevelopmentEnabled: true, emailDevelopmentRecipient: 'safe@example.test' }));
 });
 describe('non-VAT invoice rules', () => {
   it('uses the South African calendar date across UTC midnight boundaries', () => {
@@ -48,7 +48,7 @@ describe('non-VAT invoice rules', () => {
     expect(() => getInvoiceRecipient('buyer@example.test')).toThrow();
   });
   it('never redirects live invoices to a development inbox', () => {
-    vi.stubGlobal('useRuntimeConfig', () => ({ paystackEnvironment: 'live', invoiceDevelopmentRecipient: 'safe@example.test' }));
+    vi.stubGlobal('useRuntimeConfig', () => ({ paystackEnvironment: 'live', emailDevelopmentEnabled: false, emailDevelopmentRecipient: 'safe@example.test' }));
     expect(getInvoiceRecipient('buyer@example.test')).toBe('buyer@example.test');
   });
   it('rejects a live setting on the known development deployment', () => {

@@ -219,7 +219,7 @@ check because a provider transaction waited for an order lock.
   flagged for review rather than inventing historic details from current profiles.
 - [ ] Deploy the backend capturing buyer snapshots on new checkouts.
 - [ ] Set Fly runtime `NUXT_INVOICE_BILLING_ENABLED=true` to opt in.
-- [ ] In test mode set `NUXT_INVOICE_DEVELOPMENT_RECIPIENT` to a safe inbox.
+- [ ] In test mode enable `NUXT_EMAIL_DEVELOPMENT_ENABLED=true` and set `NUXT_EMAIL_DEVELOPMENT_RECIPIENT` to a safe inbox.
   Test delivery fails closed without it; live delivery ignores this redirect.
 - [ ] Configure existing AWS SES region/credentials and verified sender.
 - [ ] Activate the protected PAY-05 scheduler and matching environment token.

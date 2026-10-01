@@ -47,7 +47,8 @@ entitlements before private downloads. PDFs are not email attachments.
    **before** deploying this backend. Only disposable local databases were
    migrated during implementation.
 2. Configure existing Supabase Admin Auth, SES credentials/sender and account
-   origin. In test mode `NUXT_CUSTOMER_ACCESS_DEVELOPMENT_RECIPIENT` must be a
+   origin. In test mode enable `NUXT_EMAIL_DEVELOPMENT_ENABLED=true`;
+   `NUXT_EMAIL_DEVELOPMENT_RECIPIENT` must be a
    valid safe inbox. Live mode never redirects to it.
 3. Set `NUXT_CUSTOMER_NOTIFICATIONS_ENABLED=true` to activate scheduled delivery.
    Default is false; fulfillment still queues purchase jobs and sign-in requests

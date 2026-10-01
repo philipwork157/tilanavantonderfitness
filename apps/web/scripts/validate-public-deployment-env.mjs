@@ -9,14 +9,7 @@ const environments = {
   },
 };
 
-const expectedPaths = {
-  PUBLIC_CONTACT_API_URL: '/api/contact',
-  PUBLIC_NEWSLETTER_API_URL: '/api/newsletter/subscribe',
-  PUBLIC_CATALOGUE_API_BASE_URL: '/api/public',
-  PUBLIC_CHECKOUT_API_URL: '/api/checkout/paystack',
-  PUBLIC_CHECKOUT_STATUS_API_URL: '/api/checkout/status',
-  PUBLIC_ACCOUNT_URL: '/account/sign-in',
-};
+const expectedPaths = { PUBLIC_API_BASE_URL: '' };
 
 const errors = [];
 const expectedEnvironment = environments[deployment];
@@ -41,7 +34,7 @@ for (const [name, expectedPath] of Object.entries(expectedPaths)) {
     if (url.pathname.replace(/\/$/, '') !== expectedPath) {
       errors.push(`${name} must use the ${expectedPath} path.`);
     }
-    if (url.search || url.hash) errors.push(`${name} must not include a query string or fragment.`);
+    if (url.username || url.password || url.port || url.search || url.hash) errors.push(`${name} must not include a query string or fragment.`);
   } catch {
     errors.push(`${name} must be a valid absolute URL.`);
   }

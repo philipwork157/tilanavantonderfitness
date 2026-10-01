@@ -1,15 +1,10 @@
 ---
+import { publicApiUrl } from '@web/utils/public-api';
 import PageHero from '@tilana/ui-astro/PageHero.astro';
 import BaseLayout from '@web/layouts/BaseLayout.astro';
 
-const catalogueApiBaseUrl = (
-  import.meta.env.PUBLIC_CATALOGUE_API_BASE_URL
-  ?? 'http://127.0.0.1:3001/api/public'
-).replace(/\/+$/, '');
-const checkoutApiUrl = (
-  import.meta.env.PUBLIC_CHECKOUT_API_URL
-  ?? 'http://127.0.0.1:3001/api/checkout/paystack'
-).replace(/\/+$/, '');
+const catalogueApiBaseUrl = publicApiUrl('/api/public');
+const checkoutApiUrl = publicApiUrl('/api/checkout/paystack');
 const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 ---
 

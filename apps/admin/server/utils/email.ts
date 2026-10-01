@@ -1,3 +1,4 @@
+import { getEmailRecipient, isDevelopmentEmailEnabled } from './email-delivery';
 import { createSesEmailSender, type EmailAddress, type EmailSender } from '@tilana/email/server';
 
 let emailSender: EmailSender | undefined;
@@ -24,5 +25,15 @@ export function getServerEmail(senderOverride?: EmailAddress) {
     ...(fromName && { name: fromName }),
   };
 
-  return { sender: emailSender, from };
+  // Apply the recipient guard at the shared transport so contact and operator
+  // notifications cannot bypass development routing.
+  const transport = emailSender;
+  const sender: EmailSender = {
+    send(message) {
+      const recipient = getEmailRecipient(message.to[0]?.email || '', {}, config);
+      return transport.send({ ...message, to: isDevelopmentEmailEnabled(config)
+        ? [{ email: recipient }] : message.to });
+    },
+  };
+  return { sender, from };
 }

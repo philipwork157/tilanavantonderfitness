@@ -80,8 +80,8 @@ function campaignInput(campaign: Awaited<ReturnType<typeof getCampaign>>): Newsl
 export async function sendNewsletterCampaignTest(id: number) {
   const campaign = await getCampaign(id);
   const config = useRuntimeConfig();
-  const recipient = String(config.newsletterDevelopmentRecipient || '').trim();
-  const siteUrl = String(config.newsletterSiteUrl || 'https://tilanavantonder.co.za').replace(/\/$/, '');
+  const recipient = String(config.emailDevelopmentRecipient || '').trim();
+  const siteUrl = String(config.public.siteUrl || 'https://tilanavantonder.co.za').replace(/\/$/, '');
   if (!recipient) throw new Error('A newsletter test recipient has not been configured.');
   const database = getDatabase();
   let result: Awaited<ReturnType<typeof sendNewsletterCampaignEmail>>;
@@ -114,8 +114,8 @@ export async function sendNewsletterCampaignTest(id: number) {
 export async function sendNewsletterCampaign(id: number) {
   const campaign = await getCampaign(id);
   const config = useRuntimeConfig();
-  const siteUrl = String(config.newsletterSiteUrl || 'https://tilanavantonder.co.za').replace(/\/$/, '');
-  const developmentRecipient = String(config.newsletterDevelopmentRecipient || '').trim();
+  const siteUrl = String(config.public.siteUrl || 'https://tilanavantonder.co.za').replace(/\/$/, '');
+  const developmentRecipient = String(config.emailDevelopmentRecipient || '').trim();
 
   if (isNewsletterDevelopmentEnvironment()) {
     if (!developmentRecipient) throw new Error('A safe development newsletter recipient is required.');

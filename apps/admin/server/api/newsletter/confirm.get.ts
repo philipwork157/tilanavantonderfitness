@@ -3,7 +3,7 @@ import { confirmNewsletterSubscription } from '@server/services/newsletter-subsc
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
-  const siteUrl = String(config.newsletterSiteUrl || '').trim().replace(/\/$/, '');
+  const siteUrl = String(config.public.siteUrl || '').trim().replace(/\/$/, '');
   if (!siteUrl) throw createError({ statusCode: 503, statusMessage: 'Newsletter service is not configured.' });
 
   const parsed = newsletterTokenSchema.safeParse(getQuery(event).token);

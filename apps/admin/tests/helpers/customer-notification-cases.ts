@@ -11,7 +11,7 @@ export function registerCustomerNotificationCases(getDatabase: () => Database, s
   describe('durable customer access notifications', () => {
     beforeEach(() => {
       vi.stubGlobal('useRuntimeConfig', () => ({ paystackSecretKey: 'sk_test_fixture', paystackEnvironment: 'test', accountBaseUrl: 'https://admin.example.test',
-        customerAccessDevelopmentRecipient: 'safe@example.test', customerNotificationsEnabled: true }));
+        emailDevelopmentEnabled: true, emailDevelopmentRecipient: 'safe@example.test', customerNotificationsEnabled: true }));
       send.mockResolvedValue({ messageId: 'fixture' });
       generateLink.mockResolvedValue({ data: { properties: { hashed_token: 'fixture-token' } }, error: null });
     });

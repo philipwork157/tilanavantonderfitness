@@ -31,12 +31,12 @@ describe('Paystack deployment configuration', () => {
     expect(getPaystackCredentials().environment).toBe(environment);
   });
   it.each([
-    'http://website.example.test/checkout/complete', 'https://other.example.test/checkout/complete',
+    'http://website.example.test/checkout/complete',
     'https://website.example.test/wrong', 'https://name:secret@website.example.test/checkout/complete',
     'https://website.example.test/checkout/complete?next=https://evil.test',
     'https://website.example.test/checkout/complete#fragment', 'not-a-url',
   ])('rejects unsafe callback %s', (callback) => {
-    vi.stubGlobal('useRuntimeConfig', () => ({ ...config, paystackCallbackUrl: callback }));
+    vi.stubGlobal('useRuntimeConfig', () => ({ ...config, public: { siteUrl: callback } }));
     expect(() => getPaystackCheckoutConfiguration()).toThrow();
   });
   it('rejects localhost defaults in deployed builds, including test mode', () => {
@@ -48,6 +48,9 @@ describe('Paystack deployment configuration', () => {
     vi.stubEnv('NODE_ENV', 'development');
     expect(validatePaymentUrl('http://127.0.0.1:4321', 'test').origin).toBe('http://127.0.0.1:4321');
     expect(() => validatePaymentUrl('http://127.0.0.1:4321', 'live')).toThrow();
+  });
+  it('derives the callback from the validated public origin', () => {
+    expect(getPaystackCheckoutConfiguration().callbackUrl).toBe('https://website.example.test/checkout/complete');
   });
   it('validates the account URL as well as the website callback', () => {
     vi.stubEnv('NODE_ENV', 'production');

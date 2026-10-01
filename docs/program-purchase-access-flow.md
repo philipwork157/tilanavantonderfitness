@@ -214,7 +214,7 @@ The current flow is:
 5. The server uses the Supabase administrative client to generate a passwordless
    token without sending Supabase's default email.
 6. The project renders a branded email and AWS SES delivers it. Development can
-   redirect all delivery to `NUXT_CUSTOMER_ACCESS_DEVELOPMENT_RECIPIENT`; the
+   redirect all delivery to `NUXT_EMAIL_DEVELOPMENT_RECIPIENT`; the
    token still represents the intended test customer.
 7. The customer clicks the link. The Nuxt callback verifies the one-time token
    with Supabase, creates or reuses the integer-keyed `users` row, links

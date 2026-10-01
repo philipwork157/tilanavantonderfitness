@@ -7,9 +7,19 @@ beforeEach(() => mocks.send.mockResolvedValue({ messageId: 'fixture' }));
 describe('customer access email safety and instructions', () => {
   const input = { firstName: '<Buyer>', intendedRecipient: 'buyer@example.test', signInUrl: 'https://admin.example.test/account/sign-in', instructionsOnly: true };
   it('uses only the intended recipient in live mode even with a test redirect configured', async () => {
-    vi.stubGlobal('useRuntimeConfig', () => ({ paystackEnvironment: 'live', customerAccessDevelopmentRecipient: 'safe@example.test' }));
+    vi.stubGlobal('useRuntimeConfig', () => ({ paystackEnvironment: 'live', emailDevelopmentEnabled: false, emailDevelopmentRecipient: 'safe@example.test' }));
     await sendCustomerAccessEmail(input);
     expect(mocks.send.mock.calls[0]![0].to).toEqual([{ email: input.intendedRecipient }]);
+  });
+  it('routes test customer access through the shared inbox', async () => {
+    vi.stubGlobal('useRuntimeConfig', () => ({ paystackEnvironment: 'test', emailDevelopmentEnabled: true, emailDevelopmentRecipient: 'safe@example.test' }));
+    await sendCustomerAccessEmail(input);
+    expect(mocks.send.mock.calls[0]![0].to).toEqual([{ email: 'safe@example.test' }]);
+  });
+  it('blocks live access delivery when development routing is enabled', async () => {
+    vi.stubGlobal('useRuntimeConfig', () => ({ paystackEnvironment: 'live', emailDevelopmentEnabled: true, emailDevelopmentRecipient: 'safe@example.test' }));
+    await expect(sendCustomerAccessEmail(input)).rejects.toThrow();
+    expect(mocks.send).not.toHaveBeenCalled();
   });
   it('requires a valid safe test inbox before transport', async () => {
     vi.stubGlobal('useRuntimeConfig', () => ({ paystackEnvironment: 'test' }));

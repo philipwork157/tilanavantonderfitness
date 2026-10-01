@@ -13,7 +13,7 @@ import { randomUUID } from 'node:crypto';
 export function registerInvoiceCases(getDatabase: () => Database, send: ReturnType<typeof vi.fn>, supabase: ReturnType<typeof vi.fn>) {
   describe('purchase invoice lifecycle against PostgreSQL', () => {
     beforeEach(() => {
-      vi.stubGlobal('useRuntimeConfig', () => ({ paystackEnvironment: 'test', invoiceDevelopmentRecipient: 'safe@example.test', accountBaseUrl: 'http://127.0.0.1:3001' }));
+      vi.stubGlobal('useRuntimeConfig', () => ({ paystackEnvironment: 'test', emailDevelopmentEnabled: true, emailDevelopmentRecipient: 'safe@example.test', accountBaseUrl: 'http://127.0.0.1:3001' }));
       send.mockResolvedValue({ messageId: 'fixture-only' });
     });
     const seed = async (options: { secondLine?: boolean; missingName?: boolean } = {}) => {

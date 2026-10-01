@@ -1,22 +1,22 @@
+import { getEmailRecipient, isDevelopmentEmailEnabled } from '@server/utils/email-delivery';
 import { getServerEmail } from '@server/utils/email';
 import type { NewsletterCampaignInput } from '@tilana/contracts/newsletter';
 import { escapeEmailHtml } from '@server/email-templates/html';
 
 /** Fly dev builds still use NODE_ENV=production, so the Fly app identity is part of the safety check. */
 export function isNewsletterDevelopmentEnvironment(): boolean {
-  return process.env.NODE_ENV !== 'production'
+  return isDevelopmentEmailEnabled() || process.env.NODE_ENV !== 'production'
     || process.env.FLY_APP_NAME === 'tilanavantonder-admin-dev';
 }
 
 function getNewsletterRecipient(intendedRecipient: string, forceDevelopmentRecipient = false) {
   const config = useRuntimeConfig();
-  const developmentRecipient = String(config.newsletterDevelopmentRecipient || '').trim();
   const redirectToDevelopment = forceDevelopmentRecipient || isNewsletterDevelopmentEnvironment();
-  if (redirectToDevelopment && !developmentRecipient) {
-    throw new Error('Development newsletter delivery requires NUXT_NEWSLETTER_DEVELOPMENT_RECIPIENT.');
+  if (redirectToDevelopment && !forceDevelopmentRecipient && !isDevelopmentEmailEnabled(config)) {
+    throw new Error('Development newsletter delivery requires NUXT_EMAIL_DEVELOPMENT_ENABLED.');
   }
   return {
-    recipient: redirectToDevelopment ? developmentRecipient : intendedRecipient,
+    recipient: getEmailRecipient(intendedRecipient, { preview: redirectToDevelopment }, config),
     redirected: redirectToDevelopment,
   };
 }
@@ -24,7 +24,7 @@ function getNewsletterRecipient(intendedRecipient: string, forceDevelopmentRecip
 export async function sendNewsletterConfirmation(email: string, token: string) {
   const config = useRuntimeConfig();
   const fromEmail = String(config.newsletterFromEmail || '').trim();
-  const apiBaseUrl = String(config.newsletterApiBaseUrl || '').trim().replace(/\/$/, '');
+  const apiBaseUrl = String(config.accountBaseUrl || '').trim().replace(/\/$/, '');
   if (!fromEmail || !apiBaseUrl) {
     throw new Error('Newsletter email requires a sender and API base URL.');
   }

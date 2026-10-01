@@ -47,13 +47,12 @@ export function validatePaymentUrl(value: string, environment: 'test' | 'live') 
 
 export function getPaystackCheckoutConfiguration(config = useRuntimeConfig()) {
   const credentials = getPaystackCredentials(config);
-  const callback = validatePaymentUrl(String(config.paystackCallbackUrl || ''), credentials.environment);
   const site = validatePaymentUrl(String(config.public.siteUrl || ''), credentials.environment);
   getCustomerAccountBaseUrl(config);
-  if (site.pathname !== '/' || callback.origin !== site.origin || callback.pathname !== '/checkout/complete') {
+  if (site.pathname !== '/') {
     throw createError({ statusCode: 503, statusMessage: 'Checkout callback must match the public website.' });
   }
-  return { ...credentials, callbackUrl: callback.toString() };
+  return { ...credentials, callbackUrl: new URL('/checkout/complete', site).toString() };
 }
 
 export function getCustomerAccountBaseUrl(config = useRuntimeConfig()) {

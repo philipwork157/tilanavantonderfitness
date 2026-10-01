@@ -51,19 +51,9 @@ Add these under **Settings -> Secrets and variables -> Actions -> Secrets**:
 - `CLOUDFLARE_ACCOUNT_ID`
 - `FLY_API_TOKEN` (development Fly app)
 - `FLY_API_TOKEN_PROD` (production Fly app)
-- `PUBLIC_CONTACT_API_URL_DEV`
-- `PUBLIC_NEWSLETTER_API_URL_DEV`
-- `PUBLIC_CATALOGUE_API_BASE_URL_DEV`
-- `PUBLIC_CHECKOUT_API_URL_DEV`
-- `PUBLIC_CHECKOUT_STATUS_API_URL_DEV`
-- `PUBLIC_ACCOUNT_URL_DEV`
+- `PUBLIC_API_BASE_URL_DEV`
 - `PUBLIC_TURNSTILE_SITE_KEY_DEV`
-- `PUBLIC_CONTACT_API_URL_PROD`
-- `PUBLIC_NEWSLETTER_API_URL_PROD`
-- `PUBLIC_CATALOGUE_API_BASE_URL_PROD`
-- `PUBLIC_CHECKOUT_API_URL_PROD`
-- `PUBLIC_CHECKOUT_STATUS_API_URL_PROD`
-- `PUBLIC_ACCOUNT_URL_PROD`
+- `PUBLIC_API_BASE_URL_PROD`
 - `PUBLIC_TURNSTILE_SITE_KEY_PROD`
 
 The `PUBLIC_*` values are embedded in the public website at build time. Despite
@@ -74,22 +64,12 @@ Use these environment-specific values:
 
 | GitHub secret | Development value |
 | --- | --- |
-| `PUBLIC_CONTACT_API_URL_DEV` | `https://admin-dev.tilanavantonder.co.za/api/contact` |
-| `PUBLIC_NEWSLETTER_API_URL_DEV` | `https://admin-dev.tilanavantonder.co.za/api/newsletter/subscribe` |
-| `PUBLIC_CATALOGUE_API_BASE_URL_DEV` | `https://admin-dev.tilanavantonder.co.za/api/public` |
-| `PUBLIC_CHECKOUT_API_URL_DEV` | `https://admin-dev.tilanavantonder.co.za/api/checkout/paystack` |
-| `PUBLIC_CHECKOUT_STATUS_API_URL_DEV` | `https://admin-dev.tilanavantonder.co.za/api/checkout/status` |
-| `PUBLIC_ACCOUNT_URL_DEV` | `https://admin-dev.tilanavantonder.co.za/account/sign-in` |
+| `PUBLIC_API_BASE_URL_DEV` | `https://admin-dev.tilanavantonder.co.za` |
 | `PUBLIC_TURNSTILE_SITE_KEY_DEV` | Development Turnstile site key |
 
 | GitHub secret | Production value |
 | --- | --- |
-| `PUBLIC_CONTACT_API_URL_PROD` | `https://admin.tilanavantonder.co.za/api/contact` |
-| `PUBLIC_NEWSLETTER_API_URL_PROD` | `https://admin.tilanavantonder.co.za/api/newsletter/subscribe` |
-| `PUBLIC_CATALOGUE_API_BASE_URL_PROD` | `https://admin.tilanavantonder.co.za/api/public` |
-| `PUBLIC_CHECKOUT_API_URL_PROD` | `https://admin.tilanavantonder.co.za/api/checkout/paystack` |
-| `PUBLIC_CHECKOUT_STATUS_API_URL_PROD` | `https://admin.tilanavantonder.co.za/api/checkout/status` |
-| `PUBLIC_ACCOUNT_URL_PROD` | `https://admin.tilanavantonder.co.za/account/sign-in` |
+| `PUBLIC_API_BASE_URL_PROD` | `https://admin.tilanavantonder.co.za` |
 | `PUBLIC_TURNSTILE_SITE_KEY_PROD` | Production Turnstile site key |
 
 GitHub returns an empty string when a referenced secret does not exist. The
@@ -158,13 +138,11 @@ secret store. Audit these names independently for development and production:
 - `NUXT_CONTACT_NOTIFICATION_ENABLED`
 - `NUXT_EMAIL_FROM_ADDRESS`
 - `NUXT_NEWSLETTER_FROM_EMAIL`
-- `NUXT_NEWSLETTER_DEVELOPMENT_RECIPIENT`
-- `NUXT_NEWSLETTER_API_BASE_URL`
-- `NUXT_NEWSLETTER_SITE_URL`
+- `NUXT_EMAIL_DEVELOPMENT_ENABLED`
+- `NUXT_EMAIL_DEVELOPMENT_RECIPIENT`
+- `NUXT_ACCOUNT_BASE_URL`
 - `NUXT_PAYSTACK_SECRET_KEY`
 - `NUXT_PAYSTACK_ENVIRONMENT`
-- `NUXT_PAYSTACK_CALLBACK_URL`
-- `NUXT_ACCOUNT_BASE_URL`
 - `AWS_REGION`
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
@@ -173,9 +151,11 @@ secret store. Audit these names independently for development and production:
 configuration sets it to the matching public website so admin preview links open
 the correct development or production site.
 
-`NUXT_CUSTOMER_ACCESS_DEVELOPMENT_RECIPIENT` is strongly recommended on the Fly
-development app so test access emails cannot be delivered accidentally to a
-customer. It must not redirect production customer emails.
+`NUXT_EMAIL_DEVELOPMENT_ENABLED=true` routes every SES email to the single
+`NUXT_EMAIL_DEVELOPMENT_RECIPIENT`, including contact and recovery notifications.
+Test customer/invoice delivery requires the switch and a valid inbox. Live
+customer/invoice delivery rejects an enabled switch. Newsletter previews use
+the same inbox even when the switch is disabled.
 
 Use separate Supabase projects, database URLs, and private storage resources for
 development and live production. Sharing resources is not an approved live
@@ -246,8 +226,8 @@ ACCESS-01 rollout is documented in [customer-access-delivery.md](./customer-acce
 Review both new customer notification migrations before backend deployment.
 Enable `NUXT_CUSTOMER_NOTIFICATIONS_ENABLED=true` for the existing protected
 scheduler to send purchase instructions and retry failed login emails. It
-defaults to false. Test mode now requires a valid safe
-`NUXT_CUSTOMER_ACCESS_DEVELOPMENT_RECIPIENT`; live never uses that redirect.
+defaults to false. Test mode now requires `NUXT_EMAIL_DEVELOPMENT_ENABLED=true` and a valid safe
+`NUXT_EMAIL_DEVELOPMENT_RECIPIENT`; live never uses that redirect.
 No deployed migrations, activation or real SES sends were performed locally.
 
 Follow [billing.md](./billing.md) before activation. Review/apply
@@ -262,8 +242,8 @@ invoice rows automatically or authorizes deployed database changes. Verify
 actual browser guards/ownership, issued-but-unpaid billing login, confirmed
 manual receipt/refund, void/full-credit replacement and separate original/reissue
 PDF downloads before enabling customer delivery.
-Configure Fly runtime `NUXT_INVOICE_BILLING_ENABLED=true`, plus required
-`NUXT_INVOICE_DEVELOPMENT_RECIPIENT` in test mode and existing SES
+Configure Fly runtime `NUXT_INVOICE_BILLING_ENABLED=true`, plus `NUXT_EMAIL_DEVELOPMENT_ENABLED=true` and required
+`NUXT_EMAIL_DEVELOPMENT_RECIPIENT` in test mode and existing SES
 credentials/verified sender. Live delivery never uses the test redirect.
 The protected PAY-05 scheduler invokes billing after recovery; activate it
 and monitor issuance/email backlogs independently. This does not move scheduling
@@ -317,16 +297,15 @@ new reference without resolving the existing provider attempt.
 Paystack is currently test-only. Configure `NUXT_PAYSTACK_ENVIRONMENT=test` in
 both Fly apps and do not configure an `sk_live_...` key yet. Where test checkout
 should work, configure `NUXT_PAYSTACK_SECRET_KEY` with an `sk_test_...` key and
-set the callback and account URLs shown in the Fly configuration table above.
+set the public-site and account URLs shown in the Fly configuration table above.
 Leaving the production app without `NUXT_PAYSTACK_SECRET_KEY` keeps production
 checkout unavailable while the rest of the site can be deployed safely.
 
 The backend rejects mismatched `sk_test_`/`sk_live_` secrets before provider
 initialization, verification, refunds, or webhook processing. Deployed builds
-require HTTPS non-local URLs for `NUXT_PAYSTACK_CALLBACK_URL`,
-`NUXT_ACCOUNT_BASE_URL`, and `NUXT_PUBLIC_SITE_URL`. The callback must be exactly
-the public-site origin plus `/checkout/complete`, without credentials, query,
-or fragment; the account URL and public-site URL must be origins. Local HTTP
+require HTTPS non-local URLs for `NUXT_ACCOUNT_BASE_URL` and `NUXT_PUBLIC_SITE_URL`. The callback is derived from
+the public-site origin plus `/checkout/complete`; both configured URLs must be
+origins without credentials, query, or fragment. Local HTTP
 defaults are supported only for local test development, not deployed dev builds
 or live mode. These checks are request-time failures, so an intentionally
 unconfigured checkout does not prevent unrelated admin pages from starting.
@@ -376,10 +355,9 @@ Supabase SMTP is not used. The server-only Supabase administrative client calls
 `auth.admin.generateLink()` without triggering an email, and the branded SES
 message links its token hash to
 `https://ADMIN_HOST/api/customer/auth/confirm`. Configure the same SES sender
-and AWS credentials used by contact notifications. Locally and on the Fly dev
-application, `NUXT_CUSTOMER_ACCESS_DEVELOPMENT_RECIPIENT` can redirect delivery
-to a safe test inbox; the link still authenticates as the intended paid test
-customer. Production always delivers to the paid customer's email address.
+and AWS credentials used by contact notifications. Development delivery uses the shared switch and inbox documented above.
+Live customer delivery requires the switch to be disabled and delivers to the
+paid customer's email address.
 
 Program PDFs are not email attachments. Upload each PDF to the private R2
 program bucket and create an active `program_files` record containing its
@@ -390,3 +368,26 @@ issuing a five-minute signed R2 download URL.
 Before applying migration `20260906190429_same_black_cat.sql`, check for
 duplicate case-insensitive client emails. The new unique index intentionally
 stops two customer records from claiming the same verified email identity.
+
+## Consolidated environment configuration
+
+The public application now uses only `PUBLIC_API_BASE_URL` and
+`PUBLIC_TURNSTILE_SITE_KEY`. Endpoint paths are fixed in code. Admin newsletter
+confirmation links use `NUXT_ACCOUNT_BASE_URL`; newsletter redirects, unsubscribe
+links and Paystack callbacks use `NUXT_PUBLIC_SITE_URL`.
+
+Before deploying this version, create GitHub secrets `PUBLIC_API_BASE_URL_DEV`
+and `PUBLIC_API_BASE_URL_PROD` with the origins above. In Fly runtime secrets,
+set `NUXT_ACCOUNT_BASE_URL` to the matching admin origin; set
+`NUXT_EMAIL_DEVELOPMENT_ENABLED=true` and `NUXT_EMAIL_DEVELOPMENT_RECIPIENT` to
+the safe inbox on development. Production live customer/invoice delivery requires
+`NUXT_EMAIL_DEVELOPMENT_ENABLED=false`. The inbox remains available for explicit
+newsletter previews. These changes are configuration instructions, not evidence
+of a deployed update.
+
+Remove old per-endpoint public URL settings and the admin
+`NUXT_NEWSLETTER_API_BASE_URL`, `NUXT_NEWSLETTER_SITE_URL`,
+`NUXT_PAYSTACK_CALLBACK_URL`, `NUXT_NEWSLETTER_DEVELOPMENT_RECIPIENT`,
+`NUXT_CUSTOMER_ACCESS_DEVELOPMENT_RECIPIENT`, and
+`NUXT_INVOICE_DEVELOPMENT_RECIPIENT` settings after migrating. They are no longer
+read. Existing feature activation switches remain independent of email routing.

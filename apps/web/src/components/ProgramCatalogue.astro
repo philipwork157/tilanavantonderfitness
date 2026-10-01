@@ -1,4 +1,5 @@
 ---
+import { publicApiUrl } from '@web/utils/public-api';
 interface Props {
   variant?: 'full' | 'compact';
   eyebrow?: string;
@@ -12,10 +13,7 @@ const {
   title = 'Explore at your own pace.',
   showAllLink = false,
 } = Astro.props;
-const catalogueApiBaseUrl = (
-  import.meta.env.PUBLIC_CATALOGUE_API_BASE_URL
-  ?? 'http://127.0.0.1:3001/api/public'
-).replace(/\/+$/, '');
+const catalogueApiBaseUrl = publicApiUrl('/api/public');
 ---
 
 <section

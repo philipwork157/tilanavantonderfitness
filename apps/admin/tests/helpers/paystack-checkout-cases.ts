@@ -14,7 +14,6 @@ import { getInvoiceDocument } from '@server/services/invoice-records';
 export function registerCheckoutCases(getDatabase: () => Database) {
   const config = {
     paystackSecretKey: 'sk_test_integration_fixture', paystackEnvironment: 'test',
-    paystackCallbackUrl: 'https://website.example.test/checkout/complete',
     accountBaseUrl: 'https://admin.example.test',
     public: { siteUrl: 'https://website.example.test' },
     r2PublicMediaBucket: 'test-public', r2PublicMediaBaseUrl: 'https://media.example.test',
@@ -63,7 +62,7 @@ export function registerCheckoutCases(getDatabase: () => Database) {
 
     it.each([
       { paystackSecretKey: 'sk_live_fixture' },
-      { paystackCallbackUrl: 'https://other.example.test/checkout/complete' },
+      { public: { siteUrl: 'https://other.example.test/checkout/complete' } },
       { accountBaseUrl: 'https://admin.example.test/not-an-origin' },
     ])('rejects invalid checkout configuration before reserving or contacting Paystack: %j', async (overrides) => {
       const input = await basket();

@@ -1,6 +1,7 @@
 ---
+import { publicApiUrl } from '@web/utils/public-api';
 const newsletterApiUrl =
-  import.meta.env.PUBLIC_NEWSLETTER_API_URL ?? 'http://127.0.0.1:3001/api/newsletter/subscribe';
+  publicApiUrl('/api/newsletter/subscribe');
 const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 ---
 

@@ -1,8 +1,9 @@
 ---
+import { publicApiUrl } from '@web/utils/public-api';
 import { contactInterestOptions } from '@tilana/contracts/contact';
 
 const contactApiUrl =
-  import.meta.env.PUBLIC_CONTACT_API_URL ?? 'http://127.0.0.1:3001/api/contact';
+  publicApiUrl('/api/contact');
 const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 const defaultInterestOption = contactInterestOptions[0];
 ---
