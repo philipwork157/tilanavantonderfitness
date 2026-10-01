@@ -21,7 +21,7 @@ const programs = marketingPrograms.map((program) => {
 
 <BaseLayout title="Programs & Pricing" description="Explore Beginner, Intermediate, Advanced, Reconnect and Nourish programs from Tilana van Tonder.">
   <PageHero eyebrow="Programs for real life" title="Find your" script="next step." intro="Start where you are and choose the support that suits you - from foundational movement and nourishment to pelvic-floor connection and progressive strength." />
-  <section class="section program-collection">
+  <section id="program-collection" class="section program-collection">
     <div class="container">
       <div class="program-toolbar">
         <div><p class="eyebrow">The program collection</p><h2 class="heading-lg">Explore at your own pace.</h2></div>
@@ -64,7 +64,7 @@ const programs = marketingPrograms.map((program) => {
 </BaseLayout>
 
 <style>
-  .program-collection { --sale-accent: #43583d; --sale-pastel: #dce5ce; background: var(--cream); }
+  .program-collection { --sale-accent: #43583d; --sale-pastel: #dce5ce; scroll-margin-top: 6.5rem; background: var(--cream); }
   :global(.dark) .program-collection { --sale-accent: #dce5ce; --sale-pastel: #35412f; }
   .program-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 2rem; margin-bottom: 2.5rem; }
   .program-toolbar .heading-lg { font-size: clamp(2rem, 4vw, 3.5rem); }
