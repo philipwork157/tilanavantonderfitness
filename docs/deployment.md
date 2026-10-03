@@ -92,6 +92,18 @@ No `wrangler.toml` is required.
 
 ### Local versus deployed request identity (REAUDIT-03)
 
+Use `http://localhost:4321` for the public development site and
+`http://localhost:3001` for the local admin/API. Keep local callback URLs,
+public API settings, and browser sessions on this hostname. Numeric loopback
+addresses remain valid IP values in security checks and isolated test fixtures;
+changing a browser hostname does not fix missing request-IP information.
+
+Nuxt's local dev proxy uses a Unix socket, which has no network IP address.
+With no trusted-header override, the request-identity helper assigns that
+readable/writable local transport one shared loopback rate-limit identity.
+This applies only in `NODE_ENV=development` outside Fly. It never trusts
+forwarded headers, masks an invalid IP, or enables a production fallback.
+
 For direct local `pnpm dev`, leave `NUXT_TRUSTED_CLIENT_IP_HEADER` **unset**.
 The committed admin environment example deliberately comments it out. If an
 older copy of `apps/admin/.env` sets it to `fly-client-ip`, remove that override

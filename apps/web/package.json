@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev --host 127.0.0.1 --port 4321",
-    "start": "ASTRO_TELEMETRY_DISABLED=1 astro dev --host 127.0.0.1 --port 4321",
+    "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev --host localhost --port 4321",
+    "start": "ASTRO_TELEMETRY_DISABLED=1 astro dev --host localhost --port 4321",
     "build": "pnpm typecheck && astro build && node scripts/prepare-sites.mjs",
     "preview": "astro preview",
     "lint": "eslint \"src/**/*.{astro,js,ts}\" \"scripts/**/*.mjs\" \"tests/**/*.ts\" \"worker/**/*.js\" \"*.{js,mjs,ts}\" --max-warnings 0",

@@ -309,7 +309,7 @@ environment:
 2. Confirm every public build-time API URL points to the matching admin host.
 3. Confirm the Turnstile site key allows the deployed public hostname. For local
    testing use a Cloudflare test key or leave the local site key blank; a
-   production-only hostname key will fail on `127.0.0.1`.
+   production-only hostname key will fail on `localhost`.
 4. Confirm Paystack secret, environment, callback, and signed webhook URL all
    belong to the same environment.
 5. Confirm the AWS SES sender is verified and production does not set the

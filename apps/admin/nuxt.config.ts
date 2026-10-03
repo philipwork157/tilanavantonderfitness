@@ -34,7 +34,7 @@ export default defineNuxtConfig({
     paystackRecoveryEnabled: false,
     paystackRecoveryToken: '',
     paystackRecoveryAlertTo: '',
-    accountBaseUrl: 'http://127.0.0.1:3001',
+    accountBaseUrl: 'http://localhost:3001',
     r2AccountId: '',
     r2PublicMediaBucket: '',
     r2PublicMediaBaseUrl: '',
@@ -44,7 +44,7 @@ export default defineNuxtConfig({
     r2UploadAccessKeyId: '',
     r2UploadSecretAccessKey: '',
     public: {
-      siteUrl: 'http://127.0.0.1:4321',
+      siteUrl: 'http://localhost:4321',
     },
   },
   devtools: {

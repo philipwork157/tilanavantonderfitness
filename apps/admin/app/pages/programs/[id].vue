@@ -62,7 +62,7 @@ const nextVolumeNumber = computed(() => Math.max(
 ) + 1);
 const nextVolumeLabel = computed(() => `Add Volume ${nextVolumeNumber.value}`);
 const publicProgramUrl = computed(() => {
-  const siteUrl = String(runtimeConfig.public.siteUrl || 'http://127.0.0.1:4321').replace(/\/$/, '');
+  const siteUrl = String(runtimeConfig.public.siteUrl || 'http://localhost:4321').replace(/\/$/, '');
   return `${siteUrl}/program`;
 });
 

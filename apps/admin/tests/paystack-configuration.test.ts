@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getPaystackCheckoutConfiguration, getPaystackCredentials, validatePaymentUrl } from '@server/utils/paystack-configuration';
+import { getCustomerAccountBaseUrl, getPaystackCheckoutConfiguration, getPaystackCredentials, validatePaymentUrl } from '@server/utils/paystack-configuration';
 
 const config = {
   paystackEnvironment: 'test', paystackSecretKey: 'sk_test_fixture',
@@ -51,6 +51,15 @@ describe('Paystack deployment configuration', () => {
   });
   it('derives the callback from the validated public origin', () => {
     expect(getPaystackCheckoutConfiguration().callbackUrl).toBe('https://website.example.test/checkout/complete');
+  });
+  it('keeps localhost test checkout and account URLs on the same local hostname', () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubGlobal('useRuntimeConfig', () => ({ ...config,
+      accountBaseUrl: 'http://localhost:3001', public: { siteUrl: 'http://localhost:4321' },
+    }));
+    const local = getPaystackCheckoutConfiguration();
+    expect(local.callbackUrl).toBe('http://localhost:4321/checkout/complete');
+    expect(getCustomerAccountBaseUrl()).toBe('http://localhost:3001');
   });
   it('validates the account URL as well as the website callback', () => {
     vi.stubEnv('NODE_ENV', 'production');
