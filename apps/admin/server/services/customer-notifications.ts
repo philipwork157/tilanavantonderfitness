@@ -2,13 +2,21 @@ import type { Database } from '@tilana/db/server';
 import { clients, customerNotifications, orders } from '@tilana/db/schema';
 import { and, asc, eq, isNull, lte, or, sql } from 'drizzle-orm';
 import { getDatabase } from '@server/utils/database';
-import { assertPaystackDatabaseEnvironment, getCustomerAccountBaseUrl } from '@server/utils/paystack-configuration';
+import { assertPaystackDatabaseEnvironment, getCustomerAccountBaseUrl, getPaystackEnvironment } from '@server/utils/paystack-configuration';
 import { customerPurchaseHistoryCondition } from '@server/utils/customer-purchase-history';
 import { getSupabaseAdminClient } from '@server/utils/supabase-admin';
+import { getEmailRecipient } from '@server/utils/email-delivery';
 import { sendCustomerAccessEmail } from './customer-access-emails';
 import { getPurchaseProgramAttachments } from './purchase-program-attachments';
 
 type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
+
+/** Only fixed internal failure categories may reach logs, never provider errors or links. */
+class CustomerDeliveryError extends Error {
+  constructor(readonly failure: 'email-configuration' | 'magic-link' | 'timeout') {
+    super('Customer email delivery failed.');
+  }
+}
 
 /** Called inside successful fulfillment: one notification per order, including webhook replays. */
 export async function queuePurchaseAccess(transaction: Transaction, orderId: number) {
@@ -37,6 +45,12 @@ async function sendNotification(job: typeof customerNotifications.$inferSelect, 
     .where(eq(clients.id, job.clientId)).limit(1);
   // Old login requests must not keep issuing unsolicited fresh tokens indefinitely.
   if (!buyer || (job.kind === 'login' && Date.now() - job.createdAt.getTime() > 60 * 60_000)) return false;
+  // Fail before minting an Auth token or reading PDFs when the test inbox is missing.
+  const config = useRuntimeConfig();
+  try {
+    const test = getPaystackEnvironment(config) === 'test';
+    getEmailRecipient(buyer.email, { test, live: !test }, config);
+  } catch { throw new CustomerDeliveryError('email-configuration'); }
   const base = getCustomerAccountBaseUrl();
   const url = new URL('/account/sign-in', `${base}/`);
   const attachments = job.kind === 'purchase' ? await getPurchaseProgramAttachments(job.orderId!, job.clientId, signal) : undefined;
@@ -46,10 +60,10 @@ async function sendNotification(job: typeof customerNotifications.$inferSelect, 
     // Bound generation inside this function so a late Auth response cannot trigger a late SES send.
     const result = await Promise.race([
       getSupabaseAdminClient().auth.admin.generateLink({ type: 'magiclink', email: buyer.email.toLowerCase() }),
-      new Promise<never>((_resolve, reject) => { timer = setTimeout(() => reject(new Error('Customer token generation timed out.')), 8_000); }),
+      new Promise<never>((_resolve, reject) => { timer = setTimeout(() => reject(new CustomerDeliveryError('magic-link')), 8_000); }),
     ]).finally(() => clearTimeout(timer));
     const { data, error } = result;
-    if (error || !data.properties?.hashed_token) throw new Error('Customer token generation failed.');
+    if (error || !data.properties?.hashed_token) throw new CustomerDeliveryError('magic-link');
     url.pathname = '/api/customer/auth/confirm';
     url.searchParams.set('token_hash', data.properties.hashed_token);
     url.searchParams.set('type', 'email');
@@ -86,12 +100,16 @@ export async function deliverCustomerNotifications(jobId?: number) {
     const controller = new AbortController();
     try {
       const delivered = await Promise.race([sendNotification(job, controller.signal), new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(() => { controller.abort(); reject(new Error('Customer delivery timed out.')); }, 30_000);
+        timer = setTimeout(() => { controller.abort(); reject(new CustomerDeliveryError('timeout')); }, 30_000);
       })]);
       await database.update(customerNotifications).set({ ...(delivered ? { sentAt: new Date() } : { canceledAt: new Date() }), leaseUntil: null }).where(ownership);
       if (delivered) sent++; else canceled++;
-    } catch {
+    } catch (error) {
       // Never log tokens, provider errors or customer addresses.
+      console.error('Customer email delivery failed.', {
+        notificationId: job.id, kind: job.kind,
+        failure: error instanceof CustomerDeliveryError ? error.failure : 'delivery',
+      });
       await database.update(customerNotifications).set({ leaseUntil: null,
         nextAttemptAt: new Date(Date.now() + Math.min(6 * 60 * 60_000, 60_000 * 2 ** Math.min(job.attempts, 12))),
       }).where(ownership);

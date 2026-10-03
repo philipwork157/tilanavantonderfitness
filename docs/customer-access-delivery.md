@@ -60,6 +60,9 @@ Emailed copies cannot be recalled after refund or revocation.
    origin. In test mode enable `NUXT_EMAIL_DEVELOPMENT_ENABLED=true`;
    `NUXT_EMAIL_DEVELOPMENT_RECIPIENT` must be a
    valid safe inbox. Live mode never redirects to it.
+   After editing local `.env` values, fully restart with `pnpm dev:stop` followed
+   by `pnpm dev`. An already-running Nuxt process can retain the previous inbox
+   value; requesting a link again or hot-reloading code does not replace it.
 3. Set `NUXT_CUSTOMER_NOTIFICATIONS_ENABLED=true` to activate immediate purchase
    delivery and scheduled retries.
    Default is false; fulfillment still queues purchase jobs and sign-in requests
@@ -83,6 +86,10 @@ Emailed copies cannot be recalled after refund or revocation.
    IDs and counters only; never expose queue reads anonymously. Fix configuration
    or transport failures before retrying. Do not edit sent markers to invent
    delivery evidence.
+   Server logs classify failed attempts as `email-configuration`, `magic-link`,
+   `timeout`, or `delivery`, with the notification ID/kind only. Raw provider
+   errors, addresses, tokens and links are never logged. Invalid test-inbox
+   configuration is checked before generating a token or reading attachments.
 6. Verify actual closed-browser test checkout, safe-inbox SES receipt, link
    confirmation, repeat login, cross-customer denial and refund before go-live.
    Local tests mock every external provider and do not prove deployed setup.

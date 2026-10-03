@@ -3,7 +3,7 @@ import { clients } from '@tilana/db/schema';
 import { deliverCustomerNotifications, deliverPurchaseNotification } from '@server/services/customer-notifications';
 const mocks = vi.hoisted(() => ({ database: { select: vi.fn(), transaction: vi.fn(), update: vi.fn() }, attachments: vi.fn(), send: vi.fn(), generateLink: vi.fn(), assertEnvironment: vi.fn() }));
 vi.mock('@server/utils/database', () => ({ getDatabase: () => mocks.database }));
-vi.mock('@server/utils/paystack-configuration', () => ({ assertPaystackDatabaseEnvironment: mocks.assertEnvironment, getCustomerAccountBaseUrl: () => 'https://admin.example.test' }));
+vi.mock('@server/utils/paystack-configuration', () => ({ assertPaystackDatabaseEnvironment: mocks.assertEnvironment, getCustomerAccountBaseUrl: () => 'https://admin.example.test', getPaystackEnvironment: () => 'test' }));
 vi.mock('@server/utils/supabase-admin', () => ({ getSupabaseAdminClient: () => ({ auth: { admin: { generateLink: mocks.generateLink } } }) }));
 vi.mock('@server/services/customer-access-emails', () => ({ sendCustomerAccessEmail: mocks.send }));
 vi.mock('@server/services/purchase-program-attachments', () => ({ getPurchaseProgramAttachments: mocks.attachments }));
@@ -12,7 +12,9 @@ let buyers: unknown[];
 beforeEach(() => {
   job = { id: 1, orderId: 2, clientId: 3, kind: 'purchase', createdAt: new Date(), leaseVersion: 1, attempts: 0 };
   buyers = [{ email: 'buyer@example.test', firstName: 'Buyer' }];
-  vi.stubGlobal('useRuntimeConfig', () => ({ customerNotificationsEnabled: true }));
+  vi.stubGlobal('useRuntimeConfig', () => ({ customerNotificationsEnabled: true,
+    emailDevelopmentEnabled: true, emailDevelopmentRecipient: 'safe@example.test' }));
+  vi.spyOn(console, 'error').mockImplementation(() => {});
   mocks.database.select.mockImplementation(() => {
     let table: unknown;
     const query = { from: (value: unknown) => { table = value; return query; }, innerJoin: () => query, where: () => query,
@@ -42,6 +44,21 @@ describe('purchase email outbox delivery', () => {
     expect(mocks.attachments).not.toHaveBeenCalled();
     expect(mocks.send.mock.calls[0]?.[0].signInUrl).toContain('token_hash=fixture-token');
     expect(mocks.send.mock.calls[0]?.[0].attachments).toBeUndefined();
+  });
+  it('detects stale or blank development-inbox configuration before token generation', async () => {
+    job.kind = 'login';
+    vi.stubGlobal('useRuntimeConfig', () => ({ customerNotificationsEnabled: true, emailDevelopmentEnabled: true, emailDevelopmentRecipient: '' }));
+    expect(await deliverCustomerNotifications(1)).toMatchObject({ failed: 1 });
+    expect(mocks.generateLink).not.toHaveBeenCalled();
+    expect(mocks.send).not.toHaveBeenCalled();
+    expect(console.error).toHaveBeenCalledWith('Customer email delivery failed.', { notificationId: 1, kind: 'login', failure: 'email-configuration' });
+  });
+  it('reports token failures using fixed categories without logging provider details', async () => {
+    job.kind = 'login';
+    mocks.generateLink.mockResolvedValueOnce({ data: {}, error: new Error('secret-token buyer@example.test') });
+    expect(await deliverCustomerNotifications(1)).toMatchObject({ failed: 1 });
+    expect(console.error).toHaveBeenCalledWith('Customer email delivery failed.', { notificationId: 1, kind: 'login', failure: 'magic-link' });
+    expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toMatch(/secret-token|buyer@example/);
   });
   it.each(['missing buyer', 'revoked grant'])('cancels %s without sending content', async reason => {
     if (reason === 'missing buyer') buyers = [];
