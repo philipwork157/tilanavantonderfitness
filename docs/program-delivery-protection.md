@@ -27,6 +27,15 @@ still be maintained. Replacement finalization makes the verified new PDF ready
 before deactivating the old PDF, inside one database transaction. Either both
 changes commit or neither does. Audit events record finalization and replacement.
 
+The V1 upload button creates a new PDF edition within the selected volume and
+atomically retires all older active PDFs for that volume after content validation.
+Retired database rows and private R2 objects are retained. Volume 1 and Volume 2
+remain separate products. Explicit individual replacement remains supported by
+the API. Version reservations serialize on the volume, and a slow older upload
+cannot replace a newer ready edition. Metadata alone is insufficient: finalization
+reads the bounded, ETag-matched object and validates its PDF structure before it
+becomes ready. Invalid content leaves the previous edition available.
+
 There is no unaudited override. If no replacement will be supplied, purchases
 must complete the established refund/reversal process and non-purchase grants
 must be explicitly revoked or allowed to expire before the final PDF can be

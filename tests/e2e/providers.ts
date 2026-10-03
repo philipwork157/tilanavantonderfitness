@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import type { Database } from '@tilana/db/server';
+import { programPdfFixture } from './program-pdf';
 
 /** Local-only simulations of external boundaries; no application route is replaced. */
 export function createProviders(database: Database) {
@@ -8,6 +9,7 @@ export function createProviders(database: Database) {
   const tokens = new Map<string, { id: string; email: string }>();
   const sessions = new Map<string, { id: string; email: string }>();
   const mailbox: unknown[] = [];
+  const pdf = programPdfFixture();
   let ready = false;
   let initializeCalls = 0;
   const server = createServer(async (req, res) => {
@@ -20,6 +22,10 @@ export function createProviders(database: Database) {
       res.end(JSON.stringify(data));
     };
     try {
+      if (/^\/r2\/browser-private\/guide-[123]\.pdf$/.test(url.pathname)) {
+        res.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Length': pdf.byteLength, ETag: '"browser-pdf"' });
+        return res.end(req.method === 'HEAD' ? undefined : pdf);
+      }
       if (url.pathname === '/ready') return send({ ready }, ready ? 200 : 503);
       if (url.pathname === '/state') return send({ charges: [...charges.values()], initializeCalls, mailbox });
       if (url.pathname === '/purchase') {

@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getPurchaseProgramAttachments, PURCHASE_ATTACHMENT_MAX_BYTES } from '@server/services/purchase-program-attachments';
+import { PDFDocument } from 'pdf-lib';
+
+const pdf = await PDFDocument.create(); pdf.addPage(); const pdfContent = await pdf.save();
 
 const mocks = vi.hoisted(() => ({ files: vi.fn(), read: vi.fn() }));
 vi.mock('@server/utils/r2', () => ({ readProgramEmailAttachment: mocks.read }));
@@ -11,7 +14,7 @@ const file = { id: 10, bucket: 'private-test', key: 'volume/file.pdf', filename:
 beforeEach(() => {
   vi.stubGlobal('useRuntimeConfig', () => ({ r2PrivateProgramBucket: 'private-test' }));
   mocks.files.mockResolvedValue([file]);
-  mocks.read.mockResolvedValue(Buffer.from('%PDF-fixture'));
+  mocks.read.mockResolvedValue(pdfContent);
 });
 describe('bounded purchase attachments', () => {
   const signal = () => new AbortController().signal;
@@ -20,7 +23,7 @@ describe('bounded purchase attachments', () => {
     const result = await getPurchaseProgramAttachments(1, 2, signal());
     expect(result).toHaveLength(2);
     expect(result?.[0]).toMatchObject({ filename: '10-Beginner.pdf', contentType: 'application/pdf' });
-    expect(mocks.read.mock.calls[1]?.[2]).toBe(PURCHASE_ATTACHMENT_MAX_BYTES - Buffer.byteLength('%PDF-fixture'));
+    expect(mocks.read.mock.calls[1]?.[2]).toBe(PURCHASE_ATTACHMENT_MAX_BYTES - pdfContent.byteLength);
   });
   it('cancels when no current purchase grants remain', async () => {
     mocks.files.mockResolvedValue([]);
@@ -31,6 +34,10 @@ describe('bounded purchase attachments', () => {
     mocks.files.mockResolvedValue([{ ...file, id: null }]);
     await expect(getPurchaseProgramAttachments(1, 2, signal())).rejects.toThrow('PDF is missing');
     expect(mocks.read).not.toHaveBeenCalled();
+  });
+  it('does not email a structurally corrupt file with a PDF prefix', async () => {
+    mocks.read.mockResolvedValueOnce(Buffer.from('%PDF-1.7\ninvalid\n%%EOF'));
+    await expect(getPurchaseProgramAttachments(1, 2, signal())).rejects.toThrow('readable');
   });
   it('requires a configured environment bucket', async () => {
     vi.stubGlobal('useRuntimeConfig', () => ({}));

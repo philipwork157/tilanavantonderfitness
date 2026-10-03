@@ -1,5 +1,6 @@
 import { getEmailRecipient, isDevelopmentEmailEnabled } from './email-delivery';
 import { createSesEmailSender, type EmailAddress, type EmailSender } from '@tilana/email/server';
+import { invoiceEmailSchema } from '@tilana/contracts/invoices';
 
 let emailSender: EmailSender | undefined;
 let emailSenderRegion: string | undefined;
@@ -11,7 +12,7 @@ export function getServerEmail(senderOverride?: EmailAddress) {
   const fromEmail = senderOverride?.email.trim() || String(config.emailFromAddress || '').trim();
   const fromName = senderOverride?.name?.trim() || String(config.emailFromName || '').trim();
 
-  if (!region || !fromEmail) {
+  if (!region || !invoiceEmailSchema.safeParse(fromEmail).success) {
     throw new Error('Email delivery requires an AWS SES region and sender address.');
   }
 
@@ -29,6 +30,7 @@ export function getServerEmail(senderOverride?: EmailAddress) {
   // notifications cannot bypass development routing.
   const transport = emailSender;
   const sender: EmailSender = {
+    checkConfiguration: () => transport.checkConfiguration(),
     send(message, options) {
       const recipient = getEmailRecipient(message.to[0]?.email || '', {}, config);
       return transport.send({ ...message, to: isDevelopmentEmailEnabled(config)

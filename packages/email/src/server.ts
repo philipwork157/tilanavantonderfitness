@@ -24,6 +24,7 @@ export interface EmailAttachment {
 
 export interface EmailSender {
   send(message: EmailMessage, options?: { abortSignal?: AbortSignal }): Promise<{ messageId?: string }>;
+  checkConfiguration(): Promise<void>;
 }
 
 export interface SesEmailSenderOptions {
@@ -45,6 +46,8 @@ export function createSesEmailSender(options: SesEmailSenderOptions): EmailSende
   const client = new SESv2Client({ region: options.region });
 
   return {
+    // Resolve the standard credential chain without sending mail or requiring SES read permissions.
+    async checkConfiguration() { await client.config.credentials(); },
     async send(message, options) {
       const response = await client.send(new SendEmailCommand({
         FromEmailAddress: formatAddress(message.from),

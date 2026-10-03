@@ -356,7 +356,7 @@ export async function updateManualClient(
   });
 }
 
-export async function listClientsWithProgrammes(paystackEnvironment: 'test' | 'live') {
+export async function listClientsWithProgrammes(paystackEnvironment: 'test' | 'live', source: 'paystack' | 'all' = 'all') {
   const database = getDatabase();
   const rows = await database
     .select({
@@ -482,6 +482,7 @@ export async function listClientsWithProgrammes(paystackEnvironment: 'test' | 'l
   }>();
 
   for (const row of rows) {
+    if (source === 'paystack' && (!row.orderId || !paymentByOrder.has(row.orderId))) continue;
     let client = clientMap.get(row.id);
     if (!client) {
       client = {

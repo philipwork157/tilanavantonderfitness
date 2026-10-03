@@ -7,6 +7,7 @@ import { and, asc, eq, inArray, isNotNull } from 'drizzle-orm';
 import { getDatabase } from '@server/utils/database';
 import { getCatalogueStorageConfiguration } from '@server/utils/r2';
 import { publicObjectUrl } from './catalogue-policy';
+import { PURCHASE_ATTACHMENT_MAX_BYTES, PURCHASE_ATTACHMENT_MAX_FILES } from './purchase-program-attachments';
 
 export async function listPublicCataloguePrograms(): Promise<PublicCatalogueProgram[]> {
   const database = getDatabase();
@@ -76,7 +77,7 @@ export async function listPublicCataloguePrograms(): Promise<PublicCatalogueProg
   const readyFileVolumeIds = new Set<number>();
   if (volumeRows.length > 0) {
     const files = await database
-      .select({ volumeId: programFiles.programVolumeId })
+      .select({ volumeId: programFiles.programVolumeId, sizeBytes: programFiles.sizeBytes })
       .from(programFiles)
       .where(and(
         inArray(programFiles.programVolumeId, volumeRows.map(volume => volume.id)),
@@ -84,7 +85,16 @@ export async function listPublicCataloguePrograms(): Promise<PublicCatalogueProg
         eq(programFiles.isActive, true),
         eq(programFiles.r2Bucket, storage.privateProgramBucket),
       ));
-    files.forEach(file => readyFileVolumeIds.add(file.volumeId));
+    const payloads = new Map<number, { bytes: number; files: number }>();
+    for (const file of files) {
+      const payload = payloads.get(file.volumeId) ?? { bytes: 0, files: 0 };
+      payload.bytes += file.sizeBytes ?? 0; payload.files++;
+      payloads.set(file.volumeId, payload);
+    }
+    // Do not advertise a volume already known to exceed V1's email attachment budget.
+    for (const [volumeId, payload] of payloads) {
+      if (payload.bytes <= PURCHASE_ATTACHMENT_MAX_BYTES && payload.files <= PURCHASE_ATTACHMENT_MAX_FILES) readyFileVolumeIds.add(volumeId);
+    }
   }
 
   const coverByProgram = new Map(mediaRows.map(media => [media.programId, media]));

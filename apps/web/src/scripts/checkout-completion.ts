@@ -13,7 +13,12 @@ export function checkoutStatusMessage(result: CheckoutStatusResponse) {
     abandoned: ['Checkout not completed', 'This checkout was not completed. You can return to the programs page when you are ready. If you believe you were charged, contact Tilana with the payment reference below.'],
   } satisfies Record<CheckoutStatusResponse['status'], [string, string]>;
   const [heading, message] = messages[result.status];
-  return { heading, message, access: result.status === 'succeeded' || result.status === 'partially_refunded' };
+  const access = result.status === 'succeeded' || result.status === 'partially_refunded';
+  const delivery = result.deliveryStatus === 'sent' ? ' Your program email has been sent. Please check your inbox and spam folder.'
+    : result.deliveryStatus === 'retrying' ? ' Your payment is confirmed, but the program email is delayed. We will retry automatically. You can also use Access my programs below.'
+    : result.deliveryStatus === 'pending' ? ' We are preparing your program email. You can also use Access my programs below.'
+    : result.deliveryStatus === 'canceled' || result.deliveryStatus === 'unavailable' ? ' Program email delivery is unavailable. Please contact Tilana with your payment reference.' : '';
+  return { heading, message: message + (access ? delivery : ''), access };
 }
 
 /** Poll bounded, uncached evidence; invalid HTTP/JSON remains uncertain, not failed. */

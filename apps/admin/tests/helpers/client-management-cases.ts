@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Database } from '@tilana/db/server';
 import { clients, invoices, orderItems, orders, payments, programAccess, users } from '@tilana/db/schema';
 import { eq } from 'drizzle-orm';
-import { createManualClient, updateManualClient } from '@server/services/client-management';
+import { createManualClient, listClientsWithProgrammes, updateManualClient } from '@server/services/client-management';
 import { seedPendingPayment } from './paystack-database';
 
 /** Real PostgreSQL regression coverage for profile edits and immutable manual sales. */
@@ -24,6 +24,20 @@ export function registerClientManagementCases(getDatabase: () => Database) {
     return { order, items: await db.select().from(orderItems).where(eq(orderItems.orderId, order!.id)), payments: await db.select().from(payments).where(eq(payments.orderId, order!.id)), access: await db.select().from(programAccess).where(eq(programAccess.clientId, clientId)) };
   }
   describe('Manual client historical integrity', () => {
+    it('excludes manual, pending and other-mode orders from the Paystack-only view without deleting them', async () => {
+      const f = await fixture('paid'); const checkout = await seedPendingPayment(f.db);
+      const [checkoutOrder] = await f.db.select().from(orders).where(eq(orders.id, checkout.orderId));
+      const buyerId = checkoutOrder!.clientId;
+      expect((await listClientsWithProgrammes('test', 'paystack')).some(client => client.id === f.client.id)).toBe(false);
+      expect((await listClientsWithProgrammes('test', 'all')).some(client => client.id === f.client.id)).toBe(true);
+      const [payment] = await f.db.select().from(payments).where(eq(payments.id, checkout.paymentId));
+      expect((await listClientsWithProgrammes('test', 'paystack')).some(client => client.id === buyerId)).toBe(false);
+      await f.db.update(payments).set({ status: 'succeeded' }).where(eq(payments.id, payment!.id));
+      const buyer = (await listClientsWithProgrammes('test', 'paystack')).find(client => client.id === buyerId);
+      expect(buyer?.programmes).toHaveLength(1); expect(buyer?.programmes[0]?.payment?.id).toBe(payment!.id);
+      expect((await listClientsWithProgrammes('live', 'paystack')).some(client => client.id === buyerId)).toBe(false);
+      expect((await history(f.db, f.client.id)).payments).toHaveLength(1);
+    });
     it('preserves every sale and access field during repeated paid profile edits', async () => {
       const f = await fixture('paid');
       const before = await history(f.db, f.client.id);

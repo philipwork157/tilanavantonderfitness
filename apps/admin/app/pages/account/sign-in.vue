@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import { getPublicProgramsUrl } from '@app/utils/public-site';
+
 const route = useRoute();
+const runtimeConfig = useRuntimeConfig();
+const programsUrl = computed(() => getPublicProgramsUrl(runtimeConfig.public.siteUrl));
 const email = ref('');
 const submitting = ref(false);
 const sent = ref(false);
@@ -44,7 +48,7 @@ useSeoMeta({ title: 'Access your programs | Tilana', robots: 'noindex, nofollow'
         </UFormField>
         <AppButton label="Email my sign-in link" type="submit" :loading="submitting" block />
       </form>
-      <a href="https://tilanavantonder.co.za/program">← Back to programs</a>
+      <a :href="programsUrl">← Back to programs</a>
     </section>
   </main>
 </template>

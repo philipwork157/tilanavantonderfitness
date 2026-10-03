@@ -19,6 +19,7 @@ import {
   ensureCatalogueUploadConfigured,
   getCatalogueStorageConfiguration,
   inspectCatalogueObject,
+  readUploadedProgramPdf,
   R2_UPLOAD_URL_TTL_SECONDS,
 } from '@server/utils/r2';
 import {
@@ -35,6 +36,7 @@ import {
   CatalogueNotFoundError,
 } from './program-catalogue';
 import { assertProgramFileCanDeactivate } from './program-delivery';
+import { InvalidProgramPdfError, validateProgramPdf } from '@server/utils/program-pdf';
 
 export class CatalogueStorageError extends Error {
   readonly statusCode: number;
@@ -293,7 +295,7 @@ export async function initiateProgramFileUpload(
       })
       .from(programVolumes)
       .where(eq(programVolumes.id, volumeId))
-      .limit(1);
+      .limit(1).for('update');
     if (!volume) throw new CatalogueNotFoundError('Program volume not found.');
     // Private delivery files remain maintainable after sales are unpublished or archived.
 
@@ -365,6 +367,7 @@ export async function finalizeProgramFileUpload(
   fileId: number,
   userId: number,
   replaceFileId?: number,
+  replaceCurrentEdition = false,
 ) {
   const storage = getCatalogueStorageConfiguration();
   ensureCatalogueUploadConfigured();
@@ -406,8 +409,33 @@ export async function finalizeProgramFileUpload(
     throw error;
   }
 
+  // HEAD metadata cannot prove a PDF is readable. Check the same immutable object before making it sellable.
+  try {
+    if (!verified.etag) throw new Error('The upload has no object identity.');
+    const content = await readUploadedProgramPdf(file.r2Bucket, file.r2ObjectKey, file.sizeBytes!,
+      AbortSignal.timeout(15_000), verified.etag);
+    if (!content || content.byteLength !== file.sizeBytes) throw new InvalidProgramPdfError();
+    await validateProgramPdf(content);
+  } catch (error) {
+    if (error instanceof InvalidProgramPdfError) {
+      await markFileUploadFailed(file.id, userId, 'invalid_pdf');
+      throw new CatalogueStorageError(422, error.message);
+    }
+    throw new CatalogueStorageError(503, 'The uploaded PDF could not be read. Please try again.');
+  }
+
   return getDatabase().transaction(async (transaction) => {
+    await transaction.select({ id: programVolumes.id }).from(programVolumes)
+      .where(eq(programVolumes.id, file.programVolumeId)).for('update');
+    const activeFiles = await transaction.select().from(programFiles).where(and(
+      eq(programFiles.programVolumeId, file.programVolumeId), eq(programFiles.r2Bucket, file.r2Bucket),
+      eq(programFiles.isActive, true), eq(programFiles.uploadStatus, 'ready'),
+    ));
+    if (activeFiles.some(active => active.version > file.version)) {
+      throw new CatalogueConflictError('A newer PDF edition is already ready. Start a new upload instead.');
+    }
     let replacedFileId: number | null = null;
+    // Activate first, then retire old editions. Historical rows and R2 objects are never deleted.
     const [ready] = await transaction
       .update(programFiles)
       .set({ uploadStatus: 'ready', etag: verified.etag, updatedAt: new Date() })
@@ -473,6 +501,15 @@ export async function finalizeProgramFileUpload(
         volumeId: file.programVolumeId,
         replacementFileId: file.id,
       });
+    }
+    if (replaceCurrentEdition) {
+      for (const previous of activeFiles) {
+        await transaction.update(programFiles).set({ isActive: false, updatedAt: new Date() })
+          .where(eq(programFiles.id, previous.id));
+        await addProgramAuditEvent(transaction, userId, 'program_file', previous.id, 'replaced', {
+          volumeId: file.programVolumeId, replacementFileId: file.id,
+        });
+      }
     }
     return ready;
   });

@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   const body = await readZodBody(event, adminProgramFileUploadFinalizeRequestSchema, 'The finalize request is invalid.', { defaultToEmptyObject: true });
   try {
     return {
-      file: await finalizeProgramFileUpload(fileId, session.user.id, body.replaceFileId),
+      file: await finalizeProgramFileUpload(fileId, session.user.id, body.replaceFileId, body.replaceCurrentEdition),
     };
   } catch (error) {
     throwCatalogueRouteError(error);

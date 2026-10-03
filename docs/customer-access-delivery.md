@@ -22,8 +22,13 @@ still verifies Supabase identity, links integer users/clients and checks program
 entitlements before private downloads. Login emails do not attach PDFs.
 
 The attachment budget is 15 MiB of raw PDF data and 30 files, leaving room for
-base64/MIME encoding. Oversized baskets receive an explicit portal-only email
-instead of a misleading partial attachment set. Missing objects, invalid PDFs,
+base64/MIME encoding. New V1 checkouts validate the complete PDF payload and
+delivery/retry configuration before Paystack initialization. Known oversized
+baskets are rejected before payment; individually oversized volumes are not
+advertised as available. The customer can request assistance or split a basket
+whose individual volumes fit. Historic orders, or larger editions replacing
+files after a checkout, retain the honest portal-only fallback rather than
+receiving a partial set. Missing objects, invalid PDFs,
 storage failures and email failures remain queued. No public PDF URL is created.
 Emailed copies cannot be recalled after refund or revocation.
 
@@ -65,10 +70,21 @@ Emailed copies cannot be recalled after refund or revocation.
    value; requesting a link again or hot-reloading code does not replace it.
 3. Set `NUXT_CUSTOMER_NOTIFICATIONS_ENABLED=true` to activate immediate purchase
    delivery and scheduled retries.
-   Default is false; fulfillment still queues purchase jobs and sign-in requests
-   still attempt immediate delivery. Scheduler activation is necessary for
-   recovering failed purchase/login emails, including crashes after fulfillment.
-4. Activate the existing PAY-05 dedicated-token external scheduler. It invokes
+   Default is false; new checkout now fails closed when it is disabled.
+   Previously initialized payments still fulfill and queue jobs safely.
+   Sign-in requests still attempt immediate delivery.
+4. Locally, set `NUXT_LOCAL_CUSTOMER_NOTIFICATIONS_WORKER_ENABLED=true` and
+   restart the development server. The local-only worker checks due purchase/login
+   jobs once a minute, respects backoff/leases, skips overlapping runs and closes
+   with Nitro. It never runs in a production build or on Fly.
+   On deployed dev/live apps, activate the existing PAY-05 dedicated-token
+   external scheduler with `NUXT_PAYSTACK_RECOVERY_ENABLED=true`, a distinct
+   `NUXT_PAYSTACK_RECOVERY_TOKEN` of at least 32 characters and valid
+   `NUXT_PAYSTACK_RECOVERY_ALERT_TO`. Set the matching GitHub repository secrets
+   `PAYSTACK_RECOVERY_TOKEN_DEV` and `PAYSTACK_RECOVERY_TOKEN_PROD`.
+   Deployed checkout requires these settings; it cannot verify that GitHub is
+   actually invoking the endpoint, so verify scheduler runs and monitor backlog.
+   The endpoint invokes
    access delivery independently of billing. No new cron service is installed.
    Configure workflow failure alerts: access failures return HTTP 503.
 5. Independently monitor the queue and scheduler heartbeat. An absent scheduler
@@ -93,3 +109,21 @@ Emailed copies cannot be recalled after refund or revocation.
 6. Verify actual closed-browser test checkout, safe-inbox SES receipt, link
    confirmation, repeat login, cross-customer denial and refund before go-live.
    Local tests mock every external provider and do not prove deployed setup.
+
+## Pre-payment checks and customer status
+
+Before the first provider initialization, checkout resolves AWS credentials
+through the standard provider chain (without sending mail or requiring SES read
+permissions), checks the safe recipient/mode and retry settings, and downloads
+and parses the entire bounded PDF set using read-only R2 credentials. Conditional
+ETag reads detect changed objects. PDFs must be readable, contain a page and not
+be password-protected. A known failure marks that uncharged reservation failed
+and cancels its pending order; it never contacts Paystack or grants access.
+Duplicate hosted URLs and already-settled checkouts retain their existing
+idempotent behavior even if email configuration subsequently changes.
+
+These checks are not an atomic transaction with SES or Paystack. A later outage
+cannot undo a completed charge. The completion page reports payment separately
+from email preparation, retry or SES acceptance and offers customer access.
+`sent` means SES accepted the request, not proof that it reached the inbox.
+Actual send authorization and mailbox receipt remain operational launch checks.

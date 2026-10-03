@@ -67,6 +67,12 @@ test('two-volume checkout retries one intent, confirms payment, emails and signs
   await expect(page.getByRole('heading', { name: 'Payment received', exact: true })).toBeVisible();
   expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key)!), basketKey)).toEqual([]);
   expect(await (await request.get(`${providers}/purchase?reference=${reference}`)).json()).toEqual([{ status: 'succeeded', amount_cents: 30000, items: 2, grants: 2 }]);
+  await expect.poll(async () => (await (await request.get(`${providers}/state`)).json()).mailbox.length).toBe(1);
+  const purchase = (await (await request.get(`${providers}/state`)).json()).mailbox[0];
+  expect(purchase.Destination.ToAddresses).toEqual(['inbox@example.test']);
+  expect(purchase.Content.Simple.Attachments).toHaveLength(2);
+  expect(purchase.Content.Simple.Attachments.every((attachment: { RawContent: string }) => Buffer.from(attachment.RawContent, 'base64').subarray(0, 5).toString() === '%PDF-')).toBe(true);
+  expect(purchase.Content.Simple.Body.Text.Data).toContain('http://127.0.0.1:4311/account/sign-in');
   await page.getByRole('link', { name: 'Access my programs' }).click();
   // SSR inputs are visible before Vue attaches v-model; wait for real hydration.
   await page.waitForFunction(() => {
@@ -76,8 +82,9 @@ test('two-volume checkout retries one intent, confirms payment, emails and signs
   await page.getByLabel('Purchase email').fill('buyer@example.test');
   await page.getByRole('button', { name: 'Email my sign-in link' }).click();
   await expect(page.getByRole('heading', { name: 'Check your inbox.' })).toBeVisible();
-  await expect.poll(async () => (await (await request.get(`${providers}/state`)).json()).mailbox.length).toBe(1);
-  const mail = (await (await request.get(`${providers}/state`)).json()).mailbox[0];
+  await expect.poll(async () => (await (await request.get(`${providers}/state`)).json()).mailbox.length).toBe(2);
+  const mail = (await (await request.get(`${providers}/state`)).json()).mailbox[1];
+  expect(mail.Content.Simple.Attachments).toBeUndefined();
   expect(mail.Destination.ToAddresses).toEqual(['inbox@example.test']);
   const link = mail.Content.Simple.Body.Text.Data.match(/http:\/\/127\.0\.0\.1:4311\/api\/customer\/auth\/confirm\?[^\s]+/)[0];
   await page.close();

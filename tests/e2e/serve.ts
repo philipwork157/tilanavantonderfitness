@@ -4,6 +4,7 @@ import { createServer } from 'node:net';
 import { createPaystackTestDatabase } from '@fixtures/database';
 import { programFiles, programMedia, programs, programVolumes } from '@tilana/db/schema';
 import { createProviders } from './providers';
+import { programPdfFixture } from './program-pdf';
 
 // Refuse existing servers rather than silently testing another developer's session.
 for (const port of [4310, 4311, 4312]) {
@@ -20,7 +21,7 @@ for (let index = 1; index <= 3; index++) {
   const [program] = await database.insert(programs).values({ slug: `browser-program-${index}`, name: `Browser Program ${index}`, status: 'published', headline: `Browser Program ${index}`, cardLabel: 'Programme', description: 'Browser fixture programme', accent: 'sage' }).returning();
   await database.insert(programMedia).values({ programId: program!.id, displayName: 'Cover', altText: 'Fixture cover', r2Bucket: 'browser-public', r2ObjectKey: `cover-${index}.png`, contentType: 'image/png', uploadStatus: 'ready' });
   const [volume] = await database.insert(programVolumes).values({ programId: program!.id, slug: `browser-volume-${index}`, name: `Browser Volume ${index}`, volumeNumber: 1, currentPriceCents: index * 10000, isPublished: true }).returning();
-  await database.insert(programFiles).values({ programVolumeId: volume!.id, displayName: `Guide ${index}`, r2Bucket: 'browser-private', r2ObjectKey: `guide-${index}.pdf`, contentType: 'application/pdf', uploadStatus: 'ready' });
+  await database.insert(programFiles).values({ programVolumeId: volume!.id, displayName: `Guide ${index}`, r2Bucket: 'browser-private', r2ObjectKey: `guide-${index}.pdf`, contentType: 'application/pdf', uploadStatus: 'ready', sizeBytes: programPdfFixture().byteLength, etag: 'browser-pdf' });
 }
 const providers = createProviders(database);
 await new Promise<void>((accept, reject) => { providers.server.once('error', reject); providers.server.listen(4312, '127.0.0.1', accept); });
@@ -40,6 +41,7 @@ const admin = spawn('pnpm', ['exec', 'nuxt', 'dev', '--extends', '../../tests/e2
     NUXT_PUBLIC_SITE_URL: 'http://127.0.0.1:4310', NUXT_ACCOUNT_BASE_URL: 'http://127.0.0.1:4311',
     NUXT_SUPABASE_URL: 'http://127.0.0.1:4312', NUXT_SUPABASE_PUBLISHABLE_KEY: 'fixture', NUXT_SUPABASE_SERVICE_ROLE_KEY: 'fixture',
     NUXT_EMAIL_DEVELOPMENT_ENABLED: 'true', NUXT_EMAIL_DEVELOPMENT_RECIPIENT: 'inbox@example.test', NUXT_EMAIL_FROM_ADDRESS: 'sender@example.test',
+    NUXT_CUSTOMER_NOTIFICATIONS_ENABLED: 'true', NUXT_LOCAL_CUSTOMER_NOTIFICATIONS_WORKER_ENABLED: 'true',
     AWS_REGION: 'eu-west-1', AWS_ACCESS_KEY_ID: 'fixture', AWS_SECRET_ACCESS_KEY: 'fixture',
     AWS_ENDPOINT_URL: 'http://127.0.0.1:4312', AWS_EC2_METADATA_DISABLED: 'true',
     NUXT_R2_PUBLIC_MEDIA_BUCKET: 'browser-public', NUXT_R2_PUBLIC_MEDIA_BASE_URL: 'https://media.example.test', NUXT_R2_PRIVATE_PROGRAM_BUCKET: 'browser-private',

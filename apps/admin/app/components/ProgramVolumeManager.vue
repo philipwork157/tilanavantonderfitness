@@ -55,7 +55,7 @@ const emit = defineEmits<{
           <div><h4>Private PDFs</h4><p>Only customers with active access receive a temporary download link.</p></div>
           <input :id="`pdf-new-${volume.id}`" type="file" accept="application/pdf,.pdf" hidden @change="emit('upload-pdf', $event, volume)">
           <UButton
-            label="Add PDF"
+            label="Upload latest PDF edition"
             icon="i-lucide-file-up"
             color="neutral"
             variant="soft"

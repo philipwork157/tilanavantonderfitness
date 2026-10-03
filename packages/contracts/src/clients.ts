@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+/** Paystack is the V1 default; legacy/manual client records remain explicitly accessible. */
+export const adminClientListQuerySchema = z.object({ source: z.enum(['paystack', 'all']).default('paystack') });
+
 export const clientGenderValues = [
   'female',
   'male',

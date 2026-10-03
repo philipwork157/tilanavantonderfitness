@@ -136,8 +136,10 @@ possible and do not duplicate financial operations.
   and `NUXT_PAYSTACK_RECOVERY_ALERT_TO` (approved operator mailbox), plus SES.
 - [ ] Configure the matching GitHub repository secret
   `PAYSTACK_RECOVERY_TOKEN_DEV` or `PAYSTACK_RECOVERY_TOKEN_PROD`. Never reuse
-  one environment's token in the other. An unset token disables that workflow
-  target; the server also defaults to recovery disabled. Never put tokens in URLs.
+  one environment's token in the other. An unset token now fails that workflow
+  target visibly instead of silently claiming success. The server defaults to
+  recovery disabled; deployed V1 checkout requires recovery configuration before
+  opening new payments. Never put tokens in URLs.
 - [ ] Confirm the workflow is on the default branch and manually dispatch a
   test-environment run. Dev requires test keys; prod requires reviewed live
   configuration and an isolated live database. Do not enable prod prematurely.

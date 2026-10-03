@@ -1,6 +1,7 @@
 import { GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Readable } from 'node:stream';
+import { InvalidProgramPdfError } from './program-pdf';
 
 let r2DownloadClient: S3Client | undefined;
 let r2DownloadConfigurationKey = '';
@@ -71,9 +72,24 @@ function getProgramDownloadClient(bucket: string): S3Client {
 }
 
 /** Read a bounded private PDF without exposing an object URL or buffering an unbounded stream. */
-export async function readProgramEmailAttachment(bucket: string, objectKey: string, maxBytes: number, signal: AbortSignal): Promise<Uint8Array | null> {
+export async function readProgramEmailAttachment(bucket: string, objectKey: string, maxBytes: number, signal: AbortSignal, etag?: string | null): Promise<Uint8Array | null> {
+  return readPrivatePdf(getProgramDownloadClient(bucket), bucket, objectKey, maxBytes, signal, etag);
+}
+
+/** Upload verification uses the write credential, but still reads only the current private bucket. */
+export async function readUploadedProgramPdf(bucket: string, objectKey: string, maxBytes: number, signal: AbortSignal, etag: string): Promise<Uint8Array | null> {
+  if (bucket !== String(useRuntimeConfig().r2PrivateProgramBucket || '').trim()) {
+    throw new Error('The PDF upload belongs to another environment.');
+  }
+  return readPrivatePdf(getUploadClient(), bucket, objectKey, maxBytes, signal, etag);
+}
+
+/** Bound both advertised and streamed bytes; conditional reads reject a changed object. */
+async function readPrivatePdf(client: S3Client, bucket: string, objectKey: string, maxBytes: number, signal: AbortSignal, etag?: string | null): Promise<Uint8Array | null> {
   signal.throwIfAborted();
-  const response = await getProgramDownloadClient(bucket).send(new GetObjectCommand({ Bucket: bucket, Key: objectKey }), { abortSignal: signal });
+  const response = await client.send(new GetObjectCommand({ Bucket: bucket, Key: objectKey,
+    ...(etag && { IfMatch: `"${etag.replaceAll('"', '')}"` }),
+  }), { abortSignal: signal });
   if (!response.Body) throw new Error('Program PDF body is missing.');
   const body = response.Body;
   if (!(body instanceof Readable)) throw new Error('Program storage requires a server stream.');
@@ -94,7 +110,7 @@ export async function readProgramEmailAttachment(bucket: string, objectKey: stri
     }
   } finally { body.destroy(); }
   const content = Buffer.concat(chunks);
-  if (content.subarray(0, 5).toString() !== '%PDF-') throw new Error('Program attachment is not a valid PDF.');
+  if (content.subarray(0, 5).toString() !== '%PDF-') throw new InvalidProgramPdfError();
   return content;
 }
 

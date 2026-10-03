@@ -128,7 +128,9 @@ export const adminCatalogueUploadFinalizeRequestSchema = z.object({}).strict();
 
 export const adminProgramFileUploadFinalizeRequestSchema = z.object({
   replaceFileId: z.number().int().positive().optional(),
-}).strict();
+  replaceCurrentEdition: z.boolean().optional().default(false),
+}).strict().refine(value => !(value.replaceCurrentEdition && value.replaceFileId !== undefined),
+  'Choose a new edition or an individual replacement, not both.');
 
 export const adminCatalogueDeactivateRequestSchema = z.object({
   reason: z.string().trim().min(1).max(500).optional(),

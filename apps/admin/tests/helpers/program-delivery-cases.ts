@@ -1,14 +1,87 @@
 import { randomUUID } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Database } from '@tilana/db/server';
-import { orderItems, orders, payments, programAccess, programAuditEvents, programFiles, programs, programVolumes, users } from '@tilana/db/schema';
+import { orderItems, orders, payments, programAccess, programAuditEvents, programFiles, programMedia, programs, programVolumes, users } from '@tilana/db/schema';
 import { eq } from 'drizzle-orm';
-import { deactivateProgramFile } from '@server/services/program-storage';
+import { deactivateProgramFile, finalizeProgramFileUpload, initiateProgramFileUpload } from '@server/services/program-storage';
+import { inspectCatalogueObject, readUploadedProgramPdf } from '@server/utils/r2';
+import { PDFDocument } from 'pdf-lib';
 import { processPaystackEvent } from '@server/services/paystack';
 import { seedPendingPayment } from './paystack-database';
+import { listPublicCataloguePrograms } from '@server/services/public-catalogue';
 
 /** Real trigger/service coverage for private files owed after catalogue withdrawal. */
 export function registerProgramDeliveryCases(getDatabase: () => Database) {
+  describe('verified latest PDF edition uploads', () => {
+    beforeEach(() => vi.stubGlobal('useRuntimeConfig', () => ({
+      paystackSecretKey: 'sk_test_integration_fixture', paystackEnvironment: 'test',
+      r2PrivateProgramBucket: 'private-test', r2PublicMediaBucket: 'public-test', r2PublicMediaBaseUrl: 'https://media.example.test',
+    })));
+
+    async function uploadFixture() {
+      const db = getDatabase(); const subject = await purchasedVolume(db); const admin = await actor(db);
+      const pdf = await PDFDocument.create(); pdf.addPage(); const content = await pdf.save();
+      const input = { filename: 'new-edition.pdf', displayName: 'Latest edition', contentType: 'application/pdf' as const,
+        sizeBytes: content.byteLength, sortOrder: 0 };
+      return { db, subject, admin, content, input };
+    }
+
+    it('keeps separate volumes for sale but hides a volume known to exceed the email budget', async () => {
+      const f = await uploadFixture(); const suffix = randomUUID();
+      await f.db.update(programs).set({ status: 'published', cardLabel: 'Program', headline: 'Beginner', description: 'Beginner guide', accent: 'sage' })
+        .where(eq(programs.id, f.subject.volume.programId));
+      await f.db.insert(programMedia).values({ programId: f.subject.volume.programId, displayName: 'Cover', altText: 'Cover', r2Bucket: 'public-test', r2ObjectKey: `${suffix}.png`, contentType: 'image/png', uploadStatus: 'ready' });
+      await f.db.update(programVolumes).set({ slug: `volume-one-${suffix}`, isPublished: true }).where(eq(programVolumes.id, f.subject.volume.id));
+      const [second] = await f.db.insert(programVolumes).values({ programId: f.subject.volume.programId, volumeNumber: 2,
+        name: 'Volume 2', slug: `volume-two-${suffix}`, isPublished: true, currentPriceCents: 20000 }).returning();
+      await f.db.insert(programFiles).values({ programVolumeId: second!.id, displayName: 'Volume 2 PDF', r2Bucket: 'private-test',
+        r2ObjectKey: `second-${suffix}.pdf`, contentType: 'application/pdf', sizeBytes: 100, uploadStatus: 'ready' });
+      const catalogue = (await listPublicCataloguePrograms()).find(program => program.id === f.subject.volume.programId);
+      expect(catalogue?.volumes.map(volume => volume.isAvailable)).toEqual([true, true]);
+      await f.db.update(programFiles).set({ sizeBytes: 16 * 1024 * 1024 }).where(eq(programFiles.id, f.subject.file.id));
+      expect((await listPublicCataloguePrograms()).find(program => program.id === f.subject.volume.programId)?.volumes.map(volume => volume.isAvailable)).toEqual([false, true]);
+    });
+
+    it('validates and atomically replaces the previous edition without deleting its history or access', async () => {
+      const f = await uploadFixture(); await confirmCharge(f.subject.fixture);
+      const upload = await initiateProgramFileUpload(f.subject.volume.id, f.input, f.admin.id);
+      vi.mocked(inspectCatalogueObject).mockResolvedValueOnce({ contentType: 'application/pdf', sizeBytes: f.content.byteLength, etag: '"edition-2"' });
+      vi.mocked(readUploadedProgramPdf).mockResolvedValueOnce(f.content);
+      await finalizeProgramFileUpload(upload.uploadId, f.admin.id, undefined, true);
+      const files = await f.db.select().from(programFiles).where(eq(programFiles.programVolumeId, f.subject.volume.id));
+      expect(files).toHaveLength(2);
+      expect(files.find(file => file.id === f.subject.file.id)).toMatchObject({ isActive: false, uploadStatus: 'ready' });
+      expect(files.find(file => file.id === upload.uploadId)).toMatchObject({ isActive: true, uploadStatus: 'ready', version: 2 });
+      expect(await f.db.select().from(programAccess).where(eq(programAccess.orderItemId, f.subject.item.id))).toMatchObject([{ status: 'active' }]);
+      expect(vi.mocked(readUploadedProgramPdf).mock.calls.at(-1)?.[4]).toBe('edition-2');
+    });
+
+    it('never retires the old paid PDF when the new file is corrupt', async () => {
+      const f = await uploadFixture(); await confirmCharge(f.subject.fixture);
+      const upload = await initiateProgramFileUpload(f.subject.volume.id, f.input, f.admin.id);
+      vi.mocked(inspectCatalogueObject).mockResolvedValueOnce({ contentType: 'application/pdf', sizeBytes: f.content.byteLength, etag: 'invalid' });
+      vi.mocked(readUploadedProgramPdf).mockResolvedValueOnce(Buffer.alloc(f.content.byteLength));
+      await expect(finalizeProgramFileUpload(upload.uploadId, f.admin.id, undefined, true)).rejects.toMatchObject({ statusCode: 422 });
+      expect((await f.db.select().from(programFiles).where(eq(programFiles.id, f.subject.file.id)))[0]?.isActive).toBe(true);
+      expect((await f.db.select().from(programFiles).where(eq(programFiles.id, upload.uploadId)))[0]?.uploadStatus).toBe('failed');
+    });
+
+    it('serializes concurrent version reservations and rejects an older upload finishing last', async () => {
+      const f = await uploadFixture();
+      const uploads = await Promise.all([1, 2].map(() => initiateProgramFileUpload(f.subject.volume.id, f.input, f.admin.id)));
+      const pending = (await f.db.select().from(programFiles).where(eq(programFiles.programVolumeId, f.subject.volume.id)))
+        .filter(file => uploads.some(upload => upload.uploadId === file.id)).sort((a, b) => b.version - a.version);
+      expect(pending.map(file => file.version)).toEqual([3, 2]);
+      for (const file of pending) {
+        vi.mocked(inspectCatalogueObject).mockResolvedValueOnce({ contentType: 'application/pdf', sizeBytes: f.content.byteLength, etag: `edition-${file.version}` });
+        vi.mocked(readUploadedProgramPdf).mockResolvedValueOnce(f.content);
+        if (file.version === 3) await finalizeProgramFileUpload(file.id, f.admin.id, undefined, true);
+        else await expect(finalizeProgramFileUpload(file.id, f.admin.id, undefined, true)).rejects.toThrow('newer PDF edition');
+      }
+      expect((await f.db.select().from(programFiles).where(eq(programFiles.id, pending[0]!.id)))[0]?.isActive).toBe(true);
+      expect((await f.db.select().from(programFiles).where(eq(programFiles.id, pending[1]!.id)))[0]?.uploadStatus).toBe('pending');
+    });
+  });
   async function actor(db: Database) {
     const supabaseId = randomUUID();
     await db.$client`insert into auth.users (id) values (${supabaseId})`;

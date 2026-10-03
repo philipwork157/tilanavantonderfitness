@@ -28,6 +28,7 @@ export default defineNuxtConfig({
     emailDevelopmentEnabled: false,
     emailDevelopmentRecipient: '',
     customerNotificationsEnabled: false,
+    localCustomerNotificationsWorkerEnabled: false,
     invoiceBillingEnabled: false,
     paystackSecretKey: '',
     paystackEnvironment: 'test',

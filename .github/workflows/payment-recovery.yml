@@ -35,8 +35,8 @@ jobs:
             RECOVERY_TOKEN="$RECOVERY_TOKEN_DEV"
           fi
           if [ -z "$RECOVERY_TOKEN" ]; then
-            echo "Payment recovery is disabled: scheduler token is not configured."
-            exit 0
+            echo "::error::Payment and email recovery token is missing for $RECOVERY_ENVIRONMENT. Configure it before enabling checkout."
+            exit 1
           fi
           if [ "$RECOVERY_ENVIRONMENT" = "prod" ]; then
             RECOVERY_ENDPOINT="https://admin.tilanavantonder.co.za/api/internal/payments/reconcile"

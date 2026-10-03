@@ -3,6 +3,7 @@ import { orderItems, orders, programAccess, programFiles } from '@tilana/db/sche
 import { and, asc, eq } from 'drizzle-orm';
 import { getDatabase } from '@server/utils/database';
 import { readProgramEmailAttachment } from '@server/utils/r2';
+import { validateProgramPdf } from '@server/utils/program-pdf';
 import { currentProgramAccess } from './program-entitlements';
 
 // Leave room for base64 encoding and email content within common inbox limits.
@@ -17,7 +18,7 @@ export async function getPurchaseProgramAttachments(orderId: number, clientId: n
   const selectFiles = () => getDatabase().selectDistinct({
     id: programFiles.id, bucket: programFiles.r2Bucket, key: programFiles.r2ObjectKey,
     filename: programFiles.originalFilename, name: programFiles.displayName,
-    size: programFiles.sizeBytes, sortOrder: programFiles.sortOrder,
+    size: programFiles.sizeBytes, sortOrder: programFiles.sortOrder, etag: programFiles.etag,
   }).from(orderItems)
     .innerJoin(orders, and(eq(orders.id, orderItems.orderId), eq(orders.clientId, orderItems.clientId)))
     .innerJoin(programAccess, and(eq(programAccess.orderItemId, orderItems.id),
@@ -37,8 +38,9 @@ export async function getPurchaseProgramAttachments(orderId: number, clientId: n
   let remaining = PURCHASE_ATTACHMENT_MAX_BYTES;
   for (const file of files) {
     signal.throwIfAborted();
-    const content = await readProgramEmailAttachment(file.bucket!, file.key!, remaining, signal);
+    const content = await readProgramEmailAttachment(file.bucket!, file.key!, remaining, signal, file.etag);
     if (!content) return [];
+    await validateProgramPdf(content);
     remaining -= content.byteLength;
     // Normalize names to PDFs and strip header controls, path separators and unsafe punctuation.
     const stem = (file.filename || file.name || 'Program').replace(/\.pdf$/i, '').replace(/[^\p{L}\p{N} ._()-]/gu, '_').slice(0, 180);
@@ -49,7 +51,7 @@ export async function getPurchaseProgramAttachments(orderId: number, clientId: n
   signal.throwIfAborted();
   const current = await selectFiles();
   if (!current.length) return null;
-  if (current.length !== files.length || current.some((file, index) => file.id !== files[index]?.id)) {
+  if (current.length !== files.length || current.some((file, index) => file.id !== files[index]?.id || file.etag !== files[index]?.etag)) {
     throw new Error('Purchased program files changed during email preparation.');
   }
   return attachments;

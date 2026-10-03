@@ -34,7 +34,8 @@ const editingClientId = ref<number | null>(null);
 const purchaseReadOnly = ref(false);
 const selectedEnquiryId = ref('manual');
 const route = useRoute();
-const { data, status, error, refresh } = await useFetch('/api/admin/clients', { lazy: true });
+const purchaseSource = ref<'paystack' | 'all'>('paystack');
+const { data, status, error, refresh } = await useFetch('/api/admin/clients', { lazy: true, query: { source: purchaseSource } });
 const { data: enquiriesData } = await useFetch('/api/admin/contacts', { lazy: true });
 type ClientRecord = NonNullable<typeof data.value>['clients'][number];
 type ProgrammeRecord = ClientRecord['programmes'][number];
@@ -574,8 +575,9 @@ useSeoMeta({ title: 'Clients | Tilana Admin', robots: 'noindex, nofollow' });
       <div class="list-heading">
         <div>
           <p class="eyebrow">Your clients</p>
-          <h2>Client records</h2>
+          <h2>{{ purchaseSource === 'paystack' ? 'Paystack purchases' : 'All client records' }}</h2>
         </div>
+        <USelect v-model="purchaseSource" :items="[{ label: 'Paystack payments', value: 'paystack' }, { label: 'All clients (including manual)', value: 'all' }]" aria-label="Purchase source" />
         <UInput v-model="search" icon="i-lucide-search" placeholder="Search clients or programmes" size="lg" class="client-search" />
       </div>
 
@@ -590,9 +592,9 @@ useSeoMeta({ title: 'Clients | Tilana Admin', robots: 'noindex, nofollow' });
       />
       <div v-else-if="!filteredClients.length" class="empty-clients">
         <span><UIcon name="i-lucide-user-round-plus" /></span>
-        <h3>{{ data?.clients.length ? 'No matching clients' : 'Your first client starts here' }}</h3>
-        <p>{{ data?.clients.length ? 'Try a different search.' : 'Add a client and their programme to begin tracking your work together.' }}</p>
-        <UButton v-if="!data?.clients.length" label="Add first client" icon="i-lucide-plus" @click="openCreateForm" />
+        <h3>{{ data?.clients.length ? 'No matching clients' : purchaseSource === 'paystack' ? 'No Paystack payments yet' : 'Your first client starts here' }}</h3>
+        <p>{{ data?.clients.length ? 'Try a different search.' : purchaseSource === 'paystack' ? 'Confirmed payments and refunds will appear here.' : 'Add a client and their programme to begin tracking your work together.' }}</p>
+        <UButton v-if="!data?.clients.length && purchaseSource === 'all'" label="Add first client" icon="i-lucide-plus" @click="openCreateForm" />
       </div>
       <UCard v-else class="clients-table-card" :ui="{ body: 'p-0 sm:p-0' }">
         <UTable :data="filteredClients" :columns="columns" class="clients-table">

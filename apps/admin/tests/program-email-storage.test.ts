@@ -1,13 +1,21 @@
 import { Readable } from 'node:stream';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { readProgramEmailAttachment } from '@server/utils/r2';
+import { readProgramEmailAttachment, readUploadedProgramPdf } from '@server/utils/r2';
 const mocks = vi.hoisted(() => ({ send: vi.fn() }));
 vi.mock('@aws-sdk/client-s3', () => ({ S3Client: class { send = mocks.send; }, GetObjectCommand: class { constructor(public input: unknown) {} }, HeadObjectCommand: vi.fn(), PutObjectCommand: vi.fn() }));
 beforeEach(() => {
-  vi.stubGlobal('useRuntimeConfig', () => ({ r2PrivateProgramBucket: 'private-test', r2AccountId: 'fixture', r2DownloadAccessKeyId: 'fixture', r2DownloadSecretAccessKey: 'fixture' }));
+  vi.stubGlobal('useRuntimeConfig', () => ({ r2PrivateProgramBucket: 'private-test', r2AccountId: 'fixture', r2DownloadAccessKeyId: 'fixture', r2DownloadSecretAccessKey: 'fixture', r2UploadAccessKeyId: 'upload-fixture', r2UploadSecretAccessKey: 'upload-fixture' }));
   vi.stubGlobal('createError', (input: { statusMessage: string }) => new Error(input.statusMessage));
 });
 describe('private PDF attachment streams', () => {
+  it('verifies the inspected upload object using a conditional, bounded private read', async () => {
+    response('%PDF-fixture');
+    await readUploadedProgramPdf('private-test', 'file.pdf', 100, new AbortController().signal, '"fixture-etag"');
+    expect(mocks.send.mock.calls[0]?.[0].input.IfMatch).toBe('"fixture-etag"');
+    mocks.send.mockClear();
+    await expect(readUploadedProgramPdf('private-live', 'file.pdf', 100, new AbortController().signal, 'etag')).rejects.toThrow('another environment');
+    expect(mocks.send).not.toHaveBeenCalled();
+  });
   function response(bytes: string, contentType = 'application/pdf', length?: number) {
     const Body = Readable.from([Buffer.from(bytes)]);
     mocks.send.mockResolvedValue({ Body, ContentType: contentType, ContentLength: length });

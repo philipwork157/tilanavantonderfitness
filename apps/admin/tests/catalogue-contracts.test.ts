@@ -53,6 +53,9 @@ describe('catalogue API contracts', () => {
   it('accepts an optional positive integer file replacement identifier', () => {
     assert.equal(adminProgramFileUploadFinalizeRequestSchema.safeParse({}).success, true);
     assert.equal(adminProgramFileUploadFinalizeRequestSchema.safeParse({ replaceFileId: 42 }).success, true);
+    assert.equal(adminProgramFileUploadFinalizeRequestSchema.safeParse({ replaceCurrentEdition: true }).success, true);
+    assert.equal(adminProgramFileUploadFinalizeRequestSchema.safeParse({ replaceCurrentEdition: true, replaceFileId: 42 }).success, false);
+    assert.equal(adminProgramFileUploadFinalizeRequestSchema.safeParse({ replaceCurrentEdition: 'true' }).success, false);
     assert.equal(adminProgramFileUploadFinalizeRequestSchema.safeParse({ replaceFileId: 0 }).success, false);
     assert.equal(adminProgramFileUploadFinalizeRequestSchema.safeParse({ replaceFileId: '42' }).success, false);
     assert.equal(adminProgramFileUploadFinalizeRequestSchema.safeParse({ unexpected: true }).success, false);

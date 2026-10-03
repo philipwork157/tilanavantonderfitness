@@ -54,6 +54,7 @@ export const checkoutResponseSchema = z.object({
 export const checkoutStatusResponseSchema = z.object({
   status: z.enum(['pending', 'succeeded', 'failed', 'abandoned', 'reversed', 'partially_refunded', 'refunded']),
   orderNumber: z.string(),
+  deliveryStatus: z.enum(['pending', 'retrying', 'sent', 'canceled', 'unavailable']).optional(),
 });
 
 export const customerMagicLinkRequestSchema = z.object({

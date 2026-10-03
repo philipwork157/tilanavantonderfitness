@@ -27,6 +27,7 @@ import {
   slugifyCatalogueValue,
   uploadCatalogueObject,
 } from '@app/utils/catalogue';
+import { getPublicProgramsUrl } from '@app/utils/public-site';
 
 definePageMeta({ layout: 'dashboard' });
 
@@ -61,10 +62,7 @@ const nextVolumeNumber = computed(() => Math.max(
   ...(program.value?.volumes.map(volume => volume.volumeNumber) ?? []),
 ) + 1);
 const nextVolumeLabel = computed(() => `Add Volume ${nextVolumeNumber.value}`);
-const publicProgramUrl = computed(() => {
-  const siteUrl = String(runtimeConfig.public.siteUrl || 'http://localhost:4321').replace(/\/$/, '');
-  return `${siteUrl}/program`;
-});
+const publicProgramUrl = computed(() => getPublicProgramsUrl(runtimeConfig.public.siteUrl));
 
 const programForm = reactive({
   name: '',
@@ -397,12 +395,12 @@ async function uploadPdf(event: Event, volume: AdminCatalogueVolume, replaceFile
     pdfUploadStage.value = 'Verifying PDF…';
     await $fetch(`/api/admin/program-files/${reservation.uploadId}/finalize`, {
       method: 'POST',
-      body: replaceFile ? { replaceFileId: replaceFile.id } : {},
+      body: replaceFile ? { replaceFileId: replaceFile.id } : { replaceCurrentEdition: true },
     });
     await refreshProgram();
     actionNotice.value = replaceFile
       ? `${replaceFile.displayName} was replaced safely. Its history is retained.`
-      : 'The PDF is ready for entitled customers.';
+      : 'The latest PDF edition is ready. Previous editions are retained in history.';
   } catch (value) {
     await refreshProgram();
     actionError.value = catalogueErrorMessage(value, 'The PDF could not be uploaded.');

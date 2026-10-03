@@ -2,13 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import type { Database } from '@tilana/db/server';
 import type { BasketCheckoutRequest } from '@tilana/contracts/checkout';
-import { orderItems, orders, payments, programAccess, programFiles, programs, programVolumes } from '@tilana/db/schema';
+import { customerNotifications, orderItems, orders, payments, programAccess, programFiles, programs, programVolumes } from '@tilana/db/schema';
 import { and, eq } from 'drizzle-orm';
-import { initializePaystackBasketCheckout, initializePaystackCheckout, processPaystackEvent } from '@server/services/paystack';
+import { getPaystackCheckoutStatus, initializePaystackBasketCheckout, initializePaystackCheckout, processPaystackEvent } from '@server/services/paystack';
 import { hashCheckoutIntent } from '@server/services/paystack-checkout-intent';
 import { createBarrier } from './paystack-database';
 import { reconcileOrderInvoice } from '@server/services/invoice-issuance';
 import { getInvoiceDocument } from '@server/services/invoice-records';
+import { readProgramEmailAttachment } from '@server/utils/r2';
 
 /** Register database cases in the single integration entry point sharing its fresh cluster. */
 export function registerCheckoutCases(getDatabase: () => Database) {
@@ -18,6 +19,9 @@ export function registerCheckoutCases(getDatabase: () => Database) {
     public: { siteUrl: 'https://website.example.test' },
     r2PublicMediaBucket: 'test-public', r2PublicMediaBaseUrl: 'https://media.example.test',
     r2PrivateProgramBucket: 'test-private',
+    customerNotificationsEnabled: true, paystackRecoveryEnabled: true,
+    paystackRecoveryToken: 'fixture-'.repeat(5), paystackRecoveryAlertTo: 'owner@example.test',
+    emailDevelopmentEnabled: true, emailDevelopmentRecipient: 'safe@example.test',
   };
 
   /** Seed real published products with ready private files, not mocked catalogue data. */
@@ -59,6 +63,51 @@ export function registerCheckoutCases(getDatabase: () => Database) {
 
   describe('durable checkout intent against PostgreSQL', () => {
     beforeEach(() => vi.stubGlobal('useRuntimeConfig', () => config));
+
+    it.each(['disabled email', 'missing retries', 'unsafe inbox', 'invalid PDF', 'missing PDF', 'oversized basket'])('blocks %s before any provider call or private delivery', async reason => {
+        const input = await basket();
+        const fetch = successfulInitialize(); vi.stubGlobal('$fetch', fetch);
+        if (reason === 'disabled email') vi.stubGlobal('useRuntimeConfig', () => ({ ...config, customerNotificationsEnabled: false }));
+        if (reason === 'missing retries') vi.stubGlobal('useRuntimeConfig', () => ({ ...config, paystackRecoveryToken: '' }));
+        if (reason === 'unsafe inbox') vi.stubGlobal('useRuntimeConfig', () => ({ ...config, emailDevelopmentRecipient: '' }));
+        if (reason === 'invalid PDF') vi.mocked(readProgramEmailAttachment).mockResolvedValueOnce(Buffer.from('%PDF-invalid\n%%EOF'));
+        if (reason === 'missing PDF') vi.mocked(readProgramEmailAttachment).mockRejectedValueOnce(new Error('R2 unavailable'));
+        if (reason === 'oversized basket') {
+          const [volume] = await getDatabase().select().from(programVolumes).where(eq(programVolumes.slug, input.items[0]!.volumeSlug));
+          await getDatabase().update(programFiles).set({ sizeBytes: 16 * 1024 * 1024 }).where(eq(programFiles.programVolumeId, volume!.id));
+        }
+        await expect(initializePaystackBasketCheckout(input)).rejects.toMatchObject({ statusCode: reason === 'oversized basket' ? 409 : 503 });
+        expect(fetch).not.toHaveBeenCalled();
+        const [payment] = await attempts(input);
+        expect(payment).toMatchObject({ status: 'failed', providerStatus: 'delivery_rejected' });
+        expect((await getDatabase().select().from(orders).where(eq(orders.id, payment!.orderId)))[0]?.status).toBe('cancelled');
+        expect(await getDatabase().select().from(customerNotifications).where(eq(customerNotifications.orderId, payment!.orderId))).toHaveLength(0);
+        expect(await getDatabase().select().from(programAccess).where(eq(programAccess.clientId,
+          (await getDatabase().select().from(orders).where(eq(orders.id, payment!.orderId)))[0]!.clientId))).toHaveLength(0);
+      });
+
+    it('reports paid delivery separately and preserves the same paid checkout when delivery settings change', async () => {
+      const input = await basket(); const fetch = successfulInitialize(); vi.stubGlobal('$fetch', fetch);
+      const checkout = await initializePaystackBasketCheckout(input); await charge(checkout.reference);
+      const [payment] = await attempts(input);
+      await getDatabase().update(customerNotifications).set({ attempts: 1, sentAt: null }).where(eq(customerNotifications.orderId, payment!.orderId));
+      expect(await getPaystackCheckoutStatus(checkout.reference)).toMatchObject({ status: 'succeeded', deliveryStatus: 'retrying' });
+      await getDatabase().update(customerNotifications).set({ sentAt: new Date() }).where(eq(customerNotifications.orderId, payment!.orderId));
+      expect(await getPaystackCheckoutStatus(checkout.reference)).toMatchObject({ status: 'succeeded', deliveryStatus: 'sent' });
+      vi.stubGlobal('useRuntimeConfig', () => ({ ...config, customerNotificationsEnabled: false }));
+      const retry = await initializePaystackBasketCheckout(input);
+      expect(retry.authorizationUrl).toContain('/checkout/complete?reference='); expect(fetch).toHaveBeenCalledOnce();
+    });
+
+    it('does not claim an historical purchase email is preparing when it has no outbox job', async () => {
+      const input = await basket(); vi.stubGlobal('$fetch', successfulInitialize());
+      const checkout = await initializePaystackBasketCheckout(input);
+      const [payment] = await attempts(input);
+      // Simulate legacy settlement predating the notification outbox, without fabricating an email send.
+      await getDatabase().update(payments).set({ status: 'succeeded' }).where(eq(payments.id, payment!.id));
+      await getDatabase().update(orders).set({ status: 'paid', paidAt: new Date() }).where(eq(orders.id, payment!.orderId));
+      expect(await getPaystackCheckoutStatus(checkout.reference)).toMatchObject({ status: 'succeeded', deliveryStatus: 'unavailable' });
+    });
 
     it.each([
       { paystackSecretKey: 'sk_live_fixture' },

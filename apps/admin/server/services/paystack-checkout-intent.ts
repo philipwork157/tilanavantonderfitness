@@ -33,6 +33,7 @@ export async function resolvePaystackCheckout(
   checkout: ReservedCheckout,
   config: { secretKey: string; callbackUrl: string },
   verify: (reference: string) => Promise<void>,
+  beforeInitialize: () => Promise<void>,
 ): Promise<CheckoutResponse> {
   const [claimed] = await database.update(payments).set({ providerStatus: 'initializing', updatedAt: new Date() })
     .where(and(eq(payments.id, checkout.paymentId), eq(payments.status, 'pending'), eq(payments.providerStatus, 'initialization_reserved')))
@@ -46,7 +47,7 @@ export async function resolvePaystackCheckout(
       if (payment.status !== 'pending') return completionResponse(config.callbackUrl, checkout.reference);
       if (payment.checkoutUrl) return { reference: checkout.reference, authorizationUrl: payment.checkoutUrl };
       const uncertain = payment.providerStatus === 'initialization_uncertain'
-        || (payment.providerStatus === 'initializing' && Date.now() - payment.updatedAt.getTime() > 15_000);
+        || (payment.providerStatus === 'initializing' && Date.now() - payment.updatedAt.getTime() > 60_000);
       if (uncertain) {
         // Recover a confirmed charge through the same validated fulfillment path.
         // Never initialize a second reference after an ambiguous provider result.
@@ -60,6 +61,20 @@ export async function resolvePaystackCheckout(
       }
       await new Promise(resolve => setTimeout(resolve, 100));
     }
+  }
+
+  try {
+    await beforeInitialize();
+  } catch (error) {
+    // No provider request has been made: this is a definite rejection, not an uncertain charge.
+    await database.transaction(async transaction => {
+      const [changed] = await transaction.update(payments).set({ status: 'failed', providerStatus: 'delivery_rejected',
+        failureMessage: 'Program email preparation failed before payment.', updatedAt: new Date() })
+        .where(and(eq(payments.id, checkout.paymentId), eq(payments.status, 'pending'))).returning({ id: payments.id });
+      if (changed) await transaction.update(orders).set({ status: 'cancelled', updatedAt: new Date() })
+        .where(and(eq(orders.id, checkout.orderId), eq(orders.status, 'pending')));
+    });
+    throw error;
   }
 
   let raw: unknown;

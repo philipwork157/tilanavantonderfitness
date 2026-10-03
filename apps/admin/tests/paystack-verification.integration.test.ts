@@ -32,12 +32,19 @@ const mocks = vi.hoisted(() => ({ getDatabase: vi.fn(), createSupabaseAuthClient
 vi.mock('@server/utils/supabase-admin', () => ({ getSupabaseAdminClient: () => ({ auth: { admin: { generateLink: mocks.generateLink } } }) }));
 vi.mock('@server/utils/database', () => mocks);
 vi.mock('@server/utils/supabase-auth', () => ({ createSupabaseAuthClient: mocks.createSupabaseAuthClient }));
-vi.mock('@server/utils/email', () => ({ getServerEmail: () => ({ sender: { send: mocks.send }, from: { email: 'sender@example.test' } }) }));
+vi.mock('@server/utils/email', () => ({ getServerEmail: () => ({ sender: { send: mocks.send, checkConfiguration: async () => {} }, from: { email: 'sender@example.test' } }) }));
 // Integration exercises real order/grant/file queries, but never reads private R2 or sends mail.
-vi.mock('@server/utils/r2', async importOriginal => ({
-  ...await importOriginal<typeof import('@server/utils/r2')>(),
-  readProgramEmailAttachment: vi.fn().mockResolvedValue(Buffer.from('%PDF-fixture')),
-}));
+vi.mock('@server/utils/r2', async importOriginal => {
+  const { PDFDocument } = await import('pdf-lib');
+  const pdf = await PDFDocument.create(); pdf.addPage();
+  const content = await pdf.save();
+  return { ...await importOriginal<typeof import('@server/utils/r2')>(),
+    readProgramEmailAttachment: vi.fn().mockResolvedValue(content),
+    readUploadedProgramPdf: vi.fn().mockResolvedValue(content),
+    inspectCatalogueObject: vi.fn(), createSignedCatalogueUpload: vi.fn().mockResolvedValue('https://storage.example.test/upload'),
+    ensureCatalogueUploadConfigured: vi.fn(),
+  };
+});
 let database: Database;
 registerCheckoutCases(() => database);
 registerCustomerNotificationCases(() => database, mocks.send, mocks.generateLink);

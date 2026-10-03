@@ -8,6 +8,7 @@ import { paystackVerificationResponseSchema, type AdminPaymentRefundRequest } fr
 import type { Database } from '@tilana/db/server';
 import {
   clients,
+  customerNotifications,
   orderItems,
   orders,
   paymentEvents,
@@ -25,6 +26,7 @@ import { assertPaystackDatabaseEnvironment, getPaystackCheckoutConfiguration, ge
 import { getCatalogueStorageConfiguration } from '@server/utils/r2';
 import { isCheckoutPriceCurrent } from './catalogue-policy';
 import { hashCheckoutIntent, resolvePaystackCheckout } from './paystack-checkout-intent';
+import { assertCheckoutDeliveryReady } from './checkout-delivery';
 import { processPaystackDispute } from './paystack-disputes';
 import { createPaystackEventKey } from '@server/utils/paystack-webhook';
 import { digestEventPayload, paymentEventExpiry, sanitizePaystackEvent } from '@server/utils/paystack-event-evidence';
@@ -276,7 +278,8 @@ export async function initializePaystackBasketCheckout(input: BasketCheckoutRequ
     return { orderId: order.id, paymentId: payment.id, reference, email: customer.email, volumeIds: volumes.map(volume => volume.id), totalCents };
   });
 
-  return resolvePaystackCheckout(database, checkout, { secretKey, callbackUrl }, verifyPaystackCheckout);
+  return resolvePaystackCheckout(database, checkout, { secretKey, callbackUrl }, verifyPaystackCheckout,
+    () => assertCheckoutDeliveryReady(checkout.orderId, checkout.email));
 }
 
 function stringValue(value: unknown): string | null {
@@ -977,9 +980,17 @@ export async function processPaystackEvent(
 export async function getPaystackCheckoutStatus(reference: string): Promise<CheckoutStatusResponse | null> {
   await assertPaystackDatabaseEnvironment();
   const [result] = await getDatabase()
-    .select({ status: payments.status, orderNumber: orders.orderNumber })
+    .select({ status: payments.status, orderNumber: orders.orderNumber,
+      deliveryStatus: sql<'pending' | 'retrying' | 'sent' | 'canceled' | 'unavailable'>`case
+        when ${customerNotifications.id} is null then 'unavailable'
+        when ${customerNotifications.canceledAt} is not null then 'canceled'
+        when ${customerNotifications.sentAt} is not null then 'sent'
+        when coalesce(${customerNotifications.attempts}, 0) > 0 then 'retrying'
+        else 'pending' end`,
+    })
     .from(payments)
     .innerJoin(orders, eq(orders.id, payments.orderId))
+    .leftJoin(customerNotifications, and(eq(customerNotifications.orderId, orders.id), eq(customerNotifications.kind, 'purchase')))
     .where(and(eq(payments.provider, 'paystack'), eq(payments.providerReference, reference)))
     .limit(1);
   return result ?? null;

@@ -288,8 +288,11 @@ routes must verify the signed-in user's linked client and active
 `program_access` before exposing program content.
 
 Program PDFs are attached only to purchase emails after paid-order, ownership,
-active-grant and environment checks. Baskets above 15 MiB of raw PDFs or 30 files
-receive portal instructions instead. Missing/invalid PDFs retry rather than
+active-grant and environment checks. New V1 checkouts validate the readable PDF
+payload, email configuration and retry readiness before contacting Paystack.
+Baskets above 15 MiB of raw PDFs or 30 files are blocked before payment.
+Historical orders and editions growing after checkout retain portal-only fallback.
+Missing/invalid PDFs retry rather than
 claiming delivery. Files remain private in R2; later portal downloads still
 require an entitlement check and use short-lived presigned URLs. Already emailed
 attachments cannot be recalled after a refund.

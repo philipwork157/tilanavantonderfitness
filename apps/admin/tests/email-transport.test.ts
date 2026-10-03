@@ -1,16 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
-const mocks = vi.hoisted(() => ({ send: vi.fn() }));
+const mocks = vi.hoisted(() => ({ send: vi.fn(), credentials: vi.fn() }));
 // Resolve SES from its owning workspace; admin does not depend on SES directly.
 const require = createRequire(import.meta.url);
 const emailRequire = createRequire(require.resolve('@tilana/email/server'));
 vi.doMock(emailRequire.resolve('@aws-sdk/client-sesv2'), () => ({
-  SESv2Client: class { send = mocks.send; },
+  SESv2Client: class { send = mocks.send; config = { credentials: mocks.credentials }; },
   SendEmailCommand: class { constructor(public input: unknown) {} },
 }));
 const { createSesEmailSender } = await import('@tilana/email/server');
 beforeEach(() => mocks.send.mockResolvedValue({ MessageId: 'fixture' }));
 describe('SES attachment transport', () => {
+  it('resolves credentials without an SES request and propagates credential failures', async () => {
+    mocks.credentials.mockResolvedValueOnce({ accessKeyId: 'fixture' });
+    const sender = createSesEmailSender({ region: 'af-south-1' });
+    await expect(sender.checkConfiguration()).resolves.toBeUndefined();
+    expect(mocks.send).not.toHaveBeenCalled();
+    mocks.credentials.mockRejectedValueOnce(new Error('No credentials'));
+    await expect(sender.checkConfiguration()).rejects.toThrow('No credentials');
+  });
   const message = { from: { email: 'sender@example.test' }, to: [{ email: 'safe@example.test' }], subject: 'Programs', text: 'Text', html: '<p>Text</p>' };
   it('passes PDF bytes to SES with explicit base64 MIME encoding and abort support', async () => {
     const content = Buffer.from('%PDF-fixture');
