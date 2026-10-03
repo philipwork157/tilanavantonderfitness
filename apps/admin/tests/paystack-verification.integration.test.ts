@@ -33,6 +33,11 @@ vi.mock('@server/utils/supabase-admin', () => ({ getSupabaseAdminClient: () => (
 vi.mock('@server/utils/database', () => mocks);
 vi.mock('@server/utils/supabase-auth', () => ({ createSupabaseAuthClient: mocks.createSupabaseAuthClient }));
 vi.mock('@server/utils/email', () => ({ getServerEmail: () => ({ sender: { send: mocks.send }, from: { email: 'sender@example.test' } }) }));
+// Integration exercises real order/grant/file queries, but never reads private R2 or sends mail.
+vi.mock('@server/utils/r2', async importOriginal => ({
+  ...await importOriginal<typeof import('@server/utils/r2')>(),
+  readProgramEmailAttachment: vi.fn().mockResolvedValue(Buffer.from('%PDF-fixture')),
+}));
 let database: Database;
 registerCheckoutCases(() => database);
 registerCustomerNotificationCases(() => database, mocks.send, mocks.generateLink);

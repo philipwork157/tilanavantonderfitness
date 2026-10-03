@@ -28,7 +28,7 @@ import { hashCheckoutIntent, resolvePaystackCheckout } from './paystack-checkout
 import { processPaystackDispute } from './paystack-disputes';
 import { createPaystackEventKey } from '@server/utils/paystack-webhook';
 import { digestEventPayload, paymentEventExpiry, sanitizePaystackEvent } from '@server/utils/paystack-event-evidence';
-import { queuePurchaseAccess } from './customer-notifications';
+import { queuePurchaseAccess, deliverPurchaseNotification } from './customer-notifications';
 import {
   getTerminalCheckoutResolution,
   isPaymentAlreadyFulfilled,
@@ -485,6 +485,7 @@ async function processChargeSuccess(
   await grantOrderAccess(transaction, payment.orderId);
   await queuePurchaseAccess(transaction, payment.orderId);
   await markPaymentEvent(transaction, eventId, 'processed');
+  return payment.orderId;
 }
 
 async function processRefundEvent(
@@ -907,7 +908,7 @@ export async function processPaystackEvent(
   const database = getDatabase();
   const payloadDigest = verifiedPayloadDigest || digestEventPayload(rawPayload);
 
-  await database.transaction(async (transaction) => {
+  const fulfilledOrderId = await database.transaction(async (transaction) => {
     const [payment] = reference
       ? await transaction
           .select({
@@ -959,8 +960,7 @@ export async function processPaystackEvent(
     }
 
     if (eventType === 'charge.success') {
-      await processChargeSuccess(transaction, event.id, payload, payment);
-      return;
+      return processChargeSuccess(transaction, event.id, payload, payment);
     }
 
     if (isRefundEvent) {
@@ -970,6 +970,8 @@ export async function processPaystackEvent(
 
     await markPaymentEvent(transaction, event.id, 'ignored');
   });
+  // Storage and SES run only after the authoritative fulfillment transaction commits.
+  if (fulfilledOrderId) await deliverPurchaseNotification(fulfilledOrderId);
 }
 
 export async function getPaystackCheckoutStatus(reference: string): Promise<CheckoutStatusResponse | null> {

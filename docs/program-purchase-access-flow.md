@@ -222,7 +222,12 @@ The current flow is:
 8. Later visits use the Supabase session. The customer can request a fresh
    passwordless link with the same email; no duplicate user or client is made.
 
-Program PDFs are links in the customer account, not email attachments.
+With customer notifications enabled, confirmed purchases attempt a thank-you
+email with the purchased PDFs attached, plus a customer sign-in-page link.
+The protected scheduler retries failed deliveries. Baskets over 15 MiB of raw
+PDFs or 30 files use explicit portal-only instructions. Customers can request
+fresh magic links later to download their programs again. Login emails do not
+attach PDFs. See [customer-access-delivery.md](./customer-access-delivery.md).
 
 ## Customer program and download checks
 

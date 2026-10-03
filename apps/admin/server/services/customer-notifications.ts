@@ -1,11 +1,12 @@
 import type { Database } from '@tilana/db/server';
 import { clients, customerNotifications, orders } from '@tilana/db/schema';
-import { and, asc, eq, isNull, lte, or } from 'drizzle-orm';
+import { and, asc, eq, isNull, lte, or, sql } from 'drizzle-orm';
 import { getDatabase } from '@server/utils/database';
 import { assertPaystackDatabaseEnvironment, getCustomerAccountBaseUrl } from '@server/utils/paystack-configuration';
 import { customerPurchaseHistoryCondition } from '@server/utils/customer-purchase-history';
 import { getSupabaseAdminClient } from '@server/utils/supabase-admin';
 import { sendCustomerAccessEmail } from './customer-access-emails';
+import { getPurchaseProgramAttachments } from './purchase-program-attachments';
 
 type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
 
@@ -26,9 +27,11 @@ export async function queueCustomerLogin(clientId: number) {
 }
 
 /** Recheck eligibility immediately before sending; login tokens are fresh on every retry. */
-async function sendNotification(job: typeof customerNotifications.$inferSelect) {
+async function sendNotification(job: typeof customerNotifications.$inferSelect, signal: AbortSignal) {
   const database = getDatabase();
-  const [buyer] = await database.select({ email: clients.email, firstName: clients.firstName }).from(clients)
+  const [buyer] = await database.select({ email: job.kind === 'purchase'
+    ? sql<string>`coalesce(${orders.customerEmail}, ${clients.email})` : clients.email,
+  firstName: clients.firstName }).from(clients)
     .innerJoin(orders, and(eq(orders.clientId, clients.id), job.kind === 'purchase'
       ? and(eq(orders.id, job.orderId!), eq(orders.status, 'paid')) : customerPurchaseHistoryCondition()))
     .where(eq(clients.id, job.clientId)).limit(1);
@@ -36,6 +39,8 @@ async function sendNotification(job: typeof customerNotifications.$inferSelect) 
   if (!buyer || (job.kind === 'login' && Date.now() - job.createdAt.getTime() > 60 * 60_000)) return false;
   const base = getCustomerAccountBaseUrl();
   const url = new URL('/account/sign-in', `${base}/`);
+  const attachments = job.kind === 'purchase' ? await getPurchaseProgramAttachments(job.orderId!, job.clientId, signal) : undefined;
+  if (attachments === null) return false;
   if (job.kind === 'login') {
     let timer: ReturnType<typeof setTimeout> | undefined;
     // Bound generation inside this function so a late Auth response cannot trigger a late SES send.
@@ -50,7 +55,8 @@ async function sendNotification(job: typeof customerNotifications.$inferSelect) 
     url.searchParams.set('type', 'email');
     url.searchParams.set('next', '/account/programs');
   }
-  await sendCustomerAccessEmail({ intendedRecipient: buyer.email, firstName: buyer.firstName, signInUrl: url.toString(), instructionsOnly: job.kind === 'purchase' });
+  signal.throwIfAborted();
+  await sendCustomerAccessEmail({ intendedRecipient: buyer.email, firstName: buyer.firstName, signInUrl: url.toString(), instructionsOnly: job.kind === 'purchase', attachments, signal });
   return true;
 }
 
@@ -77,9 +83,10 @@ export async function deliverCustomerNotifications(jobId?: number) {
     if (!job) break;
     const ownership = and(eq(customerNotifications.id, job.id), eq(customerNotifications.leaseVersion, job.leaseVersion));
     let timer: ReturnType<typeof setTimeout> | undefined;
+    const controller = new AbortController();
     try {
-      const delivered = await Promise.race([sendNotification(job), new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(() => reject(new Error('Customer delivery timed out.')), 15_000);
+      const delivered = await Promise.race([sendNotification(job, controller.signal), new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => { controller.abort(); reject(new Error('Customer delivery timed out.')); }, 30_000);
       })]);
       await database.update(customerNotifications).set({ ...(delivered ? { sentAt: new Date() } : { canceledAt: new Date() }), leaseUntil: null }).where(ownership);
       if (delivered) sent++; else canceled++;
@@ -92,6 +99,18 @@ export async function deliverCustomerNotifications(jobId?: number) {
     } finally { clearTimeout(timer); }
   }
   return { sent, failed, canceled };
+}
+
+/** Best-effort delivery after fulfillment commits. Provider outages never undo payment/access. */
+export async function deliverPurchaseNotification(orderId: number) {
+  if (String(useRuntimeConfig().customerNotificationsEnabled) !== 'true') return;
+  try {
+    const [job] = await getDatabase().select({ id: customerNotifications.id }).from(customerNotifications)
+      .where(and(eq(customerNotifications.orderId, orderId), eq(customerNotifications.kind, 'purchase'))).limit(1);
+    if (job) await deliverCustomerNotifications(job.id);
+  } catch {
+    console.error('Purchase email delivery requires attention.');
+  }
 }
 
 /** Protected scheduler activation is independent of billing and defaults to disabled. */

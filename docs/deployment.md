@@ -237,7 +237,8 @@ No deployed migration or real R2/provider check was performed locally.
 ACCESS-01 rollout is documented in [customer-access-delivery.md](./customer-access-delivery.md).
 Review both new customer notification migrations before backend deployment.
 Enable `NUXT_CUSTOMER_NOTIFICATIONS_ENABLED=true` for the existing protected
-scheduler to send purchase instructions and retry failed login emails. It
+scheduler to retry failed purchase/login emails; confirmed payments also attempt
+purchase attachment delivery immediately after commit when enabled. It
 defaults to false. Test mode now requires `NUXT_EMAIL_DEVELOPMENT_ENABLED=true` and a valid safe
 `NUXT_EMAIL_DEVELOPMENT_RECIPIENT`; live never uses that redirect.
 No deployed migrations, activation or real SES sends were performed locally.
@@ -371,7 +372,9 @@ and AWS credentials used by contact notifications. Development delivery uses the
 Live customer delivery requires the switch to be disabled and delivers to the
 paid customer's email address.
 
-Program PDFs are not email attachments. Upload each PDF to the private R2
+Purchase emails attach entitled PDFs, with a portal-only fallback for baskets
+above the documented attachment budget. Login emails remain link-only.
+Upload each PDF to the private R2
 program bucket and create an active `program_files` record containing its
 integer `program_volume_id`, display name, R2 bucket, and object key. The
 customer portal checks the signed-in customer's active `program_access` before

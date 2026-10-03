@@ -1,5 +1,6 @@
 import { GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { Readable } from 'node:stream';
 
 let r2DownloadClient: S3Client | undefined;
 let r2DownloadConfigurationKey = '';
@@ -54,6 +55,49 @@ function getUploadClient(): S3Client {
   return r2UploadClient;
 }
 
+/** Environment-scoped read-only storage for downloads and purchase attachments. */
+function getProgramDownloadClient(bucket: string): S3Client {
+  const configuredBucket = String(useRuntimeConfig().r2PrivateProgramBucket || '').trim();
+  if (!configuredBucket || bucket !== configuredBucket) {
+    throw createError({ statusCode: 503, statusMessage: 'This program file is not available in this environment.' });
+  }
+  const credentials = readCredentials('download');
+  const configurationKey = `${credentials.accountId}:${credentials.accessKeyId}:${credentials.secretAccessKey}`;
+  if (!r2DownloadClient || r2DownloadConfigurationKey !== configurationKey) {
+    r2DownloadClient = createClient(credentials);
+    r2DownloadConfigurationKey = configurationKey;
+  }
+  return r2DownloadClient;
+}
+
+/** Read a bounded private PDF without exposing an object URL or buffering an unbounded stream. */
+export async function readProgramEmailAttachment(bucket: string, objectKey: string, maxBytes: number, signal: AbortSignal): Promise<Uint8Array | null> {
+  signal.throwIfAborted();
+  const response = await getProgramDownloadClient(bucket).send(new GetObjectCommand({ Bucket: bucket, Key: objectKey }), { abortSignal: signal });
+  if (!response.Body) throw new Error('Program PDF body is missing.');
+  const body = response.Body;
+  if (!(body instanceof Readable)) throw new Error('Program storage requires a server stream.');
+  if (response.ContentType?.split(';')[0]?.trim() !== 'application/pdf') {
+    body.destroy();
+    throw new Error('Program attachment must be a PDF.');
+  }
+  if ((response.ContentLength ?? 0) > maxBytes) { body.destroy(); return null; }
+  const chunks: Buffer[] = [];
+  let length = 0;
+  try {
+    for await (const chunk of body) {
+      signal.throwIfAborted();
+      const bytes = Buffer.from(chunk);
+      length += bytes.length;
+      if (length > maxBytes) return null;
+      chunks.push(bytes);
+    }
+  } finally { body.destroy(); }
+  const content = Buffer.concat(chunks);
+  if (content.subarray(0, 5).toString() !== '%PDF-') throw new Error('Program attachment is not a valid PDF.');
+  return content;
+}
+
 export function ensureCatalogueUploadConfigured(): void {
   getUploadClient();
 }
@@ -101,23 +145,12 @@ export async function createSignedProgramDownload(
   objectKey: string,
   filename?: string,
 ): Promise<string> {
-  const config = useRuntimeConfig();
-  const configuredBucket = String(config.r2PrivateProgramBucket || '').trim();
-  if (!configuredBucket || bucket !== configuredBucket) {
-    throw createError({ statusCode: 503, statusMessage: 'This program file is not available in this environment.' });
-  }
-
-  const credentials = readCredentials('download');
-  const configurationKey = `${credentials.accountId}:${credentials.accessKeyId}:${credentials.secretAccessKey}`;
-  if (!r2DownloadClient || r2DownloadConfigurationKey !== configurationKey) {
-    r2DownloadClient = createClient(credentials);
-    r2DownloadConfigurationKey = configurationKey;
-  }
+  const client = getProgramDownloadClient(bucket);
 
   const disposition = filename
     ? `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`
     : undefined;
-  return getSignedUrl(r2DownloadClient, new GetObjectCommand({
+  return getSignedUrl(client, new GetObjectCommand({
     Bucket: bucket,
     Key: objectKey,
     ResponseContentDisposition: disposition,

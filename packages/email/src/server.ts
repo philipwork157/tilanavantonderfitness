@@ -12,10 +12,18 @@ export interface EmailMessage {
   subject: string;
   text: string;
   html: string;
+  attachments?: EmailAttachment[];
+}
+
+/** Binary attachments stay server-side; the SES SDK performs wire encoding. */
+export interface EmailAttachment {
+  filename: string;
+  contentType: 'application/pdf';
+  content: Uint8Array;
 }
 
 export interface EmailSender {
-  send(message: EmailMessage): Promise<{ messageId?: string }>;
+  send(message: EmailMessage, options?: { abortSignal?: AbortSignal }): Promise<{ messageId?: string }>;
 }
 
 export interface SesEmailSenderOptions {
@@ -37,7 +45,7 @@ export function createSesEmailSender(options: SesEmailSenderOptions): EmailSende
   const client = new SESv2Client({ region: options.region });
 
   return {
-    async send(message) {
+    async send(message, options) {
       const response = await client.send(new SendEmailCommand({
         FromEmailAddress: formatAddress(message.from),
         Destination: {
@@ -46,6 +54,13 @@ export function createSesEmailSender(options: SesEmailSenderOptions): EmailSende
         ReplyToAddresses: message.replyTo?.map(formatAddress),
         Content: {
           Simple: {
+            Attachments: message.attachments?.map(attachment => ({
+              FileName: attachment.filename,
+              ContentType: attachment.contentType,
+              RawContent: attachment.content,
+              ContentDisposition: 'ATTACHMENT',
+              ContentTransferEncoding: 'BASE64',
+            })),
             Subject: {
               Charset: 'UTF-8',
               Data: message.subject,
@@ -62,7 +77,7 @@ export function createSesEmailSender(options: SesEmailSenderOptions): EmailSende
             },
           },
         },
-      }));
+      }), options);
 
       return { messageId: response.MessageId };
     },

@@ -29,10 +29,10 @@ export function getServerEmail(senderOverride?: EmailAddress) {
   // notifications cannot bypass development routing.
   const transport = emailSender;
   const sender: EmailSender = {
-    send(message) {
+    send(message, options) {
       const recipient = getEmailRecipient(message.to[0]?.email || '', {}, config);
       return transport.send({ ...message, to: isDevelopmentEmailEnabled(config)
-        ? [{ email: recipient }] : message.to });
+        ? [{ email: recipient }] : message.to }, options);
     },
   };
   return { sender, from };

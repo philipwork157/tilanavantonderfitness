@@ -6,7 +6,10 @@ Signed Paystack success or server verification commits the paid order, program
 entitlements and one `customer_notifications` purchase job together. A browser
 return is not required. Payment is not rolled back by an email outage.
 
-The protected scheduler sends branded purchase instructions linking to
+When enabled, fulfillment attempts a branded thank-you email after commit.
+It attaches active, ready PDFs belonging to that paid order's current purchase
+grants in the configured private bucket, using read-only R2 credentials. The
+protected scheduler retries failures. Purchase emails also link to
 `/account/sign-in`. This is not a bearer token and does not expire. The customer
 uses their purchase email to request a one-time sign-in link. The public route
 keeps its origin, rate-limit, validation, purchase eligibility and generic
@@ -16,7 +19,13 @@ immediately. Failed sends stay queued for the scheduler.
 Supabase generates a fresh token during each login delivery attempt. No token,
 magic link or provider error is stored in the outbox or logged. Confirmation
 still verifies Supabase identity, links integer users/clients and checks program
-entitlements before private downloads. PDFs are not email attachments.
+entitlements before private downloads. Login emails do not attach PDFs.
+
+The attachment budget is 15 MiB of raw PDF data and 30 files, leaving room for
+base64/MIME encoding. Oversized baskets receive an explicit portal-only email
+instead of a misleading partial attachment set. Missing objects, invalid PDFs,
+storage failures and email failures remain queued. No public PDF URL is created.
+Emailed copies cannot be recalled after refund or revocation.
 
 ## Reliability and limits
 
@@ -29,7 +38,8 @@ entitlements before private downloads. PDFs are not email attachments.
   checked at delivery, and refunded/unpaid purchase jobs are canceled.
 - Login requests expire after one hour; a canceled/expired request requires a
   new request. Supabase token generation is bounded to eight seconds and overall
-  delivery attempts to fifteen seconds.
+  delivery attempts to thirty seconds, aborting storage/SES on timeout and
+  preventing late token/storage results from initiating another send.
 - SES acceptance is not proof of inbox receipt. Delivery is **at least once**:
   acceptance followed by a crash/timeout can produce a duplicate email on retry.
   In-flight accepted emails cannot be recalled after refunds. Retry generates a
@@ -50,10 +60,11 @@ entitlements before private downloads. PDFs are not email attachments.
    origin. In test mode enable `NUXT_EMAIL_DEVELOPMENT_ENABLED=true`;
    `NUXT_EMAIL_DEVELOPMENT_RECIPIENT` must be a
    valid safe inbox. Live mode never redirects to it.
-3. Set `NUXT_CUSTOMER_NOTIFICATIONS_ENABLED=true` to activate scheduled delivery.
+3. Set `NUXT_CUSTOMER_NOTIFICATIONS_ENABLED=true` to activate immediate purchase
+   delivery and scheduled retries.
    Default is false; fulfillment still queues purchase jobs and sign-in requests
    still attempt immediate delivery. Scheduler activation is necessary for
-   automatic purchase delivery and failed-login recovery.
+   recovering failed purchase/login emails, including crashes after fulfillment.
 4. Activate the existing PAY-05 dedicated-token external scheduler. It invokes
    access delivery independently of billing. No new cron service is installed.
    Configure workflow failure alerts: access failures return HTTP 503.

@@ -271,7 +271,9 @@ review and actual browser/provider/SES rollout evidence remain required.
 
 After payment, the customer requests access using the purchase email address.
 ACCESS-01 queues purchase instructions atomically with Paystack fulfillment.
-The opt-in protected scheduler sends a non-expiring sign-in-page link; requested
+With customer notifications enabled, fulfillment attempts delivery after commit
+and the protected scheduler retries failures. Purchase emails attach the paid
+order's currently entitled PDFs and include a non-expiring sign-in-page link; requested
 one-time login emails also use durable retry work with fresh tokens generated
 only during delivery. No tokens are persisted/logged. Test delivery requires
 a safe inbox; live cannot redirect. See `docs/customer-access-delivery.md` for
@@ -285,9 +287,12 @@ The confirmation callback verifies the token, creates or reuses the integer-keye
 routes must verify the signed-in user's linked client and active
 `program_access` before exposing program content.
 
-Program PDFs are not attached to email and are not public. `program_files` stores
-private Cloudflare R2 bucket/object metadata. After an entitlement check, the
-server returns a short-lived presigned download URL.
+Program PDFs are attached only to purchase emails after paid-order, ownership,
+active-grant and environment checks. Baskets above 15 MiB of raw PDFs or 30 files
+receive portal instructions instead. Missing/invalid PDFs retry rather than
+claiming delivery. Files remain private in R2; later portal downloads still
+require an entitlement check and use short-lived presigned URLs. Already emailed
+attachments cannot be recalled after a refund.
 
 Unpublishing/archiving never withdraws content owed to existing/future grants
 or an open Paystack checkout. The final ready file is protected in the service

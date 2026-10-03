@@ -6,6 +6,7 @@ export interface CustomerAccessEmailTemplateInput {
   intendedEmail: string;
   redirectedToDevelopment: boolean;
   instructionsOnly?: boolean;
+  hasAttachments?: boolean;
 }
 
 /** Builds the branded HTML and plain-text versions of a customer access email. */
@@ -13,12 +14,15 @@ export function renderCustomerAccessEmail(input: CustomerAccessEmailTemplateInpu
   const firstName = singleLineEmailText(input.firstName);
   const greeting = firstName ? `Hi ${firstName},` : 'Hello,';
   const instructions = input.instructionsOnly
-    ? 'Your payment is confirmed. Sign in using the email address you used at checkout. We will send you a secure, one-time link to access your purchased programs.'
+    ? `Your payment is confirmed. Thank you for buying your programs! ${input.hasAttachments ? 'Please find your purchased program PDFs attached to this email.' : 'Your program PDFs are too large to attach to one email. Please download them from your account.'}`
     : 'Use this secure, one-time link to sign in and access the programs connected to your purchase:';
+  const accessInstructions = input.instructionsOnly
+    ? 'If you lose your files, use the link below and enter the email address you used at checkout. We will email you a secure, one-time sign-in link so you can download your programs again.'
+    : 'Your program PDFs are available securely inside your account. This sign-in link expires and can only be used once. You can request a new link whenever you need it.';
   const developmentNotice = input.redirectedToDevelopment
     ? `Development preview. Intended customer: ${input.intendedEmail}`
     : '';
-  const subject = `${input.redirectedToDevelopment ? '[DEV] ' : ''}Your Tilana program access link`;
+  const subject = `${input.redirectedToDevelopment ? '[DEV] ' : ''}${input.instructionsOnly ? 'Thank you for your purchase | Your Tilana programs' : 'Your Tilana program access link'}`;
   const text = [
     ...(developmentNotice ? [developmentNotice, ''] : []),
     'TILANA VAN TONDER',
@@ -27,10 +31,10 @@ export function renderCustomerAccessEmail(input: CustomerAccessEmailTemplateInpu
     greeting,
     '',
     instructions,
+    accessInstructions,
     input.signInUrl,
     '',
-    'The program PDF is available securely inside your account; it is not attached to this email.',
-    'If you did not request this link, you can safely ignore this email.',
+    ...(input.instructionsOnly ? [] : ['If you did not request this link, you can safely ignore this email.']),
   ].join('\n');
 
   const html = `<!doctype html>
@@ -77,11 +81,11 @@ export function renderCustomerAccessEmail(input: CustomerAccessEmailTemplateInpu
                   <tr>
                     <td style="padding:22px 24px;">
                       <p style="margin:0 0 6px;color:#614635;font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;">Secure access</p>
-                      <p style="margin:0;color:#614635;font-size:13px;line-height:1.7;">Your program PDF is available inside your account rather than attached to this email. ${input.instructionsOnly ? 'Request a new one-time sign-in link whenever you need it.' : 'The sign-in link expires and can only be used securely.'}</p>
+                      <p style="margin:0;color:#614635;font-size:13px;line-height:1.7;">${escapeEmailHtml(accessInstructions)}</p>
                     </td>
                   </tr>
                 </table>
-                <p style="margin:24px 0 0;color:#a87e63;font-size:12px;line-height:1.7;text-align:center;">If you did not request this link, you can safely ignore this email.</p>
+                ${input.instructionsOnly ? '' : '<p style="margin:24px 0 0;color:#a87e63;font-size:12px;line-height:1.7;text-align:center;">If you did not request this link, you can safely ignore this email.</p>'}
               </td>
             </tr>
             <tr>
