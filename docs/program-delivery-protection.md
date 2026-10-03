@@ -36,6 +36,19 @@ cannot replace a newer ready edition. Metadata alone is insufficient: finalizati
 reads the bounded, ETag-matched object and validates its PDF structure before it
 becomes ready. Invalid content leaves the previous edition available.
 
+Published volumes must fit the shared purchase-email budget: at most 15 MiB
+across thirty PDFs, with known positive sizes. A published replacement/addition
+that would exceed that budget is rejected before retiring any existing PDF.
+Archived/draft private maintenance may retain larger files, but publication
+requires an email-ready set. Publication and finalization lock the parent
+program before its volumes so these rules also hold during concurrent writes.
+
+New checkout orders pin their validated PDF editions before contacting Paystack.
+Purchase email uses those retained editions and checks their content digest,
+even after an administrator uploads a newer edition. Customer portal access
+uses the latest active ready edition. Replacing a PDF therefore does not turn an
+already-started purchase into an attachment-free email.
+
 There is no unaudited override. If no replacement will be supplied, purchases
 must complete the established refund/reversal process and non-purchase grants
 must be explicitly revoked or allowed to expire before the final PDF can be
@@ -47,8 +60,16 @@ Migration `20260919132857_protect_program_delivery.sql` installs a trigger that
 independently rejects an update or delete that removes the final ready file
 while a delivery obligation exists. It protects direct/internal database writes
 in addition to the friendly application conflict. Historical inactive/pending
-file cleanup remains allowed. Multiple files and atomic replacement remain
+file cleanup remains allowed unless the file belongs to a pinned purchase.
+Multiple files and atomic replacement remain
 allowed.
+
+Additive migration `20261003181008_pin_purchase_pdf_editions.sql` adds
+`order_item_files` with composite purchase/volume ownership constraints, RLS,
+immutable edition snapshots and protection against editing pinned storage
+metadata. Normal retirement is allowed, but pinned rows/files cannot be deleted.
+It does not delete or rewrite existing customer, payment or file data and does
+not backfill historical purchases. Review/apply it before the new backend.
 
 Review and apply the migration before deploying the updated admin/API. Pause
 checkout, webhook/recovery and catalogue writes during the migration/version

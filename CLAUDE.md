@@ -273,7 +273,8 @@ After payment, the customer requests access using the purchase email address.
 ACCESS-01 queues purchase instructions atomically with Paystack fulfillment.
 With customer notifications enabled, fulfillment attempts delivery after commit
 and the protected scheduler retries failures. Purchase emails attach the paid
-order's currently entitled PDFs and include a non-expiring sign-in-page link; requested
+order's checkout-pinned PDF editions, subject to current entitlement checks,
+and include a non-expiring sign-in-page link; requested
 one-time login emails also use durable retry work with fresh tokens generated
 only during delivery. No tokens are persisted/logged. Test delivery requires
 a safe inbox; live cannot redirect. See `docs/customer-access-delivery.md` for
@@ -291,7 +292,11 @@ Program PDFs are attached only to purchase emails after paid-order, ownership,
 active-grant and environment checks. New V1 checkouts validate the readable PDF
 payload, email configuration and retry readiness before contacting Paystack.
 Baskets above 15 MiB of raw PDFs or 30 files are blocked before payment.
-Historical orders and editions growing after checkout retain portal-only fallback.
+Published volumes and replacement uploads enforce the same email budget.
+`order_item_files` records immutable ownership-linked edition IDs, actual sizes
+and content digests before Paystack initialization. Retired editions remain
+available for these purchase emails; the customer portal displays the latest
+active edition. Only historical orders without pins retain portal-only fallback.
 Missing/invalid PDFs retry rather than
 claiming delivery. Files remain private in R2; later portal downloads still
 require an entitlement check and use short-lived presigned URLs. Already emailed

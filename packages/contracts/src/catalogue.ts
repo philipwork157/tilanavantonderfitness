@@ -23,6 +23,9 @@ export const catalogueImageContentTypeSchema = z.enum(catalogueImageContentTypeV
 
 export const CATALOGUE_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 export const CATALOGUE_PDF_MAX_BYTES = 50 * 1024 * 1024;
+/** Raw attachment budget shared by catalogue publication and purchase delivery. */
+export const PROGRAM_EMAIL_ATTACHMENT_MAX_BYTES = 15 * 1024 * 1024;
+export const PROGRAM_EMAIL_ATTACHMENT_MAX_FILES = 30;
 
 const optionalText = (maximum: number) => z.string().trim().min(1).max(maximum).nullable().optional();
 const uploadFilenameSchema = z

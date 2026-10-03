@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { and, asc, eq, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, asc, eq, getTableColumns, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-orm';
 import { paymentEvents, paymentRecoveryJobs, paymentRefunds, payments } from '@tilana/db/schema';
 import { paystackRecoveryDisputeListSchema, paystackRecoveryRefundListSchema, paystackRecoveryDisputeSchema, paystackRecoveryRefundSchema } from '@tilana/contracts/payments';
 import { getDatabase } from '@server/utils/database';
@@ -11,6 +11,15 @@ import { digestEventPayload, paymentEventExpiry, redactedPaymentEventPayload } f
 /** Retry forever with bounded backoff, escalating instead of silently dropping uncertain money. */
 export function recoveryDelay(attempts: number) {
   return Math.min(6 * 60 * 60_000, 60_000 * 2 ** Math.min(Math.max(attempts - 1, 0), 12));
+}
+
+/** Local markers prove no provider initialization happened only before any provider evidence exists. */
+function unsubmittedCheckout() {
+  return sql<boolean>`(${payments.providerTransactionId} is null and ${payments.checkoutUrl} is null
+    and ${payments.accessCode} is null and (
+      (${payments.status} = 'pending' and coalesce(${payments.providerStatus}, '') = 'initialization_reserved')
+      or (${payments.status} = 'failed' and coalesce(${payments.providerStatus}, '') = 'delivery_rejected')
+    ))`;
 }
 
 /** Remove replay details after their short retention window; keep ledger metadata and digest. */
@@ -51,11 +60,14 @@ export async function reconcilePayment(paymentId: number) {
   const { secretKey, environment } = getPaystackCredentials();
   await assertPaystackDatabaseEnvironment();
   const database = getDatabase();
-  let [payment] = await database.select().from(payments)
+  const [reserved] = await database.select({ ...getTableColumns(payments), unsubmitted: unsubmittedCheckout() }).from(payments)
     .where(and(eq(payments.id, paymentId), eq(payments.provider, 'paystack'), eq(payments.environment, environment))).limit(1);
-  if (!payment?.providerReference) throw createError({ statusCode: 404, statusMessage: 'Payment not found in this environment.' });
-  await verifyPaystackCheckout(payment.providerReference, true);
-  [payment] = await database.select().from(payments).where(eq(payments.id, paymentId)).limit(1);
+  if (!reserved?.providerReference) throw createError({ statusCode: 404, statusMessage: 'Payment not found in this environment.' });
+  // A nonexistent provider transaction is expected for locally rejected/unclaimed work,
+  // not a Paystack outage. Initializing/uncertain attempts still require verification.
+  if (reserved.unsubmitted) return;
+  await verifyPaystackCheckout(reserved.providerReference, true);
+  const [payment] = await database.select().from(payments).where(eq(payments.id, paymentId)).limit(1);
   if (!payment) throw new Error('Payment disappeared during reconciliation.');
   if (payment.status === 'pending') throw new Error('Payment remains pending.');
   if (['failed', 'abandoned'].includes(payment.status)) return;
@@ -108,11 +120,25 @@ export async function runPaymentRecovery() {
   const database = getDatabase();
   const now = new Date();
   await redactExpiredPaymentEventPayloads(now);
+  // Retain old job/audit rows but retire false outage alerts from references never
+  // submitted to Paystack. Separate invalid-evidence/reversal alerts remain intact.
+  await database.update(paymentRecoveryJobs).set({ attempts: 0, reviewReason: null, alertPending: false,
+    leaseUntil: null, leaseVersion: sql`${paymentRecoveryJobs.leaseVersion} + 1`,
+    nextAttemptAt: new Date(now.getTime() + 6 * 60 * 60_000), updatedAt: now }).where(and(
+    eq(paymentRecoveryJobs.reviewReason, 'Payment/refund recovery needs Paystack review.'),
+    or(isNull(paymentRecoveryJobs.leaseUntil), lte(paymentRecoveryJobs.leaseUntil, now)),
+    sql`exists (select 1 from ${payments} where ${payments.id} = ${paymentRecoveryJobs.paymentId} and ${unsubmittedCheckout()})`,
+  ));
+  // Use the worker's captured due horizon so newly seeded jobs run this cycle,
+  // rather than waiting for another scheduler tick because DEFAULT now() is later.
   await database.execute(sql`
-    insert into payment_recovery_jobs (payment_id)
-    select p.id from payments p left join payment_recovery_jobs j on j.payment_id = p.id
-    where p.provider = 'paystack' and j.id is null and p.created_at < ${new Date(now.getTime() - 120_000).toISOString()}::timestamptz
-    order by p.id limit 100 on conflict (payment_id) do nothing
+    insert into payment_recovery_jobs (payment_id, next_attempt_at)
+    select ${payments.id}, ${now.toISOString()}::timestamptz
+    from ${payments} left join payment_recovery_jobs j on j.payment_id = ${payments.id}
+    where ${payments.provider} = 'paystack' and j.id is null
+      and ${payments.createdAt} < ${new Date(now.getTime() - 120_000).toISOString()}::timestamptz
+      and not ${unsubmittedCheckout()}
+    order by ${payments.id} limit 100 on conflict (payment_id) do nothing
   `);
   let processed = 0;
   let retried = 0;
@@ -121,6 +147,7 @@ export async function runPaymentRecovery() {
     const job = await database.transaction(async (transaction) => {
       const [due] = await transaction.select().from(paymentRecoveryJobs).where(and(
         lte(paymentRecoveryJobs.nextAttemptAt, now), or(isNull(paymentRecoveryJobs.leaseUntil), lte(paymentRecoveryJobs.leaseUntil, now)),
+        sql`not exists (select 1 from ${payments} where ${payments.id} = ${paymentRecoveryJobs.paymentId} and ${unsubmittedCheckout()})`,
       )).orderBy(sql`case when
         exists (select 1 from payments p where p.id = ${paymentRecoveryJobs.paymentId} and p.status = 'pending')
         or exists (select 1 from payment_refunds r where r.payment_id = ${paymentRecoveryJobs.paymentId} and r.status in ('pending', 'processing', 'needs-attention'))

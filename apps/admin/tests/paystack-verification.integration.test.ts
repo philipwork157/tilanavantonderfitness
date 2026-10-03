@@ -5,6 +5,7 @@ import { paymentEvents, paymentRefunds, users } from '@tilana/db/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { registerCheckoutCases } from './helpers/paystack-checkout-cases';
+import { registerPurchaseEditionCases } from './helpers/purchase-edition-cases';
 import { registerCustomerNotificationCases } from './helpers/customer-notification-cases';
 import { registerRecoveryCases } from './helpers/payment-recovery-cases';
 import { registerRecoveryAuditCases, seedLegacyRecoveryAudit } from './helpers/recovery-audit-cases';
@@ -47,6 +48,7 @@ vi.mock('@server/utils/r2', async importOriginal => {
 });
 let database: Database;
 registerCheckoutCases(() => database);
+registerPurchaseEditionCases(() => database);
 registerCustomerNotificationCases(() => database, mocks.send, mocks.generateLink);
 registerRecoveryCases(() => database, mocks.send);
 registerRecoveryAuditCases(() => database);

@@ -2,6 +2,10 @@ import type {
   AdminProgramMediaUploadRequest,
   AdminProgramVolumeUpdateRequest,
 } from '@tilana/contracts/catalogue';
+import {
+  PROGRAM_EMAIL_ATTACHMENT_MAX_BYTES,
+  PROGRAM_EMAIL_ATTACHMENT_MAX_FILES,
+} from '@tilana/contracts/catalogue';
 
 export interface CataloguePublicationIssue {
   code: string;
@@ -22,7 +26,7 @@ export interface CataloguePublicationCandidate {
     isPublished: boolean;
     priceCents: number;
     currency: string;
-    hasReadyFile: boolean;
+    readyFiles: Array<{ sizeBytes: number | null }>;
   }>;
 }
 
@@ -79,6 +83,20 @@ function hasText(value: string | null): boolean {
   return Boolean(value?.trim());
 }
 
+/** Keep published PDFs inside the same known payload budget used by checkout and email. */
+export function getProgramPdfDeliveryIssue(files: Array<{ sizeBytes: number | null }>): string | null {
+  if (files.some(file => file.sizeBytes === null || !Number.isSafeInteger(file.sizeBytes) || file.sizeBytes <= 0)) {
+    return 'Every active PDF needs a verified file size. Upload a replacement PDF before publishing.';
+  }
+  if (files.length > PROGRAM_EMAIL_ATTACHMENT_MAX_FILES) {
+    return `A volume may contain at most ${PROGRAM_EMAIL_ATTACHMENT_MAX_FILES} active PDFs for purchase emails. Replace the current edition or deactivate extra files.`;
+  }
+  if (files.reduce((bytes, file) => bytes + file.sizeBytes!, 0) > PROGRAM_EMAIL_ATTACHMENT_MAX_BYTES) {
+    return 'The active PDFs for a volume must total 15 MiB or less for purchase emails. Compress the PDF or replace the current edition with a smaller file.';
+  }
+  return null;
+}
+
 export function getCataloguePublicationIssues(
   candidate: CataloguePublicationCandidate,
 ): CataloguePublicationIssue[] {
@@ -127,10 +145,18 @@ export function getCataloguePublicationIssues(
         volumeId: volume.id,
       });
     }
-    if (!volume.hasReadyFile) {
+    if (volume.readyFiles.length === 0) {
       issues.push({
         code: 'volume_missing_file',
         message: `${volume.name} needs a finalized PDF.`,
+        volumeId: volume.id,
+      });
+    }
+    const deliveryIssue = getProgramPdfDeliveryIssue(volume.readyFiles);
+    if (deliveryIssue) {
+      issues.push({
+        code: 'volume_email_delivery_unavailable',
+        message: `${volume.name}: ${deliveryIssue}`,
         volumeId: volume.id,
       });
     }

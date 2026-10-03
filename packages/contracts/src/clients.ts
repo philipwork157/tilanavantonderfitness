@@ -3,6 +3,17 @@ import { z } from 'zod';
 /** Paystack is the V1 default; legacy/manual client records remain explicitly accessible. */
 export const adminClientListQuerySchema = z.object({ source: z.enum(['paystack', 'all']).default('paystack') });
 
+/** Purchase-mail state records provider acceptance, not arrival in the buyer's inbox. */
+export const programEmailDeliveryStatusSchema = z.enum(['pending', 'retrying', 'sent', 'canceled', 'unavailable']);
+export type ProgramEmailDeliveryStatus = z.infer<typeof programEmailDeliveryStatusSchema>;
+export const PROGRAM_EMAIL_PENDING_ATTENTION_MS = 30 * 60_000;
+
+/** Include a stuck first send, not just failed attempts; completed/canceled work stays clear. */
+export function programEmailNeedsAttention(status: ProgramEmailDeliveryStatus, queuedAt?: Date | string | null, now = Date.now()): boolean {
+  if (status === 'retrying' || status === 'unavailable') return true;
+  return status === 'pending' && !!queuedAt && now - new Date(queuedAt).getTime() >= PROGRAM_EMAIL_PENDING_ATTENTION_MS;
+}
+
 export const clientGenderValues = [
   'female',
   'male',

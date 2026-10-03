@@ -9,6 +9,8 @@ import { PDFDocument } from 'pdf-lib';
 import { processPaystackEvent } from '@server/services/paystack';
 import { seedPendingPayment } from './paystack-database';
 import { listPublicCataloguePrograms } from '@server/services/public-catalogue';
+import { getProgramPublicationChecklist, setProgramStatus, updateProgramVolume } from '@server/services/program-catalogue';
+import { PROGRAM_EMAIL_ATTACHMENT_MAX_BYTES } from '@tilana/contracts/catalogue';
 
 /** Real trigger/service coverage for private files owed after catalogue withdrawal. */
 export function registerProgramDeliveryCases(getDatabase: () => Database) {
@@ -24,6 +26,20 @@ export function registerProgramDeliveryCases(getDatabase: () => Database) {
       const input = { filename: 'new-edition.pdf', displayName: 'Latest edition', contentType: 'application/pdf' as const,
         sizeBytes: content.byteLength, sortOrder: 0 };
       return { db, subject, admin, content, input };
+    }
+
+    async function publishFixture(f: Awaited<ReturnType<typeof uploadFixture>>) {
+      const suffix = randomUUID();
+      await f.db.update(programs).set({ status: 'published', cardLabel: 'Program', headline: 'Beginner', description: 'Beginner guide', accent: 'sage' })
+        .where(eq(programs.id, f.subject.volume.programId));
+      await f.db.insert(programMedia).values({ programId: f.subject.volume.programId, displayName: 'Cover', altText: 'Cover', r2Bucket: 'public-test', r2ObjectKey: `${suffix}.png`, contentType: 'image/png', uploadStatus: 'ready' });
+      await f.db.update(programVolumes).set({ slug: `published-${suffix}`, isPublished: true })
+        .where(eq(programVolumes.id, f.subject.volume.id));
+    }
+
+    /** A real readable PDF padded with harmless whitespace, never a forged MIME-only fixture. */
+    function paddedPdf(content: Uint8Array, size: number) {
+      return Buffer.concat([content, Buffer.alloc(size - content.byteLength - 6, 0x20), Buffer.from('%%EOF\n')]);
     }
 
     it('keeps separate volumes for sale but hides a volume known to exceed the email budget', async () => {
@@ -54,6 +70,105 @@ export function registerProgramDeliveryCases(getDatabase: () => Database) {
       expect(files.find(file => file.id === upload.uploadId)).toMatchObject({ isActive: true, uploadStatus: 'ready', version: 2 });
       expect(await f.db.select().from(programAccess).where(eq(programAccess.orderItemId, f.subject.item.id))).toMatchObject([{ status: 'active' }]);
       expect(vi.mocked(readUploadedProgramPdf).mock.calls.at(-1)?.[4]).toBe('edition-2');
+    });
+
+    it('rejects an oversized latest edition without hiding the published product or retiring its old PDF', async () => {
+      const f = await uploadFixture(); await publishFixture(f);
+      const content = paddedPdf(f.content, PROGRAM_EMAIL_ATTACHMENT_MAX_BYTES + 1);
+      const upload = await initiateProgramFileUpload(f.subject.volume.id, { ...f.input, sizeBytes: content.byteLength }, f.admin.id);
+      vi.mocked(inspectCatalogueObject).mockResolvedValueOnce({ contentType: 'application/pdf', sizeBytes: content.byteLength, etag: 'oversized' });
+      vi.mocked(readUploadedProgramPdf).mockResolvedValueOnce(content);
+      await expect(finalizeProgramFileUpload(upload.uploadId, f.admin.id, undefined, true))
+        .rejects.toMatchObject({ statusCode: 422, message: expect.stringContaining('15 MiB') });
+      expect((await f.db.select().from(programFiles).where(eq(programFiles.id, f.subject.file.id)))[0])
+        .toMatchObject({ uploadStatus: 'ready', isActive: true });
+      expect((await f.db.select().from(programFiles).where(eq(programFiles.id, upload.uploadId)))[0]?.uploadStatus).toBe('pending');
+      expect((await listPublicCataloguePrograms()).find(program => program.id === f.subject.volume.programId)?.volumes[0]?.isAvailable).toBe(true);
+    });
+
+    it('counts retained PDFs for additions but allows an individual replacement within the email budget', async () => {
+      const f = await uploadFixture(); await publishFixture(f);
+      await f.db.update(programFiles).set({ sizeBytes: 8 * 1024 * 1024 }).where(eq(programFiles.id, f.subject.file.id));
+      const content = paddedPdf(f.content, 8 * 1024 * 1024);
+      const upload = await initiateProgramFileUpload(f.subject.volume.id, { ...f.input, sizeBytes: content.byteLength }, f.admin.id);
+      for (const replaceFileId of [undefined, f.subject.file.id]) {
+        vi.mocked(inspectCatalogueObject).mockResolvedValueOnce({ contentType: 'application/pdf', sizeBytes: content.byteLength, etag: 'combined' });
+        vi.mocked(readUploadedProgramPdf).mockResolvedValueOnce(content);
+        if (replaceFileId === undefined) {
+          await expect(finalizeProgramFileUpload(upload.uploadId, f.admin.id)).rejects.toMatchObject({ statusCode: 422 });
+        } else {
+          await expect(finalizeProgramFileUpload(upload.uploadId, f.admin.id, replaceFileId)).resolves.toMatchObject({ status: 'ready' });
+        }
+      }
+      expect((await f.db.select().from(programFiles).where(eq(programFiles.id, f.subject.file.id)))[0]?.isActive).toBe(false);
+      expect((await getProgramPublicationChecklist(f.subject.volume.programId))?.ready).toBe(true);
+    });
+
+    it('prevents a 31st published PDF while allowing a single-file replacement at the file-count limit', async () => {
+      const f = await uploadFixture(); await publishFixture(f);
+      await f.db.insert(programFiles).values(Array.from({ length: 29 }, (_, index) => ({
+        programVolumeId: f.subject.volume.id, displayName: `Extra ${index}`, r2Bucket: 'private-test',
+        r2ObjectKey: `${randomUUID()}.pdf`, contentType: 'application/pdf', sizeBytes: 100, uploadStatus: 'ready' as const,
+      })));
+      const upload = await initiateProgramFileUpload(f.subject.volume.id, f.input, f.admin.id);
+      for (const replaceFileId of [undefined, f.subject.file.id]) {
+        vi.mocked(inspectCatalogueObject).mockResolvedValueOnce({ contentType: 'application/pdf', sizeBytes: f.content.byteLength, etag: 'limit' });
+        vi.mocked(readUploadedProgramPdf).mockResolvedValueOnce(f.content);
+        if (replaceFileId === undefined) {
+          await expect(finalizeProgramFileUpload(upload.uploadId, f.admin.id)).rejects.toThrow('at most 30');
+        } else {
+          await expect(finalizeProgramFileUpload(upload.uploadId, f.admin.id, replaceFileId)).resolves.toMatchObject({ status: 'ready' });
+        }
+      }
+    });
+
+    it.each([null, PROGRAM_EMAIL_ATTACHMENT_MAX_BYTES + 1])('keeps draft PDFs private and explains why size %s cannot publish', async sizeBytes => {
+      const f = await uploadFixture();
+      await f.db.update(programFiles).set({ sizeBytes }).where(eq(programFiles.id, f.subject.file.id));
+      const suffix = randomUUID();
+      await expect(updateProgramVolume(f.subject.volume.id, { slug: `draft-${suffix}`, isPublished: true }, f.admin.id))
+        .rejects.toMatchObject({ issues: [{ code: 'volume_email_delivery_unavailable', volumeId: f.subject.volume.id }] });
+      expect((await f.db.select().from(programVolumes).where(eq(programVolumes.id, f.subject.volume.id)))[0]?.isPublished).toBe(false);
+    });
+
+    it('marks unknown legacy file sizes unavailable and exposes the same problem in the publication checklist', async () => {
+      const f = await uploadFixture(); await publishFixture(f);
+      await f.db.update(programFiles).set({ sizeBytes: null }).where(eq(programFiles.id, f.subject.file.id));
+      expect((await listPublicCataloguePrograms()).some(program => program.id === f.subject.volume.programId)).toBe(false);
+      expect((await getProgramPublicationChecklist(f.subject.volume.programId))?.issues)
+        .toEqual(expect.arrayContaining([expect.objectContaining({ code: 'volume_email_delivery_unavailable', message: expect.stringContaining('verified file size') })]));
+    });
+
+    it('allows oversized archived private maintenance but prevents accidentally publishing it for new purchases', async () => {
+      const f = await uploadFixture(); await publishFixture(f); await archive(f.db, f.subject.volume.programId);
+      const content = paddedPdf(f.content, PROGRAM_EMAIL_ATTACHMENT_MAX_BYTES + 1);
+      const upload = await initiateProgramFileUpload(f.subject.volume.id, { ...f.input, sizeBytes: content.byteLength }, f.admin.id);
+      vi.mocked(inspectCatalogueObject).mockResolvedValueOnce({ contentType: 'application/pdf', sizeBytes: content.byteLength, etag: 'archived' });
+      vi.mocked(readUploadedProgramPdf).mockResolvedValueOnce(content);
+      await expect(finalizeProgramFileUpload(upload.uploadId, f.admin.id, undefined, true)).resolves.toMatchObject({ status: 'ready' });
+      await expect(setProgramStatus(f.subject.volume.programId, { status: 'published' }, f.admin.id))
+        .rejects.toMatchObject({ issues: [{ code: 'volume_email_delivery_unavailable' }] });
+      expect((await f.db.select().from(programs).where(eq(programs.id, f.subject.volume.programId)))[0]?.status).toBe('archived');
+    });
+
+    it('serializes unarchiving and replacing a private edition so an oversized published product cannot slip through', async () => {
+      const f = await uploadFixture(); await publishFixture(f); await archive(f.db, f.subject.volume.programId);
+      const content = paddedPdf(f.content, PROGRAM_EMAIL_ATTACHMENT_MAX_BYTES + 1);
+      const upload = await initiateProgramFileUpload(f.subject.volume.id, { ...f.input, sizeBytes: content.byteLength }, f.admin.id);
+      vi.mocked(inspectCatalogueObject).mockResolvedValueOnce({ contentType: 'application/pdf', sizeBytes: content.byteLength, etag: 'race' });
+      vi.mocked(readUploadedProgramPdf).mockResolvedValueOnce(content);
+      const outcomes = await Promise.allSettled([
+        finalizeProgramFileUpload(upload.uploadId, f.admin.id, undefined, true),
+        setProgramStatus(f.subject.volume.programId, { status: 'published' }, f.admin.id),
+      ]);
+      expect(outcomes.filter(outcome => outcome.status === 'fulfilled')).toHaveLength(1);
+      const [program] = await f.db.select().from(programs).where(eq(programs.id, f.subject.volume.programId));
+      if (program?.status === 'published') {
+        expect((await getProgramPublicationChecklist(program.id))?.ready).toBe(true);
+        expect((await f.db.select().from(programFiles).where(eq(programFiles.id, f.subject.file.id)))[0]?.isActive).toBe(true);
+      } else {
+        expect(program?.status).toBe('archived');
+      }
     });
 
     it('never retires the old paid PDF when the new file is corrupt', async () => {

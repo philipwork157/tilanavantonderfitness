@@ -2,14 +2,16 @@
 import {
   adminClientCreateRequestSchema,
   clientGenderValues,
+  programEmailNeedsAttention,
   type ClientGender,
   type ClientPurchaseStatus,
+  type ProgramEmailDeliveryStatus,
 } from '@tilana/contracts/clients';
 import {
   formatCatalogueMoney as formatZar,
 } from '@app/utils/catalogue';
 import { adminPaymentRefundRequestSchema } from '@tilana/contracts/payments';
-import { formatAdminDate } from '@app/utils/format';
+import { formatAdminDate, formatAdminDateTime } from '@app/utils/format';
 
 definePageMeta({ layout: 'dashboard' });
 
@@ -35,6 +37,7 @@ const purchaseReadOnly = ref(false);
 const selectedEnquiryId = ref('manual');
 const route = useRoute();
 const purchaseSource = ref<'paystack' | 'all'>('paystack');
+const emailDeliveryFilter = ref<'all' | 'attention'>(route.query.delivery === 'attention' ? 'attention' : 'all');
 const { data, status, error, refresh } = await useFetch('/api/admin/clients', { lazy: true, query: { source: purchaseSource } });
 const { data: enquiriesData } = await useFetch('/api/admin/contacts', { lazy: true });
 type ClientRecord = NonNullable<typeof data.value>['clients'][number];
@@ -86,13 +89,24 @@ const purchaseStatusOptions = [
 
 const filteredClients = computed(() => {
   const query = search.value.trim().toLowerCase();
-  if (!query) return data.value?.clients ?? [];
-  return (data.value?.clients ?? []).filter((client) =>
-    `${client.firstName} ${client.lastName} ${client.email} ${client.phone ?? ''} ${client.programmes.map((item) => item.name).join(' ')}`
+  return (data.value?.clients ?? []).filter((client) => {
+    if (emailDeliveryFilter.value === 'attention' && !client.programmes.some(programme =>
+      programme.status === 'paid' && programme.delivery && programEmailNeedsAttention(programme.delivery.status, programme.delivery.queuedAt),
+    )) return false;
+    return !query || `${client.firstName} ${client.lastName} ${client.email} ${client.phone ?? ''} ${client.programmes.map((item) => item.name).join(' ')}`
       .toLowerCase()
-      .includes(query),
-  );
+      .includes(query);
+  });
 });
+
+const emailDeliveryLabels: Record<ProgramEmailDeliveryStatus, string> = {
+  pending: 'Program email queued', retrying: 'Program email retrying', sent: 'Email accepted by SES',
+  canceled: 'Program email canceled', unavailable: 'No program email queued',
+};
+
+const emailDeliveryColors: Record<ProgramEmailDeliveryStatus, 'success' | 'warning' | 'error' | 'neutral'> = {
+  pending: 'warning', retrying: 'error', sent: 'success', canceled: 'neutral', unavailable: 'error',
+};
 
 const enquiryOptions = computed(() => {
   const clientEmails = new Set((data.value?.clients ?? []).map((client) => client.email.toLowerCase()));
@@ -578,8 +592,11 @@ useSeoMeta({ title: 'Clients | Tilana Admin', robots: 'noindex, nofollow' });
           <h2>{{ purchaseSource === 'paystack' ? 'Paystack purchases' : 'All client records' }}</h2>
         </div>
         <USelect v-model="purchaseSource" :items="[{ label: 'Paystack payments', value: 'paystack' }, { label: 'All clients (including manual)', value: 'all' }]" aria-label="Purchase source" />
+        <USelect v-model="emailDeliveryFilter" :items="[{ label: 'All program emails', value: 'all' }, { label: 'Emails needing attention', value: 'attention' }]" aria-label="Program email delivery" />
         <UInput v-model="search" icon="i-lucide-search" placeholder="Search clients or programmes" size="lg" class="client-search" />
+        <UButton label="Refresh" icon="i-lucide-refresh-cw" color="neutral" variant="soft" :loading="status === 'pending'" @click="() => refresh()" />
       </div>
+      <p class="email-delivery-help">Program email status is shown once per order. Accepted by SES means the email service accepted it, not proof it reached the inbox. Retrying, missing, or queued for over 30 minutes needs attention; automatic retries use the existing email worker.</p>
 
       <USkeleton v-if="status === 'pending'" class="h-80 rounded-3xl" />
       <UAlert
@@ -592,8 +609,8 @@ useSeoMeta({ title: 'Clients | Tilana Admin', robots: 'noindex, nofollow' });
       />
       <div v-else-if="!filteredClients.length" class="empty-clients">
         <span><UIcon name="i-lucide-user-round-plus" /></span>
-        <h3>{{ data?.clients.length ? 'No matching clients' : purchaseSource === 'paystack' ? 'No Paystack payments yet' : 'Your first client starts here' }}</h3>
-        <p>{{ data?.clients.length ? 'Try a different search.' : purchaseSource === 'paystack' ? 'Confirmed payments and refunds will appear here.' : 'Add a client and their programme to begin tracking your work together.' }}</p>
+        <h3>{{ emailDeliveryFilter === 'attention' && !search.trim() ? 'No program emails need attention' : data?.clients.length ? 'No matching clients' : purchaseSource === 'paystack' ? 'No Paystack payments yet' : 'Your first client starts here' }}</h3>
+        <p>{{ emailDeliveryFilter === 'attention' && !search.trim() ? 'No retrying, missing or overdue purchase emails were found. Choose All program emails to see the other sales.' : data?.clients.length ? 'Try a different search.' : purchaseSource === 'paystack' ? 'Confirmed payments and refunds will appear here.' : 'Add a client and their programme to begin tracking your work together.' }}</p>
         <UButton v-if="!data?.clients.length && purchaseSource === 'all'" label="Add first client" icon="i-lucide-plus" @click="openCreateForm" />
       </div>
       <UCard v-else class="clients-table-card" :ui="{ body: 'p-0 sm:p-0' }">
@@ -618,6 +635,14 @@ useSeoMeta({ title: 'Clients | Tilana Admin', robots: 'noindex, nofollow' });
                 <span class="programme-finance">
                   <span><b>{{ formatZar(programme.priceCents) }}</b><UBadge :color="statusColor(programme.status)" variant="subtle">{{ programme.status }}</UBadge></span>
                   <template v-if="programme.payment && isFirstOrderProgramme(row.original.programmes, programmeIndex)">
+                    <template v-if="programme.delivery">
+                      <UBadge :color="emailDeliveryColors[programme.delivery.status]" variant="subtle">
+                        {{ emailDeliveryLabels[programme.delivery.status] }}
+                      </UBadge>
+                      <small v-if="programme.delivery.status === 'retrying'">{{ programme.delivery.attempts }} delivery attempts. Payment remains recorded.</small>
+                      <small v-if="programme.delivery.nextAttemptAt">Next attempt: {{ formatAdminDateTime(programme.delivery.nextAttemptAt) }}</small>
+                      <small v-if="programme.delivery.status === 'sent' && programme.delivery.acceptedAt">Accepted: {{ formatAdminDateTime(programme.delivery.acceptedAt) }}</small>
+                    </template>
                     <small v-if="programme.payment.refundedAmountCents">
                       {{ formatZar(programme.payment.refundedAmountCents) }} refunded
                     </small>
@@ -788,6 +813,9 @@ h1 span { color: var(--caramel); font-family: var(--font-script); font-weight: 4
 .client-stats p { margin: 0.15rem 0 0; font-size: 0.69rem; }
 .clients-list-section { display: grid; gap: 1rem; }
 .client-search { width: min(100%, 24rem); }
+.list-heading { flex-wrap: wrap; }
+.list-heading > div { flex: 1 1 15rem; }
+.email-delivery-help { max-width: 75rem; margin: 0.75rem 0 1rem; color: var(--ui-text-muted); font-size: 0.65rem; line-height: 1.6; }
 .empty-clients { display: grid; min-height: 22rem; place-items: center; align-content: center; padding: 2rem; border: 1px dashed var(--color-border); border-radius: 2rem; text-align: center; }
 .empty-clients > span { display: grid; width: 4rem; aspect-ratio: 1; place-items: center; border-radius: 1.25rem; background: var(--sage); font-size: 1.4rem; }
 .empty-clients h3 { margin: 1rem 0 0.3rem; font-size: 1.6rem; }

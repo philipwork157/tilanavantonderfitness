@@ -103,6 +103,13 @@ describe('operator and scheduler payment recovery routes', () => {
     mocks.runCustomerNotificationWorker.mockResolvedValueOnce({ failed: 1 });
     await expect(internal({} as never)).rejects.toMatchObject({ statusCode: 503 });
   });
+  it.each(['payment', 'billing'] as const)('still runs purchase-email retries when %s processing throws', async stage => {
+    (stage === 'payment' ? mocks.runPaymentRecovery : mocks.runInvoiceWorker).mockRejectedValueOnce(new Error('Simulated independent outage'));
+    await expect(internal({} as never)).rejects.toMatchObject({ statusCode: 503 });
+    expect(mocks.runPaymentRecovery).toHaveBeenCalledOnce();
+    expect(mocks.runInvoiceWorker).toHaveBeenCalledOnce();
+    expect(mocks.runCustomerNotificationWorker).toHaveBeenCalledOnce();
+  });
   it('signals billing delivery or issuance failure to the scheduler', async () => {
     mocks.runInvoiceWorker.mockResolvedValueOnce({ failedOrderIds: [12], delivery: { failed: 0 } });
     await expect(internal({} as never)).rejects.toMatchObject({ statusCode: 503 });

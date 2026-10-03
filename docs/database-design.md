@@ -49,6 +49,12 @@ The customer-facing email should link to `/account/programs`. The Nuxt server ve
 
 - `orders` belongs to a client, snapshots the guest checkout email, and stores totals in integer cents.
 - `order_items` records each purchased program volume and snapshots its description and price at checkout. Its integer `client_id` is constrained together with `order_id`, so an item cannot be linked to another order's client.
+- `order_item_files` pins each new checkout's validated private PDF edition,
+  actual byte size and SHA-256 digest before provider initialization. Composite
+  foreign keys bind the same order item/client/volume and file/volume; snapshots
+  and pinned storage metadata are immutable. Purchase emails use these retained
+  editions while the customer portal uses the latest active files. Historical
+  orders are not backfilled or rewritten.
 - `payments` records one payment attempt. An order may have multiple attempts so a
   customer can safely retry checkout without creating a duplicate order.
 - Paystack references, transaction IDs, environment, raw provider status,

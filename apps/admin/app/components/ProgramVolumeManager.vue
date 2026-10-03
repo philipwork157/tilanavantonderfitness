@@ -52,7 +52,7 @@ const emit = defineEmits<{
         </dl>
 
         <div class="files-heading">
-          <div><h4>Private PDFs</h4><p>Only customers with active access receive a temporary download link.</p></div>
+          <div><h4>Private PDFs</h4><p>Paid customers receive PDFs by email and can download them again. Published volumes allow up to 15 MiB total across 30 active PDFs.</p><p>A latest edition replaces this volume's active PDFs only. Previous files and customer access are retained.</p></div>
           <input :id="`pdf-new-${volume.id}`" type="file" accept="application/pdf,.pdf" hidden @change="emit('upload-pdf', $event, volume)">
           <UButton
             label="Upload latest PDF edition"

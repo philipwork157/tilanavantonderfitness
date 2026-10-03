@@ -7,8 +7,10 @@ entitlements and one `customer_notifications` purchase job together. A browser
 return is not required. Payment is not rolled back by an email outage.
 
 When enabled, fulfillment attempts a branded thank-you email after commit.
-It attaches active, ready PDFs belonging to that paid order's current purchase
-grants in the configured private bucket, using read-only R2 credentials. The
+For new checkouts it attaches the exact ready PDF editions pinned before Paystack
+initialization, using read-only R2 credentials and rechecking the paid order's
+current purchase grants. Retiring an edition does not change this email. The
+customer portal continues to offer the latest active edition. The
 protected scheduler retries failures. Purchase emails also link to
 `/account/sign-in`. This is not a bearer token and does not expire. The customer
 uses their purchase email to request a one-time sign-in link. The public route
@@ -25,10 +27,12 @@ The attachment budget is 15 MiB of raw PDF data and 30 files, leaving room for
 base64/MIME encoding. New V1 checkouts validate the complete PDF payload and
 delivery/retry configuration before Paystack initialization. Known oversized
 baskets are rejected before payment; individually oversized volumes are not
-advertised as available. The customer can request assistance or split a basket
-whose individual volumes fit. Historic orders, or larger editions replacing
-files after a checkout, retain the honest portal-only fallback rather than
-receiving a partial set. Missing objects, invalid PDFs,
+advertised as available. Publication and published replacement uploads enforce
+the same complete-volume limits, including known positive file sizes. The
+customer can request assistance or split a basket whose individual volumes fit.
+Historical orders without edition pins retain the honest portal-only fallback
+rather than receiving a partial set. New purchases never silently fall back to
+an email without their attachments. Missing objects, changed pinned bytes, invalid PDFs,
 storage failures and email failures remain queued. No public PDF URL is created.
 Emailed copies cannot be recalled after refund or revocation.
 
@@ -58,7 +62,8 @@ Emailed copies cannot be recalled after refund or revocation.
 ## Rollout and monitoring
 
 1. Review/apply forward migrations `20260918061444_salty_bloodscream.sql` and
-   `20260918061509_red_wendell_vaughn.sql` to the intended isolated database
+   `20260918061509_red_wendell_vaughn.sql` and
+   `20261003181008_pin_purchase_pdf_editions.sql` to the intended isolated database
    **before** deploying this backend. Only disposable local databases were
    migrated during implementation.
 2. Configure existing Supabase Admin Auth, SES credentials/sender and account
@@ -106,6 +111,10 @@ Emailed copies cannot be recalled after refund or revocation.
    `timeout`, or `delivery`, with the notification ID/kind only. Raw provider
    errors, addresses, tokens and links are never logged. Invalid test-inbox
    configuration is checked before generating a token or reading attachments.
+   The admin dashboard also counts purchase emails needing attention, and the
+   sales list shows queued, retrying and SES-accepted status. A queued purchase
+   older than thirty minutes is flagged; these indicators are read-only and do
+   not alter payment history or claim mailbox receipt.
 6. Verify actual closed-browser test checkout, safe-inbox SES receipt, link
    confirmation, repeat login, cross-customer denial and refund before go-live.
    Local tests mock every external provider and do not prove deployed setup.
@@ -117,7 +126,10 @@ through the standard provider chain (without sending mail or requiring SES read
 permissions), checks the safe recipient/mode and retry settings, and downloads
 and parses the entire bounded PDF set using read-only R2 credentials. Conditional
 ETag reads detect changed objects. PDFs must be readable, contain a page and not
-be password-protected. A known failure marks that uncharged reservation failed
+be password-protected. A transaction then pins the validated editions, sizes
+and SHA-256 digests in `order_item_files`, rechecking the catalogue under locks
+so a concurrent replacement cannot switch the validated payload. A known failure
+marks that uncharged reservation failed
 and cancels its pending order; it never contacts Paystack or grants access.
 Duplicate hosted URLs and already-settled checkouts retain their existing
 idempotent behavior even if email configuration subsequently changes.
@@ -127,3 +139,9 @@ cannot undo a completed charge. The completion page reports payment separately
 from email preparation, retry or SES acceptance and offers customer access.
 `sent` means SES accepted the request, not proof that it reached the inbox.
 Actual send authorization and mailbox receipt remain operational launch checks.
+
+Known reservations that never reached Paystack are not treated as failed bank
+transactions by recovery. Submitted or uncertain attempts still reconcile.
+Recovery, optional billing and customer email workers run independently within
+the existing protected scheduler, so an optional worker failure cannot prevent
+purchase-email retries.

@@ -26,6 +26,7 @@ import {
   buildProgramFileObjectKey,
   buildProgramMediaObjectKey,
   CatalogueStorageVerificationError,
+  getProgramPdfDeliveryIssue,
   getProgramFileReplacementIssue,
   verifyUploadedObject,
 } from './catalogue-policy';
@@ -425,14 +426,26 @@ export async function finalizeProgramFileUpload(
   }
 
   return getDatabase().transaction(async (transaction) => {
-    await transaction.select({ id: programVolumes.id }).from(programVolumes)
+    // Match publication's parent-then-volume lock order before judging an archived replacement.
+    const [program] = await transaction.select({ status: programs.status }).from(programs)
+      .innerJoin(programVolumes, eq(programVolumes.programId, programs.id))
+      .where(eq(programVolumes.id, file.programVolumeId)).for('update', { of: programs });
+    const [volume] = await transaction.select({ id: programVolumes.id, isPublished: programVolumes.isPublished }).from(programVolumes)
       .where(eq(programVolumes.id, file.programVolumeId)).for('update');
+    if (!volume) throw new CatalogueNotFoundError('Program volume not found.');
     const activeFiles = await transaction.select().from(programFiles).where(and(
       eq(programFiles.programVolumeId, file.programVolumeId), eq(programFiles.r2Bucket, file.r2Bucket),
       eq(programFiles.isActive, true), eq(programFiles.uploadStatus, 'ready'),
     ));
     if (activeFiles.some(active => active.version > file.version)) {
       throw new CatalogueConflictError('A newer PDF edition is already ready. Start a new upload instead.');
+    }
+    // Reject an unsellable edition before touching either the old or pending file.
+    // Draft/archived private maintenance can still retain the broader upload size limit.
+    if (volume.isPublished && program?.status !== 'archived') {
+      const retainedFiles = replaceCurrentEdition ? [] : activeFiles.filter(active => active.id !== replaceFileId);
+      const deliveryIssue = getProgramPdfDeliveryIssue([...retainedFiles, file]);
+      if (deliveryIssue) throw new CatalogueStorageError(422, deliveryIssue);
     }
     let replacedFileId: number | null = null;
     // Activate first, then retire old editions. Historical rows and R2 objects are never deleted.

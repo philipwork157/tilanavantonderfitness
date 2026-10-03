@@ -1,13 +1,25 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import type { Database } from '@tilana/db/server';
-import { clients, invoices, orderItems, orders, payments, programAccess, users } from '@tilana/db/schema';
+import { clients, customerNotifications, invoices, orderItems, orders, payments, programAccess, users } from '@tilana/db/schema';
 import { eq } from 'drizzle-orm';
 import { createManualClient, listClientsWithProgrammes, updateManualClient } from '@server/services/client-management';
+import { getAdminDashboard } from '@server/services/admin-dashboard';
 import { seedPendingPayment } from './paystack-database';
 
 /** Real PostgreSQL regression coverage for profile edits and immutable manual sales. */
 export function registerClientManagementCases(getDatabase: () => Database) {
+  /** Local fixtures build genuine settled snapshots without contacting Paystack or sending mail. */
+  async function recordedPurchase() {
+    const db = getDatabase(); const purchase = await seedPendingPayment(db);
+    const [order] = await db.select().from(orders).where(eq(orders.id, purchase.orderId));
+    const paidAt = new Date();
+    await db.transaction(async transaction => {
+      await transaction.update(payments).set({ status: 'succeeded', paidAt }).where(eq(payments.id, purchase.paymentId));
+      await transaction.update(orders).set({ status: 'paid', paidAt }).where(eq(orders.id, purchase.orderId));
+    });
+    return { db, purchase, clientId: order!.clientId };
+  }
   async function fixture(status: 'paid' | 'pending') {
     const db = getDatabase();
     const seeded = await seedPendingPayment(db);
@@ -23,6 +35,58 @@ export function registerClientManagementCases(getDatabase: () => Database) {
     const [order] = await db.select().from(orders).where(eq(orders.clientId, clientId));
     return { order, items: await db.select().from(orderItems).where(eq(orderItems.orderId, order!.id)), payments: await db.select().from(payments).where(eq(payments.orderId, order!.id)), access: await db.select().from(programAccess).where(eq(programAccess.clientId, clientId)) };
   }
+  describe('V1 recorded sales and purchased-program email visibility', () => {
+    it('reports all purchase email states without rewriting settled history or using login jobs', async () => {
+      const f = await recordedPurchase();
+      const before = await history(f.db, f.clientId);
+      const programme = async () => (await listClientsWithProgrammes('test', 'paystack'))
+        .find(client => client.id === f.clientId)!.programmes[0]!;
+      expect((await programme()).delivery).toMatchObject({ status: 'unavailable', attempts: 0, acceptedAt: null });
+      const [job] = await f.db.insert(customerNotifications).values({ kind: 'purchase', clientId: f.clientId,
+        orderId: f.purchase.orderId, deduplicationKey: `purchase:${f.purchase.orderId}` }).returning();
+      expect((await programme()).delivery).toMatchObject({ status: 'pending', attempts: 0 });
+      const nextAttemptAt = new Date(Date.now() + 60_000);
+      await f.db.update(customerNotifications).set({ attempts: 2, nextAttemptAt }).where(eq(customerNotifications.id, job!.id));
+      await f.db.insert(customerNotifications).values({ kind: 'login', clientId: f.clientId,
+        deduplicationKey: `login-visibility:${f.clientId}`, sentAt: new Date() });
+      expect((await programme()).delivery).toMatchObject({ status: 'retrying', attempts: 2, nextAttemptAt });
+      const acceptedAt = new Date();
+      await f.db.update(customerNotifications).set({ sentAt: acceptedAt }).where(eq(customerNotifications.id, job!.id));
+      expect((await programme()).delivery).toMatchObject({ status: 'sent', acceptedAt, nextAttemptAt: null });
+      await f.db.update(customerNotifications).set({ canceledAt: new Date() }).where(eq(customerNotifications.id, job!.id));
+      expect((await programme()).delivery?.status).toBe('canceled');
+      expect(await history(f.db, f.clientId)).toEqual(before);
+      expect((await listClientsWithProgrammes('live', 'paystack')).some(client => client.id === f.clientId)).toBe(false);
+      await f.db.transaction(async transaction => {
+        await transaction.update(payments).set({ status: 'refunded', refundedAmountCents: 10000 }).where(eq(payments.id, f.purchase.paymentId));
+        await transaction.update(orders).set({ status: 'refunded' }).where(eq(orders.id, f.purchase.orderId));
+      });
+      expect(await programme()).toMatchObject({ status: 'refunded', delivery: { status: 'canceled' } });
+    });
+    it('alerts once per paid order for retries, missing jobs and stuck first sends, without mixing manual/live sales', async () => {
+      const baseline = (await getAdminDashboard('test', 30)).alerts.programEmailsNeedingAttention;
+      const otherModeBaseline = (await getAdminDashboard('live', 30)).alerts.programEmailsNeedingAttention;
+      const missing = await recordedPurchase();
+      const retrying = await recordedPurchase();
+      const stale = await recordedPurchase();
+      const sent = await recordedPurchase();
+      const canceled = await recordedPurchase();
+      const recent = await recordedPurchase();
+      await fixture('paid'); // Optional/manual history is not a Paystack delivery alert.
+      for (const [f, state] of [[retrying, 'retrying'], [stale, 'stale'], [sent, 'sent'], [canceled, 'canceled'], [recent, 'recent']] as const) {
+        await f.db.insert(customerNotifications).values({ kind: 'purchase', clientId: f.clientId,
+          orderId: f.purchase.orderId, deduplicationKey: `purchase:${f.purchase.orderId}`,
+          attempts: state === 'retrying' ? 1 : 0,
+          sentAt: state === 'sent' ? new Date() : null, canceledAt: state === 'canceled' ? new Date() : null,
+          createdAt: state === 'stale' ? new Date(Date.now() - 31 * 60_000) : new Date(),
+        });
+      }
+      expect((await getAdminDashboard('test', 30)).alerts.programEmailsNeedingAttention).toBe(baseline + 3);
+      expect((await getAdminDashboard('live', 30)).alerts.programEmailsNeedingAttention).toBe(otherModeBaseline);
+      const [order] = await missing.db.select().from(orders).where(eq(orders.id, missing.purchase.orderId));
+      expect(order?.status).toBe('paid');
+    });
+  });
   describe('Manual client historical integrity', () => {
     it('excludes manual, pending and other-mode orders from the Paystack-only view without deleting them', async () => {
       const f = await fixture('paid'); const checkout = await seedPendingPayment(f.db);

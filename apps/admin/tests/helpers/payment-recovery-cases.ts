@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Database } from '@tilana/db/server';
 import { eq, sql } from 'drizzle-orm';
-import { paymentDisputes, paymentEvents, paymentRecoveryJobs, paymentRefunds } from '@tilana/db/schema';
+import { paymentDisputes, paymentEvents, paymentRecoveryJobs, paymentRefunds, payments } from '@tilana/db/schema';
 import { processPaystackEvent } from '@server/services/paystack';
 import { reconcilePayment, redactExpiredPaymentEventPayloads, replayPaymentEvent, requestPaymentRecovery, runPaymentRecovery } from '@server/services/payment-recovery';
 import { deliverPaymentRecoveryAlerts } from '@server/services/payment-recovery-alerts';
@@ -55,6 +55,76 @@ export function registerRecoveryCases(getDatabase: () => Database, send: ReturnT
       expect((await readPaymentState(getDatabase(), fixture)).access).toHaveLength(1);
       expect(fetch).toHaveBeenCalledTimes(3);
       expect(fetch.mock.calls.every(call => call[1].method !== 'POST')).toBe(true);
+    });
+    it.each([
+      ['pending', 'initialization_reserved'], ['failed', 'delivery_rejected'],
+    ] as const)('does not seed or verify %s/%s references that were never submitted to Paystack', async (status, providerStatus) => {
+      const fixture = await seedPendingPayment(getDatabase());
+      await getDatabase().update(payments).set({ status, providerStatus, createdAt: new Date(0) })
+        .where(eq(payments.id, fixture.paymentId));
+      const before = await readPaymentState(getDatabase(), fixture);
+      const fetch = vi.fn().mockRejectedValue(new Error('Reference never existed at Paystack'));
+      vi.stubGlobal('$fetch', fetch);
+      await reconcilePayment(fixture.paymentId);
+      expect(await runPaymentRecovery()).toMatchObject({ processed: 0, retried: 0 });
+      expect(fetch).not.toHaveBeenCalled();
+      expect(await jobFor(fixture)).toBeUndefined();
+      expect(await readPaymentState(getDatabase(), fixture)).toEqual(before);
+    });
+    it('retires an existing false provider-outage alert without deleting the rejected payment or its recovery history', async () => {
+      const fixture = await seedPendingPayment(getDatabase());
+      await getDatabase().update(payments).set({ status: 'failed', providerStatus: 'delivery_rejected' })
+        .where(eq(payments.id, fixture.paymentId));
+      await requestPaymentRecovery(fixture.paymentId, actor);
+      await getDatabase().update(paymentRecoveryJobs).set({ attempts: 8, alertPending: true,
+        reviewReason: 'Payment/refund recovery needs Paystack review.' }).where(eq(paymentRecoveryJobs.paymentId, fixture.paymentId));
+      const before = await readPaymentState(getDatabase(), fixture);
+      const fetch = vi.fn(); vi.stubGlobal('$fetch', fetch);
+      expect(await runPaymentRecovery()).toMatchObject({ processed: 0, retried: 0 });
+      expect(await jobFor(fixture)).toMatchObject({ attempts: 0, alertPending: false, reviewReason: null });
+      expect(fetch).not.toHaveBeenCalled();
+      expect(await readPaymentState(getDatabase(), fixture)).toEqual(before);
+      expect(await getDatabase().select().from(paymentEvents).where(eq(paymentEvents.paymentId, fixture.paymentId))).toHaveLength(1);
+    });
+    it('does not clear a separate signed-evidence review alert on an unsubmitted reference', async () => {
+      const fixture = await seedPendingPayment(getDatabase());
+      await getDatabase().update(payments).set({ status: 'failed', providerStatus: 'delivery_rejected' })
+        .where(eq(payments.id, fixture.paymentId));
+      await requestPaymentRecovery(fixture.paymentId, actor);
+      await getDatabase().update(paymentRecoveryJobs).set({ alertPending: true, reviewReason: 'Signed evidence needs review.' })
+        .where(eq(paymentRecoveryJobs.paymentId, fixture.paymentId));
+      vi.stubGlobal('$fetch', vi.fn());
+      await runPaymentRecovery();
+      expect(await jobFor(fixture)).toMatchObject({ alertPending: true, reviewReason: 'Signed evidence needs review.' });
+    });
+    it.each(['initializing', 'initialization_uncertain'] as const)('continues recovering %s references because a charge may exist', async providerStatus => {
+      const fixture = await seedPendingPayment(getDatabase());
+      await getDatabase().update(payments).set({ providerStatus, createdAt: new Date(0) }).where(eq(payments.id, fixture.paymentId));
+      const fetch = provider(fixture);
+      expect(await runPaymentRecovery()).toMatchObject({ processed: 1, retried: 0 });
+      expect(fetch).toHaveBeenCalledTimes(3);
+      expect(await readPaymentState(getDatabase(), fixture)).toMatchObject({ payment: { status: 'succeeded' }, order: { status: 'paid' } });
+      expect((await readPaymentState(getDatabase(), fixture)).access).toHaveLength(1);
+    });
+    it('seeds a skipped reservation after initialization becomes uncertain and honors later confirmed success', async () => {
+      const fixture = await seedPendingPayment(getDatabase());
+      await getDatabase().update(payments).set({ providerStatus: 'initialization_reserved', createdAt: new Date(0) })
+        .where(eq(payments.id, fixture.paymentId));
+      const fetch = provider(fixture);
+      expect(await runPaymentRecovery()).toMatchObject({ processed: 0, retried: 0 });
+      expect(fetch).not.toHaveBeenCalled();
+      await getDatabase().update(payments).set({ providerStatus: 'initialization_uncertain' }).where(eq(payments.id, fixture.paymentId));
+      expect(await runPaymentRecovery()).toMatchObject({ processed: 1, retried: 0 });
+      expect((await readPaymentState(getDatabase(), fixture)).access).toHaveLength(1);
+    });
+    it('does not let a local marker override evidence that a checkout URL was already issued', async () => {
+      const fixture = await seedPendingPayment(getDatabase());
+      await getDatabase().update(payments).set({ providerStatus: 'initialization_reserved',
+        checkoutUrl: 'https://checkout.paystack.com/fixture', createdAt: new Date(0) }).where(eq(payments.id, fixture.paymentId));
+      const fetch = provider(fixture);
+      expect(await runPaymentRecovery()).toMatchObject({ processed: 1, retried: 0 });
+      expect(fetch).toHaveBeenCalledTimes(3);
+      expect((await readPaymentState(getDatabase(), fixture)).access).toHaveLength(1);
     });
     it('reconciles an uncertain refund reservation after its webhook is missed', async () => {
       const fixture = await seedPendingPayment(getDatabase());

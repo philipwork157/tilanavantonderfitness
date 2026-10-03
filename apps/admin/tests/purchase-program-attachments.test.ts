@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getPurchaseProgramAttachments, PURCHASE_ATTACHMENT_MAX_BYTES } from '@server/services/purchase-program-attachments';
 import { PDFDocument } from 'pdf-lib';
+import { createHash } from 'node:crypto';
 
 const pdf = await PDFDocument.create(); pdf.addPage(); const pdfContent = await pdf.save();
 
-const mocks = vi.hoisted(() => ({ files: vi.fn(), read: vi.fn() }));
+const mocks = vi.hoisted(() => ({ files: vi.fn(), read: vi.fn(), pins: vi.fn() }));
 vi.mock('@server/utils/r2', () => ({ readProgramEmailAttachment: mocks.read }));
-vi.mock('@server/utils/database', () => ({ getDatabase: () => ({ selectDistinct: () => {
+vi.mock('@server/utils/database', () => ({ getDatabase: () => ({ select: () => {
+  const query = { from: () => query, innerJoin: () => query, where: () => query, limit: mocks.pins };
+  return query;
+}, selectDistinct: () => {
   const query = { from: () => query, innerJoin: () => query, leftJoin: () => query, where: () => query, orderBy: mocks.files };
   return query;
 } }) }));
@@ -14,6 +18,7 @@ const file = { id: 10, bucket: 'private-test', key: 'volume/file.pdf', filename:
 beforeEach(() => {
   vi.stubGlobal('useRuntimeConfig', () => ({ r2PrivateProgramBucket: 'private-test' }));
   mocks.files.mockResolvedValue([file]);
+  mocks.pins.mockResolvedValue([]);
   mocks.read.mockResolvedValue(pdfContent);
 });
 describe('bounded purchase attachments', () => {
@@ -75,5 +80,21 @@ describe('bounded purchase attachments', () => {
   it('retries a concurrent file replacement rather than emailing a retired PDF', async () => {
     mocks.files.mockResolvedValueOnce([file]).mockResolvedValueOnce([{ ...file, id: 12 }]);
     await expect(getPurchaseProgramAttachments(1, 2, signal())).rejects.toThrow('changed');
+  });
+  it('requires the checkout-pinned bytes rather than sending a different PDF edition', async () => {
+    mocks.pins.mockResolvedValue([{ id: 1 }]);
+    mocks.files.mockResolvedValue([{ ...file, size: pdfContent.byteLength,
+      digest: createHash('sha256').update(pdfContent).digest('hex') }]);
+    expect(await getPurchaseProgramAttachments(1, 2, signal())).toHaveLength(1);
+    mocks.files.mockResolvedValue([{ ...file, size: pdfContent.byteLength, digest: '0'.repeat(64) }]);
+    await expect(getPurchaseProgramAttachments(1, 2, signal())).rejects.toThrow('content changed');
+  });
+  it('never marks a pinned purchase delivered through an attachment-free fallback', async () => {
+    mocks.pins.mockResolvedValue([{ id: 1 }]);
+    mocks.files.mockResolvedValue([{ ...file, size: PURCHASE_ATTACHMENT_MAX_BYTES + 1 }]);
+    await expect(getPurchaseProgramAttachments(1, 2, signal())).rejects.toThrow('email limit');
+    mocks.files.mockResolvedValue([{ ...file, size: pdfContent.byteLength }]);
+    mocks.read.mockResolvedValue(null);
+    await expect(getPurchaseProgramAttachments(1, 2, signal())).rejects.toThrow('email limit');
   });
 });

@@ -62,15 +62,13 @@ export async function rememberCheckoutIntent(key: string, reference: string): Pr
   });
 }
 
-/** A confirmed terminal attempt may be deliberately retried under a fresh intent. */
+/** Surface retirement failures so the status UI cannot offer a misleading fresh-payment retry. */
 export async function clearCompletedCheckoutIntent(reference: string): Promise<void> {
-  try {
-    await withIntentLock(() => {
-      const intents = readIntents();
-      for (const [hash, intent] of Object.entries(intents)) {
-        if (intent.reference === reference) delete intents[hash];
-      }
-      localStorage.setItem(CHECKOUT_INTENTS_STORAGE_KEY, JSON.stringify(intents));
-    });
-  } catch { /* Payment confirmation does not depend on browser persistence. */ }
+  await withIntentLock(() => {
+    const intents = readIntents();
+    for (const [hash, intent] of Object.entries(intents)) {
+      if (intent.reference === reference) delete intents[hash];
+    }
+    localStorage.setItem(CHECKOUT_INTENTS_STORAGE_KEY, JSON.stringify(intents));
+  });
 }

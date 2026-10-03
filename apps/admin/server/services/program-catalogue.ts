@@ -123,10 +123,10 @@ async function loadPublicationCandidate(
     .where(eq(programVolumes.programId, programId))
     .orderBy(asc(programVolumes.sortOrder), asc(programVolumes.volumeNumber));
 
-  const readyFileVolumeIds = new Set<number>();
+  const readyFilesByVolume = new Map<number, Array<{ sizeBytes: number | null }>>();
   if (volumeRows.length > 0) {
     const readyFiles = await transaction
-      .select({ volumeId: programFiles.programVolumeId })
+      .select({ volumeId: programFiles.programVolumeId, sizeBytes: programFiles.sizeBytes })
       .from(programFiles)
       .where(and(
         inArray(programFiles.programVolumeId, volumeRows.map(volume => volume.id)),
@@ -134,7 +134,11 @@ async function loadPublicationCandidate(
         eq(programFiles.isActive, true),
         eq(programFiles.r2Bucket, storage.privateProgramBucket),
       ));
-    readyFiles.forEach(file => readyFileVolumeIds.add(file.volumeId));
+    for (const file of readyFiles) {
+      const files = readyFilesByVolume.get(file.volumeId) ?? [];
+      files.push({ sizeBytes: file.sizeBytes });
+      readyFilesByVolume.set(file.volumeId, files);
+    }
   }
 
   return {
@@ -142,7 +146,7 @@ async function loadPublicationCandidate(
     hasReadyCover: Boolean(cover),
     volumes: volumeRows.map(volume => ({
       ...volume,
-      hasReadyFile: readyFileVolumeIds.has(volume.id),
+      readyFiles: readyFilesByVolume.get(volume.id) ?? [],
     })),
   };
 }
@@ -501,7 +505,7 @@ export async function updateProgramVolume(
   userId: number,
 ) {
   return getDatabase().transaction(async (transaction) => {
-    const [existing] = await transaction.select().from(programVolumes).where(eq(programVolumes.id, volumeId)).limit(1);
+    const [existing] = await transaction.select().from(programVolumes).where(eq(programVolumes.id, volumeId)).limit(1).for('update');
     if (!existing) throw new CatalogueNotFoundError('Program volume not found.');
 
     if (input.slug !== undefined && input.slug !== existing.slug) {
@@ -558,16 +562,15 @@ export async function updateProgramVolume(
 
     if (volume.isPublished) {
       const storage = getCatalogueStorageConfiguration();
-      const [readyFile] = await transaction
-        .select({ id: programFiles.id })
+      const readyFiles = await transaction
+        .select({ sizeBytes: programFiles.sizeBytes })
         .from(programFiles)
         .where(and(
           eq(programFiles.programVolumeId, volumeId),
           eq(programFiles.uploadStatus, 'ready'),
           eq(programFiles.isActive, true),
           eq(programFiles.r2Bucket, storage.privateProgramBucket),
-        ))
-        .limit(1);
+        ));
       const issues = getVolumePublicationIssues({
         id: volume.id,
         slug: volume.slug,
@@ -575,7 +578,7 @@ export async function updateProgramVolume(
         isPublished: true,
         priceCents: volume.currentPriceCents,
         currency: volume.currency,
-        hasReadyFile: Boolean(readyFile),
+        readyFiles,
       });
       if (issues.length > 0) throw new CataloguePublicationError(issues);
     }
@@ -601,8 +604,11 @@ export async function setProgramStatus(
   userId: number,
 ) {
   return getDatabase().transaction(async (transaction) => {
-    const [existing] = await transaction.select().from(programs).where(eq(programs.id, programId)).limit(1);
+    // Serialize publication with private-file replacements using parent-then-volume locks.
+    const [existing] = await transaction.select().from(programs).where(eq(programs.id, programId)).limit(1).for('update');
     if (!existing) throw new CatalogueNotFoundError('Program not found.');
+    await transaction.select({ id: programVolumes.id }).from(programVolumes)
+      .where(eq(programVolumes.programId, programId)).orderBy(asc(programVolumes.id)).for('update');
     if (input.status === 'published') {
       const candidate = await loadPublicationCandidate(transaction, programId);
       if (!candidate) throw new CatalogueNotFoundError('Program not found.');

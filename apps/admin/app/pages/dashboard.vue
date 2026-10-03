@@ -65,6 +65,12 @@ const paymentAlerts = computed(() => [
     detail: 'Unresolved Paystack refund responses',
     icon: 'i-lucide-rotate-ccw',
   },
+  {
+    label: 'Program emails to review',
+    value: data.value?.alerts.programEmailsNeedingAttention ?? 0,
+    detail: 'Retrying, missing, or queued over 30 minutes',
+    icon: 'i-lucide-mail-warning',
+  },
 ]);
 const totalPaymentAlerts = computed(() => paymentAlerts.value.reduce((total, item) => total + item.value, 0));
 
@@ -156,15 +162,15 @@ useSeoMeta({ title: 'Dashboard | Tilana Admin', robots: 'noindex, nofollow' });
               <UIcon :name="totalPaymentAlerts ? 'i-lucide-bell-ring' : 'i-lucide-circle-check'" />
             </span>
             <div>
-              <p class="eyebrow">Payment monitoring</p>
+              <p class="eyebrow">Payment and delivery monitoring</p>
               <h2 id="alerts-heading">
                 {{ totalPaymentAlerts ? `${totalPaymentAlerts} items need attention` : 'Everything looks clear' }}
               </h2>
             </div>
             <UButton
               v-if="totalPaymentAlerts"
-              label="Review clients"
-              to="/clients"
+              :label="data?.alerts.programEmailsNeedingAttention ? 'Review program emails' : 'Review clients'"
+              :to="data?.alerts.programEmailsNeedingAttention ? '/clients?delivery=attention' : '/clients'"
               icon="i-lucide-arrow-up-right"
               trailing
               color="neutral"
@@ -183,6 +189,7 @@ useSeoMeta({ title: 'Dashboard | Tilana Admin', robots: 'noindex, nofollow' });
               </div>
             </article>
           </div>
+          <p class="delivery-note">Paid sales stay recorded if email delivery fails. The existing worker retries purchase emails. Email accepted by SES is not confirmation that it reached the customer's inbox.</p>
         </UCard>
       </section>
     </template>
@@ -383,8 +390,10 @@ useSeoMeta({ title: 'Dashboard | Tilana Admin', robots: 'noindex, nofollow' });
   display: grid;
   gap: 0.75rem;
   margin-top: 1.25rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
+
+.delivery-note { margin: 1rem 0 0; color: var(--ui-text-muted); font-size: 0.65rem; line-height: 1.5; }
 
 .alert-item {
   display: flex;

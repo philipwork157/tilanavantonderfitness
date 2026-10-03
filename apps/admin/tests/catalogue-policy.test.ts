@@ -5,6 +5,7 @@ import {
   buildProgramMediaObjectKey,
   CatalogueStorageVerificationError,
   getCataloguePublicationIssues,
+  getProgramPdfDeliveryIssue,
   getProgramFileReplacementIssue,
   getProgramVolumeAuditEvents,
   isCheckoutPriceCurrent,
@@ -48,9 +49,38 @@ describe('catalogue publication policy', () => {
         isPublished: true,
         priceCents: 39_900,
         currency: 'ZAR',
-        hasReadyFile: true,
+        readyFiles: [{ sizeBytes: 100 }],
       }],
     }), []);
+  });
+
+  it('reports a volume whose ready PDFs cannot be attached to purchase emails', () => {
+    const issues = getCataloguePublicationIssues({
+      cardLabel: 'Program', headline: 'Beginner', description: 'A guide', accent: 'sage', hasReadyCover: true,
+      volumes: [{ id: 18, slug: 'beginner-volume-1', name: 'Beginner Volume 1', isPublished: true,
+        priceCents: 40_000, currency: 'ZAR', readyFiles: [{ sizeBytes: 16 * 1024 * 1024 }] }],
+    });
+    assert.equal(issues[0]?.code, 'volume_email_delivery_unavailable');
+    assert.match(issues[0]?.message ?? '', /15 MiB/);
+  });
+});
+
+describe('catalogue purchase-email budget', () => {
+  it('accepts the exact byte and file boundaries and rejects an extra byte or file', () => {
+    assert.equal(getProgramPdfDeliveryIssue([{ sizeBytes: 15 * 1024 * 1024 }]), null);
+    assert.equal(getProgramPdfDeliveryIssue(Array.from({ length: 30 }, () => ({ sizeBytes: 1 }))), null);
+    assert.match(getProgramPdfDeliveryIssue([{ sizeBytes: 15 * 1024 * 1024 + 1 }]) ?? '', /15 MiB/);
+    assert.match(getProgramPdfDeliveryIssue(Array.from({ length: 31 }, () => ({ sizeBytes: 1 }))) ?? '', /at most 30/);
+  });
+
+  it('does not treat unknown, zero, negative or unsafe file sizes as deliverable', () => {
+    for (const sizeBytes of [null, 0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+      assert.match(getProgramPdfDeliveryIssue([{ sizeBytes }]) ?? '', /verified file size/);
+    }
+  });
+
+  it('counts the full combined PDF payload, not just the largest file', () => {
+    assert.match(getProgramPdfDeliveryIssue([{ sizeBytes: 8 * 1024 * 1024 }, { sizeBytes: 8 * 1024 * 1024 }]) ?? '', /15 MiB/);
   });
 });
 

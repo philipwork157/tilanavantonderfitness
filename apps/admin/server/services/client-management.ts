@@ -1,7 +1,8 @@
-import type { AdminClientCreateRequest, AdminClientUpdateRequest } from '@tilana/contracts/clients';
+import type { AdminClientCreateRequest, AdminClientUpdateRequest, ProgramEmailDeliveryStatus } from '@tilana/contracts/clients';
 import type { Database } from '@tilana/db/server';
 import {
   clients,
+  customerNotifications,
   invoices,
   orderItems,
   orders,
@@ -13,6 +14,7 @@ import {
 } from '@tilana/db/schema';
 import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { getDatabase } from '@server/utils/database';
+import { getProgramEmailDeliveryStatus } from '@server/utils/program-email-delivery';
 import { shouldGrantManualProgramAccess } from './client-access-policy';
 
 export class ClientEmailExistsError extends Error {
@@ -400,6 +402,19 @@ export async function listClientsWithProgrammes(paystackEnvironment: 'test' | 'l
     ))
     .orderBy(desc(payments.createdAt));
   const paymentIds = paymentRows.map((payment) => payment.id);
+  const paidOrderIds = [...new Set(paymentRows.map(payment => payment.orderId))];
+  // Purchase jobs are order-owned. Login emails must never change a sale's delivery badge.
+  const notificationRows = paidOrderIds.length ? await database
+    .select({ id: customerNotifications.id, orderId: customerNotifications.orderId, attempts: customerNotifications.attempts,
+      sentAt: customerNotifications.sentAt, canceledAt: customerNotifications.canceledAt, nextAttemptAt: customerNotifications.nextAttemptAt,
+      createdAt: customerNotifications.createdAt })
+    .from(customerNotifications)
+    .where(and(inArray(customerNotifications.orderId, paidOrderIds), eq(customerNotifications.kind, 'purchase')))
+    .orderBy(desc(customerNotifications.createdAt), desc(customerNotifications.id)) : [];
+  const notificationByOrder = new Map<number, typeof notificationRows[number]>();
+  for (const notification of notificationRows) {
+    if (notification.orderId !== null && !notificationByOrder.has(notification.orderId)) notificationByOrder.set(notification.orderId, notification);
+  }
   const refundRows = paymentIds.length
     ? await database
         .select({
@@ -478,6 +493,7 @@ export async function listClientsWithProgrammes(paystackEnvironment: 'test' | 'l
       status: string;
       programVolumeId: number | null;
       payment: PaystackPaymentSummary | null;
+      delivery: { status: ProgramEmailDeliveryStatus; attempts: number; acceptedAt: Date | null; nextAttemptAt: Date | null; queuedAt: Date | null } | null;
     }>;
   }>();
 
@@ -500,6 +516,8 @@ export async function listClientsWithProgrammes(paystackEnvironment: 'test' | 'l
     }
 
     if (row.orderId && row.orderNumber && row.orderStatus && row.programmeName && row.priceCents !== null) {
+      const notification = notificationByOrder.get(row.orderId);
+      const deliveryStatus = getProgramEmailDeliveryStatus(notification);
       client.programmes.push({
         orderId: row.orderId,
         orderNumber: row.orderNumber,
@@ -508,6 +526,13 @@ export async function listClientsWithProgrammes(paystackEnvironment: 'test' | 'l
         status: row.orderStatus,
         programVolumeId: row.programVolumeId,
         payment: paymentByOrder.get(row.orderId) ?? null,
+        delivery: paymentByOrder.has(row.orderId) ? {
+          status: deliveryStatus,
+          attempts: notification?.attempts ?? 0,
+          acceptedAt: notification?.sentAt ?? null,
+          nextAttemptAt: deliveryStatus === 'pending' || deliveryStatus === 'retrying' ? notification?.nextAttemptAt ?? null : null,
+          queuedAt: notification?.createdAt ?? null,
+        } : null,
       });
     }
   }

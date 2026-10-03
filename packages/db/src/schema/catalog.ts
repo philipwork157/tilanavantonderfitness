@@ -166,6 +166,7 @@ export const programFiles = pgTable(
   },
   (table) => [
     uniqueIndex('program_files_r2_object_unique').on(table.r2Bucket, table.r2ObjectKey),
+    uniqueIndex('program_files_id_volume_unique').on(table.id, table.programVolumeId),
     check('program_files_display_name_length', sql`char_length(${table.displayName}) between 1 and 200`),
     check(
       'program_files_original_filename_length',

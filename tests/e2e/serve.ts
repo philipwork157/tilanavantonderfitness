@@ -1,8 +1,9 @@
 import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
 import { createServer } from 'node:net';
+import { randomUUID } from 'node:crypto';
 import { createPaystackTestDatabase } from '@fixtures/database';
-import { programFiles, programMedia, programs, programVolumes } from '@tilana/db/schema';
+import { programFiles, programMedia, programs, programVolumes, users, userRoles, USER_ROLES } from '@tilana/db/schema';
 import { createProviders } from './providers';
 import { programPdfFixture } from './program-pdf';
 
@@ -17,13 +18,19 @@ for (const port of [4310, 4311, 4312]) {
 // The helper refuses missing, remote, nonempty or incorrectly named databases.
 process.env.PAYSTACK_TEST_DATABASE_URL = process.env.E2E_DATABASE_URL;
 const database = await createPaystackTestDatabase();
+const administrator = { id: randomUUID(), email: 'admin@example.test', password: 'browser-only-fixture-password' };
+await database.$client`insert into auth.users (id) values (${administrator.id})`;
+const [adminUser] = await database.insert(users).values({ supabaseId: administrator.id, email: administrator.email,
+  firstName: 'Fixture', lastName: 'Administrator' }).returning();
+await database.insert(userRoles).values({ userId: adminUser!.id, role: USER_ROLES.ADMIN });
 for (let index = 1; index <= 3; index++) {
-  const [program] = await database.insert(programs).values({ slug: `browser-program-${index}`, name: `Browser Program ${index}`, status: 'published', headline: `Browser Program ${index}`, cardLabel: 'Programme', description: 'Browser fixture programme', accent: 'sage' }).returning();
+  const name = index === 3 ? 'Nourish' : `Browser Program ${index}`;
+  const [program] = await database.insert(programs).values({ slug: `browser-program-${index}`, name, status: 'published', headline: name, cardLabel: 'Programme', description: 'Browser fixture programme', accent: 'sage' }).returning();
   await database.insert(programMedia).values({ programId: program!.id, displayName: 'Cover', altText: 'Fixture cover', r2Bucket: 'browser-public', r2ObjectKey: `cover-${index}.png`, contentType: 'image/png', uploadStatus: 'ready' });
-  const [volume] = await database.insert(programVolumes).values({ programId: program!.id, slug: `browser-volume-${index}`, name: `Browser Volume ${index}`, volumeNumber: 1, currentPriceCents: index * 10000, isPublished: true }).returning();
+  const [volume] = await database.insert(programVolumes).values({ programId: program!.id, slug: `browser-volume-${index}`, name: index === 3 ? 'Nourish Volume 1' : `Browser Volume ${index}`, volumeNumber: 1, currentPriceCents: index * 10000, isPublished: true }).returning();
   await database.insert(programFiles).values({ programVolumeId: volume!.id, displayName: `Guide ${index}`, r2Bucket: 'browser-private', r2ObjectKey: `guide-${index}.pdf`, contentType: 'application/pdf', uploadStatus: 'ready', sizeBytes: programPdfFixture().byteLength, etag: 'browser-pdf' });
 }
-const providers = createProviders(database);
+const providers = createProviders(database, administrator);
 await new Promise<void>((accept, reject) => { providers.server.once('error', reject); providers.server.listen(4312, '127.0.0.1', accept); });
 
 // Never inherit real credentials, developer .env files, or deployment identity.
@@ -46,6 +53,7 @@ const admin = spawn('pnpm', ['exec', 'nuxt', 'dev', '--extends', '../../tests/e2
     AWS_ENDPOINT_URL: 'http://127.0.0.1:4312', AWS_EC2_METADATA_DISABLED: 'true',
     NUXT_R2_PUBLIC_MEDIA_BUCKET: 'browser-public', NUXT_R2_PUBLIC_MEDIA_BASE_URL: 'https://media.example.test', NUXT_R2_PRIVATE_PROGRAM_BUCKET: 'browser-private',
     NUXT_R2_ACCOUNT_ID: 'fixture', NUXT_R2_DOWNLOAD_ACCESS_KEY_ID: 'fixture', NUXT_R2_DOWNLOAD_SECRET_ACCESS_KEY: 'fixture',
+    NUXT_R2_UPLOAD_ACCESS_KEY_ID: 'fixture', NUXT_R2_UPLOAD_SECRET_ACCESS_KEY: 'fixture',
   },
 });
 const web = spawn('pnpm', ['exec', 'astro', 'dev', '--config', '../../tests/e2e/astro.config.mjs', '--ignore-lock', '--host', '127.0.0.1', '--port', '4310'], {

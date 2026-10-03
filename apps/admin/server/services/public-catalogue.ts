@@ -6,8 +6,7 @@ import { programFiles, programMedia, programs, programVolumes } from '@tilana/db
 import { and, asc, eq, inArray, isNotNull } from 'drizzle-orm';
 import { getDatabase } from '@server/utils/database';
 import { getCatalogueStorageConfiguration } from '@server/utils/r2';
-import { publicObjectUrl } from './catalogue-policy';
-import { PURCHASE_ATTACHMENT_MAX_BYTES, PURCHASE_ATTACHMENT_MAX_FILES } from './purchase-program-attachments';
+import { getProgramPdfDeliveryIssue, publicObjectUrl } from './catalogue-policy';
 
 export async function listPublicCataloguePrograms(): Promise<PublicCatalogueProgram[]> {
   const database = getDatabase();
@@ -85,15 +84,15 @@ export async function listPublicCataloguePrograms(): Promise<PublicCatalogueProg
         eq(programFiles.isActive, true),
         eq(programFiles.r2Bucket, storage.privateProgramBucket),
       ));
-    const payloads = new Map<number, { bytes: number; files: number }>();
+    const payloads = new Map<number, Array<{ sizeBytes: number | null }>>();
     for (const file of files) {
-      const payload = payloads.get(file.volumeId) ?? { bytes: 0, files: 0 };
-      payload.bytes += file.sizeBytes ?? 0; payload.files++;
+      const payload = payloads.get(file.volumeId) ?? [];
+      payload.push({ sizeBytes: file.sizeBytes });
       payloads.set(file.volumeId, payload);
     }
     // Do not advertise a volume already known to exceed V1's email attachment budget.
     for (const [volumeId, payload] of payloads) {
-      if (payload.bytes <= PURCHASE_ATTACHMENT_MAX_BYTES && payload.files <= PURCHASE_ATTACHMENT_MAX_FILES) readyFileVolumeIds.add(volumeId);
+      if (!getProgramPdfDeliveryIssue(payload)) readyFileVolumeIds.add(volumeId);
     }
   }
 

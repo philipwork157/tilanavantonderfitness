@@ -56,6 +56,17 @@ describe('persistent browser checkout intent', () => {
     await expect(getCheckoutIntentKey(request)).rejects.toThrow('Storage blocked');
   });
 
+  it('surfaces a failed retirement while retaining the original intent for a safe status-screen handoff', async () => {
+    const key = await getCheckoutIntentKey(request);
+    await rememberCheckoutIntent(key, 'TVT-failed-reference');
+    const stored = values.get(CHECKOUT_INTENTS_STORAGE_KEY);
+    vi.stubGlobal('localStorage', { getItem: (name: string) => values.get(name) ?? null,
+      setItem: () => { throw new Error('Storage blocked'); } });
+    await expect(clearCompletedCheckoutIntent('TVT-failed-reference')).rejects.toThrow('Storage blocked');
+    expect(values.get(CHECKOUT_INTENTS_STORAGE_KEY)).toBe(stored);
+    expect(await getCheckoutIntentKey(request)).toBe(key);
+  });
+
   it.each(['{broken', '[]', '{"wrong-hash":{"key":"wrong"}}'])('does not silently replace malformed intent storage: %s', raw => {
     values.set(CHECKOUT_INTENTS_STORAGE_KEY, raw);
     return expect(getCheckoutIntentKey(request)).rejects.toThrow();

@@ -1,7 +1,9 @@
-import type { AdminDashboardPeriod } from '@tilana/contracts/dashboard';
-import { clients, contactSubmissions, newsletterSubscribers, paymentRefunds, payments } from '@tilana/db/schema';
-import { and, count, desc, eq, gte, inArray, lte } from 'drizzle-orm';
+import { adminDashboardAlertsSchema, type AdminDashboardPeriod } from '@tilana/contracts/dashboard';
+import { programEmailNeedsAttention } from '@tilana/contracts/clients';
+import { clients, contactSubmissions, customerNotifications, newsletterSubscribers, orders, paymentRefunds, payments } from '@tilana/db/schema';
+import { and, count, desc, eq, exists, gte, inArray, isNull, lte } from 'drizzle-orm';
 import { getDatabase } from '@server/utils/database';
+import { getProgramEmailDeliveryStatus } from '@server/utils/program-email-delivery';
 
 const JOHANNESBURG_TIME_ZONE = 'Africa/Johannesburg';
 const STALE_PAYMENT_MINUTES = 30;
@@ -55,6 +57,7 @@ export async function getAdminDashboard(
     failedPaymentsResult,
     stalePaymentsResult,
     refundAlertsResult,
+    programEmailRows,
   ] =
     await Promise.all([
       database.select({ value: count() }).from(contactSubmissions).where(eq(contactSubmissions.status, 'new')),
@@ -105,6 +108,21 @@ export async function getAdminDashboard(
           eq(payments.environment, paystackEnvironment),
           eq(paymentRefunds.status, 'needs-attention'),
         )),
+      // Delivery failures matter even when the purchase falls outside the chart's period.
+      // EXISTS keeps multiple payment attempts from counting one order more than once.
+      database
+        .select({ id: customerNotifications.id, attempts: customerNotifications.attempts,
+          sentAt: customerNotifications.sentAt, canceledAt: customerNotifications.canceledAt,
+          queuedAt: customerNotifications.createdAt })
+        .from(orders)
+        .leftJoin(customerNotifications, and(eq(customerNotifications.orderId, orders.id), eq(customerNotifications.kind, 'purchase')))
+        .where(and(
+          eq(orders.status, 'paid'), isNull(customerNotifications.sentAt), isNull(customerNotifications.canceledAt),
+          exists(database.select({ id: payments.id }).from(payments).where(and(
+            eq(payments.orderId, orders.id), eq(payments.provider, 'paystack'),
+            eq(payments.environment, paystackEnvironment), inArray(payments.status, ['succeeded', 'partially_refunded']),
+          ))),
+        )),
     ]);
 
   for (const payment of recentPayments) {
@@ -141,11 +159,16 @@ export async function getAdminDashboard(
       periodDays,
       series: salesSeries,
     },
-    alerts: {
+    alerts: adminDashboardAlertsSchema.parse({
       failedPayments: failedPaymentsResult[0]?.value ?? 0,
       stalePayments: stalePaymentsResult[0]?.value ?? 0,
       refundsNeedingAttention: refundAlertsResult[0]?.value ?? 0,
-    },
+      programEmailsNeedingAttention: programEmailRows.filter(notification => programEmailNeedsAttention(
+        getProgramEmailDeliveryStatus(notification.id === null ? null : {
+          id: notification.id, attempts: notification.attempts ?? 0, sentAt: notification.sentAt, canceledAt: notification.canceledAt,
+        }), notification.queuedAt, now,
+      )).length,
+    }),
   };
 }
 
