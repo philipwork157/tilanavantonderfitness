@@ -5,6 +5,12 @@ node_modules/
 # Local reference snapshot of the retired backend, including private environment files
 /tilana-fitness-old/
 
+# Local PDF, Word, image/video work and UI previews (not application source)
+/tilana-content-work/
+
+# Screenshots the Claude desktop app saves into the project; keep them in tilana-content-work instead
+/Claude outputs/
+
 # Astro, Nuxt, Nitro, and Turborepo output
 dist/
 .astro/
