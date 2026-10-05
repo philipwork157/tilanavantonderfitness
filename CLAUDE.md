@@ -5,8 +5,10 @@ changing this repository.
 
 ## Current rebuild state
 
-The old admin/backend has been retired locally. `apps/admin` is a clean Nuxt
-starter, not a working login, database, payment or customer portal. Rebuild
+The old admin/backend has been retired locally. `apps/admin` is being rebuilt
+feature by feature. Implemented so far: admin sign-in (Supabase Auth password
+login, httpOnly cookies, `NUXT_ADMIN_EMAILS` allow-list, `requireAdmin()` for
+every admin API route). There is no database, payment or customer portal yet. Rebuild
 features only when the user requests them. Do not silently restore the old
 feature scope.
 
@@ -25,10 +27,15 @@ separate reviewed migration plan.
 
 - `apps/web`: existing Astro public website. Preserve its appearance, content,
   assets and public environment setup unless the user requests changes.
-- `apps/admin`: fresh Nuxt admin starter. It extends `@tilana/ui-nuxt`.
-- `packages/contracts`: website-facing Zod contracts. Legacy admin-only
-  contracts are archived. Keep public API contracts compatible while rebuilding.
-- `packages/design-system`: shared visual tokens and CSS.
+- `apps/admin`: Nuxt admin. It extends `@tilana/ui-nuxt`.
+- `packages/contracts`: Zod request/response contracts (website-facing plus
+  `admin-auth`). Legacy admin-only contracts are archived. Keep public API
+  contracts compatible while rebuilding. Use `program` in code identifiers;
+  British "programme" is website copy only. Public slugs, storage keys and the
+  `?programme=` query parameter must not change.
+- `packages/design-system`: shared visual tokens and CSS, the single source of
+  brand colours (including the numbered `--brand-*` scale), status colours and
+  shadows. Do not hard-code these values in components.
 - `packages/ui-astro`: shared Astro presentation components.
 - `packages/ui-nuxt`: shared Nuxt layer and components.
 
@@ -45,8 +52,8 @@ in routes. If Drizzle is reintroduced, keep schema/migration ownership explicit.
 Keep application IDs consistent; do not invent several competing identity models.
 
 Actual integration credentials live only in the ignored root `.env` or provider
-secrets. Nuxt CLI scripts explicitly load `../../.env`. The starter does not
-consume old integration credentials. The website keeps `apps/web/.env`; only
+secrets. Nuxt CLI scripts explicitly load `../../.env`. The admin reads only
+the settings listed in `.env.example`. The website keeps `apps/web/.env`; only
 `PUBLIC_*` values or deliberately public Nuxt runtime config may reach browsers.
 Never print, commit or expose secrets, tokens, magic links or private documents.
 Maintain a secret-free `.env.example` containing only settings for implemented

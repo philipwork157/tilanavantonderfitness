@@ -4,9 +4,11 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./admin-auth": "./src/admin-auth.ts",
     "./catalogue": "./src/catalogue.ts",
     "./checkout": "./src/checkout.ts",
     "./contact": "./src/contact.ts",
+    "./customer-access": "./src/customer-access.ts",
     "./newsletter": "./src/newsletter.ts",
     "./newsletter.messages": "./src/newsletter.messages.ts",
     "./programs": "./src/programs.ts"
@@ -16,7 +18,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "zod": "latest"
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

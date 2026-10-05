@@ -1,21 +1,8 @@
 import { z } from 'zod';
-import { catalogueSlugSchema } from '@tilana/contracts/catalogue';
+import { catalogueSlugSchema } from './catalogue';
 
 /** Unpredictable browser intent token. It is external text, not an application ID. */
 export const checkoutIntentKeySchema = z.string().uuid().transform(value => value.toLowerCase());
-
-export const checkoutRequestSchema = z.object({
-  idempotencyKey: checkoutIntentKeySchema,
-  volumeSlug: catalogueSlugSchema,
-  expectedPriceCents: z.number().int().positive(),
-  firstName: z.string().trim().min(1).max(100),
-  lastName: z.string().trim().min(1).max(100),
-  email: z.string().trim().email().max(254),
-  phone: z.string().trim().max(30).default(''),
-  consent: z.literal(true),
-  website: z.string().max(200).default(''),
-  turnstileToken: z.string().max(2048).default(''),
-});
 
 export const basketCheckoutItemSchema = z.object({
   volumeSlug: catalogueSlugSchema,
@@ -57,13 +44,6 @@ export const checkoutStatusResponseSchema = z.object({
   deliveryStatus: z.enum(['pending', 'retrying', 'sent', 'canceled', 'unavailable']).optional(),
 });
 
-export const customerMagicLinkRequestSchema = z.object({
-  email: z.string().trim().email().max(254),
-});
-
-export const customerMagicLinkResponseSchema = z.object({ ok: z.literal(true) });
-
-export type CheckoutRequest = z.infer<typeof checkoutRequestSchema>;
 export type BasketCheckoutRequest = z.infer<typeof basketCheckoutRequestSchema>;
 
 /** Canonical purchase identity excludes rotating anti-abuse tokens and item order. */
@@ -76,5 +56,3 @@ export function serializeCheckoutIntent(input: Pick<BasketCheckoutRequest, 'item
 }
 export type CheckoutResponse = z.infer<typeof checkoutResponseSchema>;
 export type CheckoutStatusResponse = z.infer<typeof checkoutStatusResponseSchema>;
-export type CustomerMagicLinkRequest = z.infer<typeof customerMagicLinkRequestSchema>;
-export type CustomerMagicLinkResponse = z.infer<typeof customerMagicLinkResponseSchema>;

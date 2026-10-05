@@ -6,8 +6,9 @@ admin starting point and shared Tilana design packages.
 ## Admin rebuild
 
 The old backend and its tests are preserved locally in `tilana-fitness-old/`.
-The new admin currently shows a branded starting page only. Authentication,
-database, email, payments and business APIs are not implemented yet.
+The new admin has Supabase password sign-in restricted to the emails in
+`NUXT_ADMIN_EMAILS`. Database, email, payments and business APIs are not
+implemented yet.
 
 See [the rebuild notes](docs/admin-rebuild.md) for archive contents, recovery
 information and the next feature scope. No deployed service or remote database
@@ -46,8 +47,9 @@ API origin. Do not mistake the clean admin page for a working backend.
 
 The original backend environment is copied to the ignored root `.env`, kept
 private and explicitly loaded by Nuxt commands. None of the old integration
-credentials are consumed by the starter. A minimal root `.env.example` will
-document settings as each feature is implemented. Keep real secrets out of Git.
+credentials are consumed by the admin except those listed in `.env.example`,
+which documents settings as each feature is implemented (currently admin sign-in:
+`NUXT_SUPABASE_URL`, `NUXT_SUPABASE_PUBLISHABLE_KEY`, `NUXT_ADMIN_EMAILS`). Keep real secrets out of Git.
 
 The website retains `apps/web/.env` and `apps/web/.env.example`. Its public
 settings remain separate from private backend configuration.

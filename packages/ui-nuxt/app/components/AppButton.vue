@@ -30,6 +30,8 @@ withDefaults(defineProps<Props>(), {
 <style scoped>
 .app-button {
   min-height: 3.4rem;
-  box-shadow: 0 12px 30px rgb(97 70 53 / 16%);
+  /* Dark text keeps AA contrast on the light terracotta fill in both themes. */
+  color: var(--color-on-primary);
+  box-shadow: var(--shadow-button);
 }
 </style>

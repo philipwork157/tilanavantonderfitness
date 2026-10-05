@@ -23,6 +23,25 @@
   --color-positive: var(--sage);
   --color-border: color-mix(in srgb, var(--caramel) 28%, transparent);
 
+  /* Status colours meet WCAG AA (4.5:1) as text on --cream and --white. */
+  --color-danger: #a63d32;
+  --color-success: #4f6b3a;
+  --color-warning: #8a5d0c;
+  --color-focus: var(--caramel);
+
+  /* Fixed brand scale for UI libraries that need numbered shades (Nuxt UI). */
+  --brand-50: #fff8f3;
+  --brand-100: #fbeee5;
+  --brand-200: #f4d9c7;
+  --brand-300: #e8bfa2;
+  --brand-400: #dda986;
+  --brand-500: #d5a27f;
+  --brand-600: #bd8663;
+  --brand-700: #9e6b4d;
+  --brand-800: #805640;
+  --brand-900: #684838;
+  --brand-950: #38231b;
+
   --font-heading: 'Playfair Display', Georgia, serif;
   --font-body: 'Montserrat', system-ui, sans-serif;
   --font-script: 'Allura', cursive;
@@ -36,7 +55,9 @@
   --radius-lg: 28px;
   --radius-pill: 999px;
 
+  --shadow-xs: 0 8px 22px rgb(97 70 53 / 10%);
   --shadow-sm: 0 12px 32px rgb(97 70 53 / 11%);
+  --shadow-button: 0 12px 30px rgb(97 70 53 / 16%);
   --shadow-md: 0 24px 64px rgb(97 70 53 / 17%);
   --shadow-hover: 0 28px 70px rgb(97 70 53 / 23%);
 
@@ -59,7 +80,13 @@
   --white: #241c21;
 
   --color-border: rgb(221 169 134 / 24%);
+  --color-danger: #f29a8a;
+  --color-success: #b9cc9c;
+  --color-warning: #e9c27a;
+
+  --shadow-xs: 0 8px 22px rgb(0 0 0 / 20%);
   --shadow-sm: 0 12px 32px rgb(0 0 0 / 24%);
+  --shadow-button: 0 12px 30px rgb(0 0 0 / 28%);
   --shadow-md: 0 24px 64px rgb(0 0 0 / 32%);
   --shadow-hover: 0 28px 70px rgb(0 0 0 / 40%);
 }

@@ -8,20 +8,32 @@ const toggleTheme = () => {
 </script>
 
 <template>
-  <UButton
-    color="neutral"
-    variant="soft"
-    size="lg"
-    :icon="isDark ? 'i-lucide-sun' : 'i-lucide-moon'"
-    :aria-label="isDark ? 'Use light mode' : 'Use dark mode'"
-    class="theme-toggle"
-    @click="toggleTheme"
-  />
+  <!-- The stored theme is only known in the browser, so render the icon there to avoid a wrong icon after load. -->
+  <ClientOnly>
+    <UButton
+      color="neutral"
+      variant="soft"
+      size="lg"
+      :icon="isDark ? 'i-lucide-sun' : 'i-lucide-moon'"
+      :aria-label="isDark ? 'Use light mode' : 'Use dark mode'"
+      class="theme-toggle"
+      @click="toggleTheme"
+    />
+    <template #fallback>
+      <span class="theme-toggle-placeholder" aria-hidden="true" />
+    </template>
+  </ClientOnly>
 </template>
 
 <style scoped>
 .theme-toggle {
   border-radius: 999px;
-  box-shadow: 0 8px 22px rgb(97 70 53 / 10%);
+  box-shadow: var(--shadow-xs);
+}
+
+.theme-toggle-placeholder {
+  display: inline-block;
+  width: 2.5rem;
+  height: 2.5rem;
 }
 </style>

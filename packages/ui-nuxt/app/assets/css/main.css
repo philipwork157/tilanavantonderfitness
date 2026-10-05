@@ -2,21 +2,22 @@
 @import 'tailwindcss';
 @import '@nuxt/ui';
 
+/* Brand shades come from @tilana/design-system so there is one source of truth. */
 @theme static {
   --font-sans: 'Montserrat', system-ui, sans-serif;
   --font-serif: 'Playfair Display', Georgia, serif;
 
-  --color-brand-50: #fff8f3;
-  --color-brand-100: #fbeee5;
-  --color-brand-200: #f4d9c7;
-  --color-brand-300: #e8bfa2;
-  --color-brand-400: #dda986;
-  --color-brand-500: #d5a27f;
-  --color-brand-600: #bd8663;
-  --color-brand-700: #9e6b4d;
-  --color-brand-800: #805640;
-  --color-brand-900: #684838;
-  --color-brand-950: #38231b;
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-brand-950: var(--brand-950);
 }
 
 :root {
@@ -30,6 +31,9 @@
   --ui-text: var(--ink);
   --ui-text-muted: var(--chocolate);
   --ui-text-dimmed: color-mix(in srgb, var(--chocolate) 68%, transparent);
+  --ui-error: var(--color-danger);
+  --ui-success: var(--color-success);
+  --ui-warning: var(--color-warning);
 }
 
 html,
