@@ -57,5 +57,31 @@ export const userRoles = pgTable('user_roles', {
   index('user_roles_role_id_idx').on(table.roleId),
 ]).enableRLS();
 
+export const INQUIRY_STATUSES = ['new', 'replied', 'archived'] as const;
+
+/** Messages sent through the website contact form. */
+export const inquiries = pgTable('inquiries', {
+  id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  name: text('name').notNull(),
+  email: text('email').notNull(),
+  // Option key the visitor picked (e.g. 'move', 'one-on-one'). Becomes a
+  // program reference once programs live in the database.
+  interest: text('interest').notNull(),
+  // The label exactly as shown to the visitor, kept even if options change.
+  interestLabel: text('interest_label').notNull(),
+  message: text('message').notNull(),
+  // When the visitor accepted the privacy policy for this enquiry.
+  privacyAcceptedAt: timestamp('privacy_accepted_at', { withTimezone: true }).notNull(),
+  status: text('status', { enum: INQUIRY_STATUSES }).notNull().default('new'),
+  // Email notification to Tilana. A failed email never loses the enquiry.
+  notifiedAt: timestamp('notified_at', { withTimezone: true }),
+  notificationError: text('notification_error'),
+  ...timestamps,
+}, table => [
+  check('inquiries_status_valid', sql`${table.status} in ('new', 'replied', 'archived')`),
+  index('inquiries_created_at_idx').on(table.createdAt.desc()),
+]).enableRLS();
+
 export type User = typeof users.$inferSelect;
+export type Inquiry = typeof inquiries.$inferSelect;
 export type Role = typeof roles.$inferSelect;

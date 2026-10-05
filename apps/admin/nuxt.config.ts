@@ -11,6 +11,15 @@ export default defineNuxtConfig({
     supabaseUrl: '',
     supabasePublishableKey: '',
     databaseUrl: '',
+    // Email via Amazon SES (AWS_REGION / AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY).
+    emailFromAddress: '',
+    emailFromName: '',
+    // Development only: every outgoing email goes here instead.
+    emailDevRedirectTo: '',
+    contactNotifyTo: '',
+    turnstileSecretKey: '',
+    // Website origins allowed to call the public endpoints (comma separated).
+    websiteOrigins: '',
   },
   routeRules: {
     '/**': { headers: { 'cache-control': 'private, no-store' } },

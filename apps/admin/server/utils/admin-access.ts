@@ -26,33 +26,33 @@ export function isSameOrigin(origin: string | undefined, host: string | undefine
 }
 
 interface RateLimiterOptions {
-  maxFailures: number;
+  maxAttempts: number;
   windowMs: number;
   now?: () => number;
 }
 
 /**
- * In-memory failed-login limiter. It is per server instance and resets on
- * restart, which is enough for a handful of admins; Supabase applies its own limits too.
+ * In-memory attempt limiter (failed sign-ins, contact form posts). It is per
+ * server instance and resets on restart, which is enough at this scale.
  */
-export function createFailureLimiter({ maxFailures, windowMs, now = Date.now }: RateLimiterOptions) {
-  const failures = new Map<string, number[]>();
+export function createAttemptLimiter({ maxAttempts, windowMs, now = Date.now }: RateLimiterOptions) {
+  const attempts = new Map<string, number[]>();
 
   const recent = (key: string) => {
     const cutoff = now() - windowMs;
-    const kept = (failures.get(key) ?? []).filter(time => time > cutoff);
-    if (kept.length) failures.set(key, kept);
-    else failures.delete(key);
+    const kept = (attempts.get(key) ?? []).filter(time => time > cutoff);
+    if (kept.length) attempts.set(key, kept);
+    else attempts.delete(key);
     return kept;
   };
 
   return {
-    isBlocked: (key: string) => recent(key).length >= maxFailures,
-    recordFailure: (key: string) => {
-      failures.set(key, [...recent(key), now()]);
+    isBlocked: (key: string) => recent(key).length >= maxAttempts,
+    record: (key: string) => {
+      attempts.set(key, [...recent(key), now()]);
     },
     clear: (key: string) => {
-      failures.delete(key);
+      attempts.delete(key);
     },
   };
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ADMIN_AREA_ROLES, hasAnyRole } from '@tilana/db/roles';
-import { confirmedEmail, createFailureLimiter, isSameOrigin } from '../server/utils/admin-access';
+import { confirmedEmail, createAttemptLimiter, isSameOrigin } from '../server/utils/admin-access';
 import { safeRedirectPath } from '../app/utils/safe-redirect';
 import { adminLoginRequestSchema } from '@tilana/contracts/admin-auth';
 
@@ -44,14 +44,14 @@ describe('isSameOrigin', () => {
   });
 });
 
-describe('createFailureLimiter', () => {
+describe('createAttemptLimiter', () => {
   it('blocks after the maximum failures and recovers after the window', () => {
     let time = 0;
-    const limiter = createFailureLimiter({ maxFailures: 3, windowMs: 1000, now: () => time });
+    const limiter = createAttemptLimiter({ maxAttempts: 3, windowMs: 1000, now: () => time });
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
       expect(limiter.isBlocked('key')).toBe(false);
-      limiter.recordFailure('key');
+      limiter.record('key');
     }
     expect(limiter.isBlocked('key')).toBe(true);
     expect(limiter.isBlocked('other')).toBe(false);
@@ -61,8 +61,8 @@ describe('createFailureLimiter', () => {
   });
 
   it('clears failures after a successful sign-in', () => {
-    const limiter = createFailureLimiter({ maxFailures: 1, windowMs: 1000, now: () => 0 });
-    limiter.recordFailure('key');
+    const limiter = createAttemptLimiter({ maxAttempts: 1, windowMs: 1000, now: () => 0 });
+    limiter.record('key');
     expect(limiter.isBlocked('key')).toBe(true);
     limiter.clear('key');
     expect(limiter.isBlocked('key')).toBe(false);

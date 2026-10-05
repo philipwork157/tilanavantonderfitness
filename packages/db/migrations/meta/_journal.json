@@ -15,6 +15,13 @@
       "when": 1791204274268,
       "tag": "0001_seed_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791233350737,
+      "tag": "0002_inquiries",
+      "breakpoints": true
     }
   ]
 }

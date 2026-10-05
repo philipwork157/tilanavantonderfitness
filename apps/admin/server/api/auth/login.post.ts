@@ -1,10 +1,10 @@
 import { isAuthRetryableFetchError } from '@supabase/supabase-js';
 import { adminLoginRequestSchema } from '@tilana/contracts/admin-auth';
-import { createFailureLimiter } from '../../utils/admin-access';
+import { createAttemptLimiter } from '../../utils/admin-access';
 import { resolveAdminUser } from '../../services/admin-users';
 
 const FAILURE_WINDOW_MS = 15 * 60 * 1000;
-const failedLogins = createFailureLimiter({ maxFailures: 5, windowMs: FAILURE_WINDOW_MS });
+const failedLogins = createAttemptLimiter({ maxAttempts: 5, windowMs: FAILURE_WINDOW_MS });
 
 export default defineEventHandler(async (event) => {
   assertSameOrigin(event);
@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 503, statusMessage: 'Sign-in is temporarily unavailable. Please try again shortly.' });
   }
   if (error || !data.user) {
-    failedLogins.recordFailure(limitKey);
+    failedLogins.record(limitKey);
     throw createError({ statusCode: 401, statusMessage: 'The email address or password is incorrect.' });
   }
 
@@ -43,7 +43,7 @@ export default defineEventHandler(async (event) => {
   if (!admin) {
     await supabase.auth.signOut({ scope: 'local' });
     clearSupabaseCookies(event);
-    failedLogins.recordFailure(limitKey);
+    failedLogins.record(limitKey);
     throw createError({ statusCode: 403, statusMessage: 'This account does not have admin access.' });
   }
 

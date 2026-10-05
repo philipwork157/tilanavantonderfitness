@@ -36,6 +36,11 @@ defineProps<{
 }
 
 .admin-page-body {
+  display: grid;
+  align-content: start;
+  gap: var(--space-6);
+  width: 100%;
+  max-width: var(--container-max);
   outline: none;
 }
 </style>

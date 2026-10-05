@@ -114,6 +114,16 @@ Keep public deployment functional. An ignored archive is not a remote backup.
   targets at least 44px on the website and 36px in the admin.
 - Use semantic tokens, keep a visible focus ring and respect reduced motion.
 
+## Email and public endpoints
+
+- Email goes through Amazon SES (`apps/admin/server/utils/email.ts`). In
+  development `NUXT_EMAIL_DEV_REDIRECT_TO` is required and receives every
+  outgoing email; production leaves it unset. Never send to real people from dev.
+- Save first, then email: a failed email is recorded on the row, never lost.
+- Website-facing endpoints are listed in `PUBLIC_WEBSITE_PATHS`
+  (`server/utils/website-origins.ts`) and only accept `NUXT_WEBSITE_ORIGINS`.
+  `/api/contact` also requires Turnstile in production, a honeypot and a rate limit.
+
 ## Admin UI
 
 - Built on Nuxt UI dashboard components (`UDashboardGroup`, `UDashboardSidebar`,
