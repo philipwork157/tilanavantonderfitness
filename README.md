@@ -59,11 +59,11 @@ API origin. Do not mistake the clean admin page for a working backend.
 
 ## Environment files
 
-The original backend environment is copied to the ignored root `.env`, kept
-private and explicitly loaded by Nuxt commands. None of the old integration
-credentials are consumed by the admin except those listed in `.env.example`,
-which documents settings as each feature is implemented (currently admin sign-in:
-`NUXT_SUPABASE_URL`, `NUXT_SUPABASE_PUBLISHABLE_KEY`, `NUXT_DATABASE_URL`). Keep real secrets out of Git.
+Each app keeps its own ignored `.env`. The admin's `apps/admin/.env` holds only
+the settings in `apps/admin/.env.example` (currently `NUXT_SUPABASE_URL`,
+`NUXT_SUPABASE_PUBLISHABLE_KEY`, `NUXT_DATABASE_URL`); `pnpm db:*` commands read it
+too. Older integration settings are archived in `tilana-fitness-old/apps/admin/.env`
+and return one at a time as features are rebuilt. Keep real secrets out of Git.
 
 The website retains `apps/web/.env` and `apps/web/.env.example`. Its public
 settings remain separate from private backend configuration.

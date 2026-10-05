@@ -37,11 +37,10 @@ you explicitly replace them. Never deploy this starter over the existing admin.
 
 ## Environment and deployment
 
-The original backend environment is copied to the ignored repository-root
-`.env`, with private file permissions. Nuxt commands explicitly load that file.
-The fresh admin does not consume any of those old integration credentials.
+The original backend environment is archived in `tilana-fitness-old/apps/admin/.env`.
+The admin's own `apps/admin/.env` contains only settings for rebuilt features.
 Keep `apps/web/.env` unchanged; only its `PUBLIC_*` settings may reach the browser.
-The tracked root `.env.example` will grow only as approved features need settings.
+The tracked `apps/admin/.env.example` grows only as approved features need settings.
 
 Admin Fly deployment and legacy scheduled recovery are paused in this branch.
 Public deployment stays available. No workflow was run or pushed by this reset.

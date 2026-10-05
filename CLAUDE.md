@@ -70,12 +70,12 @@ Use the existing Nuxt/Astro stack and workspace aliases. Keep shared types in
 in routes. If Drizzle is reintroduced, keep schema/migration ownership explicit.
 Keep application IDs consistent; do not invent several competing identity models.
 
-Actual integration credentials live only in the ignored root `.env` or provider
-secrets. Nuxt CLI scripts explicitly load `../../.env`. The admin reads only
-the settings listed in `.env.example`. The website keeps `apps/web/.env`; only
+Actual integration credentials live only in each app's ignored `.env` or provider
+secrets. The admin uses `apps/admin/.env` (also read by `pnpm db:*`) and only the
+settings listed in `apps/admin/.env.example`. The website keeps `apps/web/.env`; only
 `PUBLIC_*` values or deliberately public Nuxt runtime config may reach browsers.
 Never print, commit or expose secrets, tokens, magic links or private documents.
-Maintain a secret-free `.env.example` containing only settings for implemented
+Maintain secret-free `.env.example` files containing only settings for implemented
 features.
 
 When payments/access are rebuilt, verify provider evidence on the server,
@@ -87,6 +87,8 @@ necessary safety boundaries.
 ## Testing and commands
 
 - `pnpm dev`: both local applications; `pnpm dev:stop` stops managed servers.
+- `pnpm db:generate`: create a migration from schema changes; `pnpm db:migrate`:
+  apply pending migrations to the database in `apps/admin/.env`; `pnpm db:add-admin --email ...`.
 - `pnpm dev:web` / `pnpm dev:admin`: one application.
 - `pnpm test`: tests in active workspaces (currently the existing website tests).
 - `pnpm test:coverage`: active test coverage.
@@ -111,6 +113,15 @@ Keep public deployment functional. An ignored archive is not a remote backup.
 - Works on mobile: usable from 360px wide, no horizontal page scroll, touch
   targets at least 44px on the website and 36px in the admin.
 - Use semantic tokens, keep a visible focus ring and respect reduced motion.
+
+## Admin UI
+
+- Built on Nuxt UI dashboard components (`UDashboardGroup`, `UDashboardSidebar`,
+  `UDashboardPanel`, `UDashboardNavbar`) styled by the design tokens.
+- Every admin page wraps its content in `<AdminPage id title>` (navbar with the
+  sidebar collapse button and theme toggle). Sidebar items live in
+  `apps/admin/app/utils/admin-navigation.ts`; the account menu (email, log out)
+  is `AdminUserMenu`.
 
 ## Database
 

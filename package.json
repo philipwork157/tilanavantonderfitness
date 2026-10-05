@@ -19,7 +19,10 @@
     "check": "turbo run lint typecheck",
     "test": "turbo run test",
     "test:coverage": "turbo run test:coverage",
-    "site:build": "pnpm --filter @tilana/web build && node scripts/prepare-site-dist.mjs"
+    "site:build": "pnpm --filter @tilana/web build && node scripts/prepare-site-dist.mjs",
+    "db:generate": "pnpm --filter @tilana/db db:generate",
+    "db:migrate": "pnpm --filter @tilana/db db:migrate",
+    "db:add-admin": "pnpm --filter @tilana/db db:add-admin"
   },
   "devDependencies": {
     "turbo": "2.11.5"

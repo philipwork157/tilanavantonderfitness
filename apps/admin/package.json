@@ -4,13 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "NUXT_TELEMETRY_DISABLED=1 nuxt dev --dotenv ../../.env --host localhost --port 3001",
-    "build": "nuxt build --dotenv ../../.env",
+    "dev": "NUXT_TELEMETRY_DISABLED=1 nuxt dev --host localhost --port 3001",
+    "build": "nuxt build",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "pnpm lint --fix",
-    "typecheck": "nuxt typecheck --dotenv ../../.env",
-    "prepare": "nuxt prepare --dotenv ../../.env",
-    "postinstall": "nuxt prepare --dotenv ../../.env",
+    "typecheck": "nuxt typecheck",
+    "prepare": "nuxt prepare",
+    "postinstall": "nuxt prepare",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

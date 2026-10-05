@@ -1,8 +1,9 @@
 import { existsSync } from 'node:fs';
 import { defineConfig } from 'drizzle-kit';
 
-// Connection string comes from the repository-root .env (never committed).
-if (existsSync('../../.env')) process.loadEnvFile('../../.env');
+// Connection string comes from the admin's private env file (never committed).
+const envFile = '../../apps/admin/.env';
+if (existsSync(envFile)) process.loadEnvFile(envFile);
 
 export default defineConfig({
   dialect: 'postgresql',
