@@ -2,7 +2,7 @@
 @import 'tailwindcss';
 @import '@nuxt/ui';
 
-/* Brand shades come from @tilana/design-system so there is one source of truth. */
+/* Brand shades and fonts come from @tilana/design-system (one source of truth). */
 @theme static {
   --font-sans: 'Montserrat', system-ui, sans-serif;
   --font-serif: 'Playfair Display', Georgia, serif;
@@ -20,20 +20,37 @@
   --color-brand-950: var(--brand-950);
 }
 
-:root {
-  --ui-radius: 1rem;
-  --ui-container: 80rem;
-  --ui-bg: var(--cream);
-  --ui-bg-muted: color-mix(in srgb, var(--sand) 54%, var(--cream));
-  --ui-bg-elevated: var(--white);
-  --ui-bg-accented: var(--sand);
-  --ui-border: var(--color-border);
-  --ui-text: var(--ink);
-  --ui-text-muted: var(--chocolate);
-  --ui-text-dimmed: color-mix(in srgb, var(--chocolate) 68%, transparent);
-  --ui-error: var(--color-danger);
+/* Map Nuxt UI onto the semantic tokens. These follow the theme automatically,
+   because the tokens themselves change under .dark. */
+:root,
+.dark {
+  --ui-radius: var(--radius-sm);
+  --ui-container: var(--container-max);
+
+  --ui-primary: var(--color-primary);
+  --ui-error: var(--color-error);
   --ui-success: var(--color-success);
   --ui-warning: var(--color-warning);
+  --ui-info: var(--color-info);
+
+  --ui-bg: var(--color-background);
+  --ui-bg-muted: var(--color-surface);
+  --ui-bg-elevated: var(--color-surface-elevated);
+  --ui-bg-accented: var(--color-surface-subtle);
+  --ui-bg-inverted: var(--color-surface-inverse);
+
+  --ui-border: var(--color-border);
+  --ui-border-muted: var(--color-border-subtle);
+  --ui-border-accented: var(--color-border-strong);
+  --ui-border-inverted: var(--color-text-primary);
+
+  --ui-text-highlighted: var(--color-text-primary);
+  --ui-text: var(--color-text-secondary);
+  --ui-text-toned: var(--color-text-secondary);
+  --ui-text-muted: var(--color-text-muted);
+  --ui-text-dimmed: var(--color-text-muted);
+  /* Text on solid primary fills: Soft Black, never white (white on terracotta is 2.3:1). */
+  --ui-text-inverted: var(--color-on-primary);
 }
 
 html,
@@ -44,15 +61,29 @@ body,
 
 body {
   margin: 0;
-  color: var(--chocolate);
-  background: var(--cream);
+  color: var(--color-text-secondary);
+  background: var(--color-background);
   font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
   -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  color: var(--ink);
-  background: var(--terracotta);
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+}
+
+/* One visible focus style everywhere: 2px ring with a 2px offset. */
+:focus-visible {
+  outline: var(--border-width-focus) solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Tabular numbers keep figures aligned in tables and metrics. */
+.tabular-nums,
+table {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Select dropdowns: size to the longest option and never clip the label. */

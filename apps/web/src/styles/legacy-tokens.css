@@ -1,0 +1,33 @@
+/*
+ * Website v1 values for token names that design-system v2 redefines.
+ * Keeps the public site looking exactly as before while it moves to v2
+ * one deliberate change at a time. Delete a line here to adopt the v2 value.
+ */
+:root {
+  --color-surface: var(--white);
+  --color-text-muted: var(--chocolate);
+  --color-border: color-mix(in srgb, var(--caramel) 28%, transparent);
+
+  --container: 1280px;
+  --page-pad: clamp(1.25rem, 5vw, 4rem);
+  --section-space: clamp(4.25rem, 7vw, 6.5rem);
+
+  --radius-sm: 10px;
+  --radius-md: 18px;
+  --radius-lg: 28px;
+
+  --shadow-sm: 0 12px 32px rgb(97 70 53 / 11%);
+  --shadow-md: 0 24px 64px rgb(97 70 53 / 17%);
+  --shadow-hover: 0 28px 70px rgb(97 70 53 / 23%);
+
+  --motion-fast: 180ms;
+  --motion-base: 260ms;
+  --motion-slow: 650ms;
+}
+
+.dark {
+  --color-border: rgb(221 169 134 / 24%);
+  --shadow-sm: 0 12px 32px rgb(0 0 0 / 24%);
+  --shadow-md: 0 24px 64px rgb(0 0 0 / 32%);
+  --shadow-hover: 0 28px 70px rgb(0 0 0 / 40%);
+}

@@ -6,9 +6,9 @@ admin starting point and shared Tilana design packages.
 ## Admin rebuild
 
 The old backend and its tests are preserved locally in `tilana-fitness-old/`.
-The new admin has Supabase password sign-in restricted to the emails in
-`NUXT_ADMIN_EMAILS`. Database, email, payments and business APIs are not
-implemented yet.
+The new admin has Supabase password sign-in; access comes from the `users` and
+`roles` tables in `packages/db` (Drizzle). Email, payments and business APIs are
+not implemented yet.
 
 See [the rebuild notes](docs/admin-rebuild.md) for archive contents, recovery
 information and the next feature scope. No deployed service or remote database
@@ -26,7 +26,21 @@ packages/
   ui-astro/            Shared Astro components
   ui-nuxt/             Shared Nuxt layer and components
 tilana-fitness-old/     Ignored old backend, tests and private configuration
+tilana-content-work/    Ignored PDF/Word work, marketing exports and UI previews
 ```
+
+## Local creative files and caches
+
+Personal PDF/Word drafts, renders, reels and generated images live in
+`tilana-content-work/`, not in the application folders. See its local `README.md`
+for the retained folder layout and generator scripts. Git does not back up this
+folder; keep a separate copy of important documents. Website assets remain in
+`apps/web/src/assets` and `apps/web/public`.
+
+`.turbo/cache`, old root `.cache`/`.astro`, root `dist` and `.pnpm-store` are
+regenerable build/dependency caches, not creative documents. Keep installed
+`node_modules` and active app caches while local servers are running. `.openai`
+contains hosting configuration; it is not a disposable output folder.
 
 ## Local development
 
@@ -49,7 +63,7 @@ The original backend environment is copied to the ignored root `.env`, kept
 private and explicitly loaded by Nuxt commands. None of the old integration
 credentials are consumed by the admin except those listed in `.env.example`,
 which documents settings as each feature is implemented (currently admin sign-in:
-`NUXT_SUPABASE_URL`, `NUXT_SUPABASE_PUBLISHABLE_KEY`, `NUXT_ADMIN_EMAILS`). Keep real secrets out of Git.
+`NUXT_SUPABASE_URL`, `NUXT_SUPABASE_PUBLISHABLE_KEY`, `NUXT_DATABASE_URL`). Keep real secrets out of Git.
 
 The website retains `apps/web/.env` and `apps/web/.env.example`. Its public
 settings remain separate from private backend configuration.

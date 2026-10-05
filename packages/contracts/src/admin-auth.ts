@@ -7,8 +7,11 @@ export const adminLoginRequestSchema = z.object({
 });
 
 export const adminUserSchema = z.object({
-  id: z.string(),
+  id: z.number().int().positive(),
   email: z.string(),
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
+  roles: z.array(z.string()),
 });
 
 export const adminSessionResponseSchema = z.object({

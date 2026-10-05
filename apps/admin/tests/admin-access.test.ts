@@ -1,38 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { createFailureLimiter, isAllowedAdmin, isSameOrigin, parseAdminEmails } from '../server/utils/admin-access';
+import { ADMIN_AREA_ROLES, hasAnyRole } from '@tilana/db/roles';
+import { confirmedEmail, createFailureLimiter, isSameOrigin } from '../server/utils/admin-access';
 import { safeRedirectPath } from '../app/utils/safe-redirect';
 import { adminLoginRequestSchema } from '@tilana/contracts/admin-auth';
 
 const confirmed = '2026-01-01T00:00:00Z';
 
-describe('parseAdminEmails', () => {
-  it('normalises comma and whitespace separated emails', () => {
-    expect([...parseAdminEmails(' Tilana@Example.com, owner@example.com\nthird@example.com ,')])
-      .toEqual(['tilana@example.com', 'owner@example.com', 'third@example.com']);
-  });
-
-  it('returns an empty set when unset', () => {
-    expect(parseAdminEmails(undefined).size).toBe(0);
-    expect(parseAdminEmails('  ').size).toBe(0);
+describe('confirmedEmail', () => {
+  it('returns the lowercase email only when it is confirmed', () => {
+    expect(confirmedEmail({ email: ' Tilana@Example.com ', email_confirmed_at: confirmed })).toBe('tilana@example.com');
+    expect(confirmedEmail({ email: 'tilana@example.com', email_confirmed_at: null })).toBeNull();
+    expect(confirmedEmail({ email: null, email_confirmed_at: confirmed })).toBeNull();
+    expect(confirmedEmail(null)).toBeNull();
   });
 });
 
-describe('isAllowedAdmin', () => {
-  const allow = parseAdminEmails('tilana@example.com');
-
-  it('allows a confirmed listed email regardless of case', () => {
-    expect(isAllowedAdmin({ email: 'Tilana@Example.com', email_confirmed_at: confirmed }, allow)).toBe(true);
+describe('hasAnyRole', () => {
+  it('allows admin and staff into the admin area, not customers', () => {
+    expect(hasAnyRole(['admin'], ADMIN_AREA_ROLES)).toBe(true);
+    expect(hasAnyRole(['staff'], ADMIN_AREA_ROLES)).toBe(true);
+    expect(hasAnyRole(['customer', 'admin'], ADMIN_AREA_ROLES)).toBe(true);
+    expect(hasAnyRole(['customer'], ADMIN_AREA_ROLES)).toBe(false);
+    expect(hasAnyRole([], ADMIN_AREA_ROLES)).toBe(false);
   });
 
-  it('rejects unlisted, unconfirmed or missing users', () => {
-    expect(isAllowedAdmin({ email: 'someone@example.com', email_confirmed_at: confirmed }, allow)).toBe(false);
-    expect(isAllowedAdmin({ email: 'tilana@example.com', email_confirmed_at: null }, allow)).toBe(false);
-    expect(isAllowedAdmin({ email: null, email_confirmed_at: confirmed }, allow)).toBe(false);
-    expect(isAllowedAdmin(null, allow)).toBe(false);
-  });
-
-  it('rejects everyone when the allow-list is empty', () => {
-    expect(isAllowedAdmin({ email: 'tilana@example.com', email_confirmed_at: confirmed }, new Set())).toBe(false);
+  it('limits admin-only actions to admins', () => {
+    expect(hasAnyRole(['staff'], ['admin'])).toBe(false);
+    expect(hasAnyRole(['admin', 'staff'], ['admin'])).toBe(true);
   });
 });
 

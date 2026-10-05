@@ -12,8 +12,8 @@ const toggleTheme = () => {
   <ClientOnly>
     <UButton
       color="neutral"
-      variant="soft"
-      size="lg"
+      variant="ghost"
+      size="md"
       :icon="isDark ? 'i-lucide-sun' : 'i-lucide-moon'"
       :aria-label="isDark ? 'Use light mode' : 'Use dark mode'"
       class="theme-toggle"
@@ -27,13 +27,12 @@ const toggleTheme = () => {
 
 <style scoped>
 .theme-toggle {
-  border-radius: 999px;
-  box-shadow: var(--shadow-xs);
+  border-radius: var(--radius-pill);
 }
 
 .theme-toggle-placeholder {
   display: inline-block;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: var(--control-md);
+  height: var(--control-md);
 }
 </style>

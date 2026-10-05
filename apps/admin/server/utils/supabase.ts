@@ -1,8 +1,8 @@
 import { createServerClient } from '@supabase/ssr';
-import type { User } from '@supabase/supabase-js';
 import type { H3Event } from 'h3';
 import type { AdminUser } from '@tilana/contracts/admin-auth';
-import { isAllowedAdmin, parseAdminEmails } from './admin-access';
+import { hasAnyRole, type RoleKey } from '@tilana/db';
+import { resolveAdminUser } from '../services/admin-users';
 
 const requestClientKey = Symbol('supabase-request-client');
 type ClientContext = H3Event['context'] & { [requestClientKey]?: ReturnType<typeof createServerClient> };
@@ -40,33 +40,44 @@ export function useSupabaseServerClient(event: H3Event) {
   return client;
 }
 
-export function getAdminAllowList(event: H3Event) {
-  const allowList = parseAdminEmails(useRuntimeConfig(event).adminEmails);
-  if (!allowList.size) {
-    throw createError({ statusCode: 503, statusMessage: 'Admin access is not configured yet.' });
-  }
-  return allowList;
-}
-
-export function toAdminUser(user: User): AdminUser {
-  return { id: user.id, email: user.email ?? '' };
-}
-
 /**
  * Use in every admin API route. getUser() asks Supabase to verify the token
- * rather than trusting the cookie contents.
+ * rather than trusting the cookie; the database then decides access.
  */
 export async function requireAdmin(event: H3Event): Promise<AdminUser> {
-  const allowList = getAdminAllowList(event);
   const { data, error } = await useSupabaseServerClient(event).auth.getUser();
-
   if (error || !data.user) {
     throw createError({ statusCode: 401, statusMessage: 'Please sign in.' });
   }
-  if (!isAllowedAdmin(data.user, allowList)) {
+
+  const admin = await resolveAdminUser(useDatabase(), data.user);
+  if (!admin) {
     throw createError({ statusCode: 403, statusMessage: 'This account does not have admin access.' });
   }
-  return toAdminUser(data.user);
+  return admin;
+}
+
+/** For routes limited to specific roles, e.g. requireRole(event, ['admin']) for money. */
+export async function requireRole(event: H3Event, allowed: readonly RoleKey[]): Promise<AdminUser> {
+  const admin = await requireAdmin(event);
+  if (!hasAnyRole(admin.roles, allowed)) {
+    throw createError({ statusCode: 403, statusMessage: 'You do not have permission to do this.' });
+  }
+  return admin;
+}
+
+/**
+ * Remove every Supabase auth cookie from this browser, including ones set
+ * earlier in this same response (e.g. a sign-in that was then refused).
+ */
+export function clearSupabaseCookies(event: H3Event) {
+  const names = new Set(Object.keys(parseCookies(event)).filter(name => name.startsWith('sb-')));
+  const pending = getResponseHeader(event, 'set-cookie');
+  for (const header of [pending ?? []].flat()) {
+    const name = String(header).split('=')[0]?.trim();
+    if (name?.startsWith('sb-')) names.add(name);
+  }
+  for (const name of names) deleteCookie(event, name, { path: '/' });
 }
 
 export function assertSameOrigin(event: H3Event) {

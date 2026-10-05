@@ -1,6 +1,6 @@
 /**
- * Pure admin access rules, kept free of Nuxt/Supabase imports so they can be
- * unit tested directly.
+ * Pure access rules, kept free of Nuxt/Supabase/database imports so they can
+ * be unit tested directly.
  */
 
 export interface AuthUserLike {
@@ -8,24 +8,10 @@ export interface AuthUserLike {
   email_confirmed_at?: string | null;
 }
 
-/** Parse NUXT_ADMIN_EMAILS (comma or whitespace separated) into a lowercase set. */
-export function parseAdminEmails(raw: string | undefined | null): Set<string> {
-  return new Set(
-    (raw ?? '')
-      .split(/[\s,]+/)
-      .map(email => email.trim().toLowerCase())
-      .filter(Boolean),
-  );
-}
-
-/**
- * Supabase proves the password; this allow-list decides who is an admin.
- * An unconfirmed email is never trusted, so a sign-up using Tilana's address
- * cannot gain access before the owner of that inbox confirms it.
- */
-export function isAllowedAdmin(user: AuthUserLike | null | undefined, allowList: Set<string>): boolean {
-  if (!user?.email || !user.email_confirmed_at) return false;
-  return allowList.has(user.email.trim().toLowerCase());
+/** Only a confirmed email may be linked to a users row (prevents claiming someone else's email). */
+export function confirmedEmail(user: AuthUserLike | null | undefined): string | null {
+  if (!user?.email || !user.email_confirmed_at) return null;
+  return user.email.trim().toLowerCase();
 }
 
 /** State-changing requests must come from this site (basic CSRF protection). */
@@ -47,7 +33,7 @@ interface RateLimiterOptions {
 
 /**
  * In-memory failed-login limiter. It is per server instance and resets on
- * restart, which is enough for one admin; Supabase applies its own limits too.
+ * restart, which is enough for a handful of admins; Supabase applies its own limits too.
  */
 export function createFailureLimiter({ maxFailures, windowMs, now = Date.now }: RateLimiterOptions) {
   const failures = new Map<string, number[]>();

@@ -1,4 +1,4 @@
-// Tilana admin. Supabase handles password sign-in; NUXT_ADMIN_EMAILS decides who is an admin.
+// Tilana admin. Supabase checks the password; the users/roles tables decide who may enter.
 export default defineNuxtConfig({
   extends: ['@tilana/ui-nuxt'],
   modules: ['@nuxt/eslint'],
@@ -7,10 +7,10 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   colorMode: { preference: 'system', fallback: 'light' },
   runtimeConfig: {
-    // Server-only. Set with NUXT_SUPABASE_URL, NUXT_SUPABASE_PUBLISHABLE_KEY and NUXT_ADMIN_EMAILS.
+    // Server-only. Set with NUXT_SUPABASE_URL, NUXT_SUPABASE_PUBLISHABLE_KEY and NUXT_DATABASE_URL.
     supabaseUrl: '',
     supabasePublishableKey: '',
-    adminEmails: '',
+    databaseUrl: '',
   },
   routeRules: {
     '/**': { headers: { 'cache-control': 'private, no-store' } },

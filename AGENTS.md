@@ -28,7 +28,7 @@ boundaries. The old admin/backend is historical reference in the ignored
 
 Run checks proportionate to the changed area, normally `pnpm check`, `pnpm test`,
 and the production build for each affected app. Old database and financial tests
-are archived; the active starter has no database commands.
+are archived. Database tests need an isolated TEST_DATABASE_URL and skip without it.
 
 After every completed task that changes repository files, include one
 ready-to-copy Conventional Commit message in the final response. Use

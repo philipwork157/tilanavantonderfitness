@@ -7,8 +7,10 @@ changing this repository.
 
 The old admin/backend has been retired locally. `apps/admin` is being rebuilt
 feature by feature. Implemented so far: admin sign-in (Supabase Auth password
-login, httpOnly cookies, `NUXT_ADMIN_EMAILS` allow-list, `requireAdmin()` for
-every admin API route). There is no database, payment or customer portal yet. Rebuild
+login, httpOnly cookies, access from the `users`/`roles`/`user_roles` tables,
+`requireAdmin()`/`requireRole()` for every admin API route) and an empty admin
+shell (Overview, Inquiries, Newsletter, Blog). There are no payments, emails or
+customer portal yet. Rebuild
 features only when the user requests them. Do not silently restore the old
 feature scope.
 
@@ -23,6 +25,16 @@ database work must use an explicitly isolated development database. Never apply
 an archived migration or a new baseline to an existing database without a
 separate reviewed migration plan.
 
+## Local creative work
+
+Keep PDF/Word authoring, marketing images/reels, working renders and UI screenshots
+in the ignored root `tilana-content-work/` folder. Its `output/` contains finished
+deliverables, `tmp/` contains drafts/generators/render previews, `artifacts/` holds
+social media exports and `Claude outputs/` holds UI screenshots. These are local
+work, not app source or disposable caches, and need a separate backup.
+Do not move or delete assets under `apps/web/src/assets` or `apps/web/public`:
+those are part of the website. Do not delete creative work when clearing caches.
+
 ## Active packages
 
 - `apps/web`: existing Astro public website. Preserve its appearance, content,
@@ -33,9 +45,16 @@ separate reviewed migration plan.
   contracts compatible while rebuilding. Use `program` in code identifiers;
   British "programme" is website copy only. Public slugs, storage keys and the
   `?programme=` query parameter must not change.
-- `packages/design-system`: shared visual tokens and CSS, the single source of
-  brand colours (including the numbered `--brand-*` scale), status colours and
-  shadows. Do not hard-code these values in components.
+- `packages/design-system`: design tokens v2 (primitives, semantic tokens,
+  dark theme under `.dark`, compact admin density under
+  `[data-density='compact']`). Components use semantic tokens
+  (`--color-text-primary`, `--color-surface`, `--space-4`, `--radius-md`...),
+  never hex values or primitives. The v1 colour names (`--cream`, `--caramel`...)
+  remain as theme-aware aliases for the website only. The design-system
+  document targets Next.js/HeroUI; this repo maps the same tokens onto Nuxt UI
+  in `packages/ui-nuxt/app/assets/css/main.css`.
+- `apps/web/src/styles/legacy-tokens.css`: v1 values for names v2 redefines,
+  so the website changes only deliberately. Remove a line to adopt v2.
 - `packages/ui-astro`: shared Astro presentation components.
 - `packages/ui-nuxt`: shared Nuxt layer and components.
 
@@ -84,6 +103,27 @@ Use `pnpm dev:stop` before replacing managed development processes.
 Admin deployment and legacy scheduled recovery are paused in this branch.
 Do not restore them until a working backend is explicitly approved for rollout.
 Keep public deployment functional. An ignored archive is not a remote backup.
+
+## Every screen (website and admin)
+
+- Supports light and dark mode using the design-system tokens (they switch
+  under `.dark`). Check both themes before handoff.
+- Works on mobile: usable from 360px wide, no horizontal page scroll, touch
+  targets at least 44px on the website and 36px in the admin.
+- Use semantic tokens, keep a visible focus ring and respect reduced motion.
+
+## Database
+
+- `packages/db` owns the Drizzle schema and the single migration history
+  (`packages/db/migrations`). Generate with `pnpm --filter @tilana/db db:generate`;
+  apply with `db:migrate` against the development database only.
+- IDs are auto-increment `bigint` identities. Public references (order numbers)
+  get their own column instead of exposing IDs.
+- Row level security is enabled on every table with no policies; only the
+  server's connection string can read or write.
+- `users` holds everyone who signs in; roles come from `roles` + `user_roles`
+  (a user may hold several). Admin-area access: `admin` or `staff`
+  (`requireAdmin`, `requireRole` in `apps/admin/server/utils/supabase.ts`).
 
 ## Editing and handoff
 
