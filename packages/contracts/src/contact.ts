@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { programmeCatalogByKey } from './programs';
+import { programCatalogByKey } from './programs';
 
 export const contactInterestValues = [
   'move',
@@ -16,10 +16,10 @@ export type ContactInterest = z.infer<typeof contactInterestSchema>;
 
 /** Shared display labels used by the public form, admin portal, and notifications. */
 export const contactInterestLabels = {
-  strong: `${programmeCatalogByKey['strong-volume-1'].volumeName} · Coming soon`,
-  move: programmeCatalogByKey['move-volume-1'].volumeName,
-  nourish: programmeCatalogByKey['nourish-volume-1'].volumeName,
-  reconnect: programmeCatalogByKey['reconnect-volume-1'].volumeName,
+  strong: `${programCatalogByKey['strong-volume-1'].volumeName} · Coming soon`,
+  move: programCatalogByKey['move-volume-1'].volumeName,
+  nourish: programCatalogByKey['nourish-volume-1'].volumeName,
+  reconnect: programCatalogByKey['reconnect-volume-1'].volumeName,
   'one-on-one': 'One-on-one training',
   general: 'General question',
 } as const satisfies Record<ContactInterest, string>;

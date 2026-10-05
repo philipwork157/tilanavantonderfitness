@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev --host 127.0.0.1 --port 4321",
-    "start": "ASTRO_TELEMETRY_DISABLED=1 astro dev --host 127.0.0.1 --port 4321",
+    "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev --host localhost --port 4321",
+    "start": "ASTRO_TELEMETRY_DISABLED=1 astro dev --host localhost --port 4321",
     "build": "pnpm typecheck && astro build && node scripts/prepare-sites.mjs",
     "preview": "astro preview",
     "lint": "eslint \"src/**/*.{astro,js,ts}\" \"scripts/**/*.mjs\" \"tests/**/*.ts\" \"worker/**/*.js\" \"*.{js,mjs,ts}\" --max-warnings 0",
@@ -17,16 +17,16 @@
     "check": "pnpm lint && pnpm typecheck"
   },
   "dependencies": {
-    "@astrojs/sitemap": "latest",
+    "@astrojs/sitemap": "3.7.4",
     "@lucide/astro": "^1.45.0",
     "@tilana/contracts": "workspace:*",
     "@tilana/design-system": "workspace:*",
     "@tilana/ui-astro": "workspace:*",
-    "astro": "latest",
+    "astro": "7.3.5",
     "sharp": "^0.35.5"
   },
   "devDependencies": {
-    "@astrojs/check": "latest",
+    "@astrojs/check": "0.9.10",
     "@eslint/js": "^10.0.1",
     "@typescript-eslint/parser": "^8.67.0",
     "@vitest/coverage-v8": "^5.0.0",

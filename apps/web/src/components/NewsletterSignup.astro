@@ -158,8 +158,8 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
   .newsletter-shell { position: relative; }
   form { position: relative; padding: clamp(1.25rem, 3vw, 1.8rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--white) 82%, var(--cream)); box-shadow: var(--shadow-sm); }
   .email-row { display: flex; gap: 0.65rem; }
-  input[type='email'] { width: 100%; min-width: 0; min-height: 3.25rem; padding: 0.8rem 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-pill); color: var(--ink); background: var(--white); }
-  input[type='email']:focus { border-color: var(--caramel); outline: 2px solid color-mix(in srgb, var(--caramel) 24%, transparent); }
+  input[type='email'] { width: 100%; min-width: 0; min-height: 3.25rem; padding: 0.8rem 1rem; border: var(--border-width-field) solid var(--color-border-strong); border-radius: var(--radius-pill); color: var(--ink); background: var(--white); }
+  input[type='email']:focus { border-color: var(--caramel); outline: var(--border-width-focus) solid var(--color-focus); outline-offset: 2px; }
 
   button { position: relative; display: inline-flex; min-height: 3.25rem; flex: 0 0 auto; align-items: center; gap: 0.55rem; padding: 0.8rem 1.25rem; border: 0; border-radius: var(--radius-pill); color: var(--color-on-primary); background: var(--terracotta); font-weight: 700; cursor: pointer; transition: background-color var(--motion-fast) ease, transform var(--motion-fast) ease; }
   button:hover { background: var(--caramel); transform: translateY(-2px); }

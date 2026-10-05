@@ -14,6 +14,7 @@ const accountUrl = publicApiUrl('/account/sign-in');
       <p data-status-copy>Please keep this page open while Paystack confirms the payment.</p>
       <p data-reference hidden>Payment reference: <code data-reference-value></code></p>
       <a class="button button-secondary" href="/program" data-status-link hidden>Back to programs</a>
+      <button class="button button-secondary" type="button" data-recheck-status hidden>Check payment again</button>
       <a class="button button-primary account-link" href={accountUrl} data-account-link hidden>Access my programs</a>
     </div>
   </main>
@@ -27,7 +28,8 @@ const accountUrl = publicApiUrl('/account/sign-in');
   const root = document.querySelector<HTMLElement>('[data-payment-status]');
   const title = root?.querySelector<HTMLElement>('[data-status-title]');
   const copy = root?.querySelector<HTMLElement>('[data-status-copy]');
-  const link = root?.querySelector<HTMLElement>('[data-status-link]');
+  const link = root?.querySelector<HTMLAnchorElement>('[data-status-link]');
+  const recheck = root?.querySelector<HTMLButtonElement>('[data-recheck-status]');
   const accountLink = root?.querySelector<HTMLElement>('[data-account-link]');
   const reference = new URLSearchParams(window.location.search).get('reference');
   const referenceRow = root?.querySelector<HTMLElement>('[data-reference]');
@@ -40,6 +42,7 @@ const accountUrl = publicApiUrl('/account/sign-in');
   };
 
   const checkStatus = async () => {
+    if (recheck) { recheck.hidden = true; recheck.disabled = true; }
     if (!root || !reference) {
       show('Payment reference missing', 'Please contact Tilana if you completed a payment but cannot see its status.');
       return;
@@ -58,9 +61,18 @@ const accountUrl = publicApiUrl('/account/sign-in');
       retireIntent: clearCompletedCheckoutIntent,
     });
     show(result.heading, result.message);
+    if (link) {
+      link.href = result.retry ? '/checkout' : '/program';
+      link.textContent = result.retry ? 'Return to checkout' : 'Back to programs';
+    }
+    if (recheck) { recheck.hidden = !result.recheck; recheck.disabled = false; }
     if (accountLink) accountLink.hidden = !result.access;
   };
 
+  recheck?.addEventListener('click', () => {
+    show('Confirming your payment…', 'Please wait while we check the latest payment status.');
+    void checkStatus();
+  });
   void checkStatus();
 </script>
 
@@ -70,5 +82,6 @@ const accountUrl = publicApiUrl('/account/sign-in');
   .status-card h1 { margin: 0.75rem 0 1rem; font-family: var(--font-heading); font-size: clamp(2.2rem, 6vw, 4rem); }
   .status-card p:not(.eyebrow) { margin: 0 auto 1.8rem; max-width: 36rem; line-height: 1.7; }
   .account-link { margin-left: 0.6rem; }
+  [data-recheck-status] { margin-left: 0.6rem; }
   [data-reference-value] { overflow-wrap: anywhere; }
 </style>

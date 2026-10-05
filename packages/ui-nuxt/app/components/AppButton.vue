@@ -18,7 +18,7 @@ withDefaults(defineProps<Props>(), {
   <UButton
     :type="type"
     color="primary"
-    size="xl"
+    size="lg"
     trailing-icon="i-lucide-arrow-right"
     :loading="loading"
     :class="['app-button', { 'w-full justify-center': block }]"
@@ -29,7 +29,16 @@ withDefaults(defineProps<Props>(), {
 
 <style scoped>
 .app-button {
-  min-height: 3.4rem;
-  box-shadow: 0 12px 30px rgb(97 70 53 / 16%);
+  min-height: var(--control-lg);
+  /* Soft Black on terracotta is 8.5:1; white would be 2.3:1. */
+  color: var(--color-on-primary);
+}
+
+.app-button:not(:disabled):hover {
+  background: var(--color-primary-hover);
+}
+
+.app-button:not(:disabled):active {
+  background: var(--color-primary-active);
 }
 </style>

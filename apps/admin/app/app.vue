@@ -1,6 +1,10 @@
+<script setup lang="ts">
+// Compact admin density from the design system: same tokens, tighter values.
+useHead({ htmlAttrs: { 'data-density': 'compact', 'lang': 'en-ZA' } });
+</script>
+
 <template>
   <UApp>
-    <NuxtLoadingIndicator color="#D5A27F" :height="3" />
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>

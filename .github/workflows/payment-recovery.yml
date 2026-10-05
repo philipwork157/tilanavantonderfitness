@@ -1,10 +1,8 @@
-name: Reconcile Paystack payments
+name: Payment recovery (paused)
 
-# An external request wakes scale-to-zero Fly apps, unlike an in-process timer.
-# GitHub schedules run from the default branch and are best-effort, not a hard SLA.
+# The legacy backend and its worker are archived. No schedule or provider
+# request may be restored until the replacement backend has been reviewed.
 on:
-  schedule:
-    - cron: '*/10 * * * *'
   workflow_dispatch:
 
 permissions: {}
@@ -14,34 +12,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  reconcile:
+  paused:
+    name: Recovery is paused during the backend restart
     runs-on: ubuntu-latest
-    timeout-minutes: 8
-    strategy:
-      fail-fast: false
-      matrix:
-        environment: [dev, prod]
-    env:
-      RECOVERY_TOKEN_DEV: ${{ secrets.PAYSTACK_RECOVERY_TOKEN_DEV }}
-      RECOVERY_TOKEN_PROD: ${{ secrets.PAYSTACK_RECOVERY_TOKEN_PROD }}
-      RECOVERY_ENVIRONMENT: ${{ matrix.environment }}
+    timeout-minutes: 2
     steps:
-      - name: Run configured environment recovery
-        shell: bash
-        run: |
-          if [ "$RECOVERY_ENVIRONMENT" = "prod" ]; then
-            RECOVERY_TOKEN="$RECOVERY_TOKEN_PROD"
-          else
-            RECOVERY_TOKEN="$RECOVERY_TOKEN_DEV"
-          fi
-          if [ -z "$RECOVERY_TOKEN" ]; then
-            echo "Payment recovery is disabled: scheduler token is not configured."
-            exit 0
-          fi
-          if [ "$RECOVERY_ENVIRONMENT" = "prod" ]; then
-            RECOVERY_ENDPOINT="https://admin.tilanavantonder.co.za/api/internal/payments/reconcile"
-          else
-            RECOVERY_ENDPOINT="https://admin-dev.tilanavantonder.co.za/api/internal/payments/reconcile"
-          fi
-          curl --silent --show-error --fail-with-body --max-time 330 --retry 0 \
-            --request POST --header "Authorization: Bearer $RECOVERY_TOKEN" "$RECOVERY_ENDPOINT"
+      - name: Explain the recovery pause
+        run: echo '::notice::Payment and email recovery is paused in this restart branch. This workflow makes no requests to the deployed backend.'

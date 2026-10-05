@@ -7,6 +7,12 @@ const response = (status: CheckoutStatusResponse['status']) => new Response(JSON
 const setup = () => ({ fetch: vi.fn<typeof fetch>(), pause: vi.fn(async () => {}), clearPaid: vi.fn(async () => {}), retireIntent: vi.fn(async () => {}) });
 
 describe('verified checkout completion', () => {
+  it.each([['pending', 'preparing'], ['retrying', 'retry automatically'], ['sent', 'has been sent'], ['canceled', 'contact Tilana'], ['unavailable', 'email delivery is unavailable']] as const)('shows %s email delivery without falsely failing a paid order', (deliveryStatus, copy) => {
+      const result = checkoutStatusMessage({ status: 'succeeded', orderNumber: 'WEB-123', deliveryStatus });
+      expect(result).toMatchObject({ heading: 'Payment received', access: true }); expect(result.message).toContain(copy);
+      expect(checkoutStatusMessage({ status: 'failed', orderNumber: 'WEB-123', deliveryStatus })).toEqual(
+        checkoutStatusMessage({ status: 'failed', orderNumber: 'WEB-123' }));
+    });
   it('does not bind native fetch to the injected dependency object', async () => {
     const dependencies = setup();
     dependencies.fetch.mockImplementation(async function (this: unknown) {
@@ -21,11 +27,24 @@ describe('verified checkout completion', () => {
     ['partially_refunded', 'Payment partially refunded', true],
     ['refunded', 'Payment refunded', false],
     ['reversed', 'Payment reversed', false],
-    ['failed', 'Payment not completed', false],
-    ['abandoned', 'Checkout not completed', false],
+    ['failed', 'Sorry, something went wrong', false],
+    ['abandoned', 'Sorry, something went wrong', false],
     ['pending', 'Payment is still processing', false],
   ] as const)('presents %s explicitly with correct access guidance', (status, heading, access) => {
     expect(checkoutStatusMessage({ status, orderNumber: 'WEB-123' })).toMatchObject({ heading, access });
+  });
+
+  it.each(['failed', 'abandoned'] as const)('offers a preserved-cart retry only after %s evidence', status => {
+    const result = checkoutStatusMessage({ status, orderNumber: 'WEB-123' });
+    expect(result).toMatchObject({ retry: true, recheck: false, access: false });
+    expect(result.message).toContain('your cart has been kept');
+    expect(result.message).toContain('before paying again');
+  });
+
+  it('offers a status recheck instead of another payment for pending evidence', () => {
+    const result = checkoutStatusMessage({ status: 'pending', orderNumber: 'WEB-123' });
+    expect(result).toMatchObject({ retry: false, recheck: true, access: false });
+    expect(result.message).toContain('Do not start another payment');
   });
 
   it.each(['succeeded', 'partially_refunded', 'refunded', 'reversed', 'failed', 'abandoned'] as const)('handles a revisited %s callback without guessing entitlement', async status => {
@@ -64,5 +83,18 @@ describe('verified checkout completion', () => {
     expect(dependencies.pause).toHaveBeenCalledTimes(9);
     expect(dependencies.clearPaid).not.toHaveBeenCalled();
     expect(dependencies.retireIntent).not.toHaveBeenCalled();
+  });
+
+  it.each(['succeeded', 'failed', 'abandoned'] as const)('does not hide verified %s evidence when saved-checkout cleanup fails', async status => {
+    const dependencies = setup();
+    dependencies.fetch.mockResolvedValue(response(status));
+    dependencies.clearPaid.mockRejectedValue(new Error('Storage unavailable'));
+    dependencies.retireIntent.mockRejectedValue(new Error('Storage unavailable'));
+    const result = await confirmCheckoutStatus('https://admin.example/status', reference, dependencies);
+    expect(result).toMatchObject({ heading: status === 'succeeded' ? 'Payment received' : 'Sorry, something went wrong',
+      access: status === 'succeeded', retry: false, recheck: false });
+    expect(result.message).toContain('We could not update your saved checkout');
+    expect(dependencies.fetch).toHaveBeenCalledOnce();
+    expect(dependencies.pause).not.toHaveBeenCalled();
   });
 });

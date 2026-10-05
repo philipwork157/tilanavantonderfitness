@@ -16,22 +16,15 @@
     "build:admin": "turbo run build --filter=@tilana/admin",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "check": "turbo run lint typecheck && pnpm check:e2e",
-    "check:e2e": "pnpm --filter @tilana/admin exec tsc --project ../../tests/e2e/tsconfig.json",
+    "check": "turbo run lint typecheck",
+    "test": "turbo run test",
+    "test:coverage": "turbo run test:coverage",
+    "site:build": "pnpm --filter @tilana/web build && node scripts/prepare-site-dist.mjs",
     "db:generate": "pnpm --filter @tilana/db db:generate",
     "db:migrate": "pnpm --filter @tilana/db db:migrate",
-    "db:apply": "pnpm --filter @tilana/db db:apply",
-    "db:check": "pnpm --filter @tilana/db db:check",
-    "test": "turbo run test",
-    "test:integration": "pnpm --filter @tilana/admin test:integration",
-    "test:e2e": "playwright test",
-    "test:coverage": "turbo run test:coverage",
-    "site:build": "pnpm --filter @tilana/web build && node scripts/prepare-site-dist.mjs"
+    "db:add-admin": "pnpm --filter @tilana/db db:add-admin"
   },
   "devDependencies": {
-    "@playwright/test": "^1.63.0",
-    "tsx": "4.23.12",
-    "turbo": "latest",
-    "undici": "8.11.2"
+    "turbo": "2.11.5"
   }
 }

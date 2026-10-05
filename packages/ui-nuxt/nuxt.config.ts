@@ -13,11 +13,13 @@ export default defineNuxtConfig({
       icons: [
         'lucide:arrow-right',
         'lucide:check',
+        'lucide:circle-alert',
         'lucide:eye',
         'lucide:eye-off',
         'lucide:info',
         'lucide:key-round',
         'lucide:lock-keyhole',
+        'lucide:log-out',
         'lucide:mail',
         'lucide:moon',
         'lucide:shield-check',

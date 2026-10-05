@@ -1,20 +1,17 @@
-import { defineConfig } from 'drizzle-kit';
 import { existsSync } from 'node:fs';
-import { loadEnvFile } from 'node:process';
+import { defineConfig } from 'drizzle-kit';
 
-const adminEnvironmentFile = '../../apps/admin/.env';
-if (existsSync(adminEnvironmentFile)) loadEnvFile(adminEnvironmentFile);
-
-const databaseUrl = process.env.DATABASE_URL || process.env.NUXT_DATABASE_URL;
+// Connection string comes from the admin's private env file (never committed).
+const envFile = '../../apps/admin/.env';
+if (existsSync(envFile)) process.loadEnvFile(envFile);
 
 export default defineConfig({
   dialect: 'postgresql',
-  schema: './src/schema/index.ts',
-  out: '../../supabase/migrations',
-  migrations: {
-    prefix: 'timestamp',
-  },
-  ...(databaseUrl ? { dbCredentials: { url: databaseUrl } } : {}),
+  schema: './src/schema.ts',
+  out: './migrations',
+  dbCredentials: { url: process.env.NUXT_DATABASE_URL ?? '' },
+  // Only manage our own tables; never touch Supabase-managed schemas.
+  schemaFilter: ['public'],
   strict: true,
   verbose: true,
 });

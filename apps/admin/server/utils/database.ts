@@ -1,20 +1,14 @@
-import { createDatabase, type Database } from '@tilana/db/server';
+import { createDatabase, type Database } from '@tilana/db';
 
 let database: Database | undefined;
 
-export function getDatabase(): Database {
+/** One shared connection pool per server process. */
+export function useDatabase(): Database {
   if (database) return database;
-
   const { databaseUrl } = useRuntimeConfig();
-
   if (!databaseUrl) {
-    throw createError({
-      statusCode: 503,
-      statusMessage: 'The contact service is not configured.',
-    });
+    throw createError({ statusCode: 503, statusMessage: 'The database is not configured yet.' });
   }
-
-  database = createDatabase(databaseUrl);
+  database = createDatabase(databaseUrl).db;
   return database;
 }
-

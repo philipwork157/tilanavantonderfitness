@@ -14,7 +14,7 @@
     ".": "./nuxt.config.ts"
   },
   "dependencies": {
-    "@nuxt/ui": "latest",
+    "@nuxt/ui": "4.11.2",
     "@tiptap/y-tiptap": "^3.0.7",
     "@tilana/design-system": "workspace:*",
     "y-protocols": "^1.0.6",
@@ -24,11 +24,11 @@
     "nuxt": ">=4"
   },
   "devDependencies": {
-    "@iconify-json/lucide": "latest",
-    "@nuxt/eslint-config": "latest",
+    "@iconify-json/lucide": "1.2.137",
+    "@nuxt/eslint-config": "1.17.0",
     "eslint": "^10.8.1",
-    "nuxt": "latest",
+    "nuxt": "4.5.2",
     "typescript": "^6.0.0",
-    "vue-tsc": "latest"
+    "vue-tsc": "3.3.11"
   }
 }

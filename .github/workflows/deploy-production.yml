@@ -1,19 +1,17 @@
 name: Build and deploy (production)
 
-# Production never runs on push. Use Run workflow on main and choose both
-# applications or just one; the selected builds must pass before deployment.
+# Production never runs on push. Only the public website may be deployed
+# during the backend restart; the existing Fly application stays unchanged.
 on:
   workflow_dispatch:
     inputs:
       target:
-        description: What should be deployed?
+        description: Public website only (admin deployment is paused)
         required: true
-        default: both
+        default: public
         type: choice
         options:
-          - both
           - public
-          - admin
       confirm:
         description: 'Type "deploy" to confirm the production release'
         required: true
@@ -32,6 +30,7 @@ jobs:
         env:
           CONFIRM: ${{ inputs.confirm }}
           REF_NAME: ${{ github.ref_name }}
+          TARGET: ${{ inputs.target }}
         run: |
           if [ "$REF_NAME" != "main" ]; then
             echo "Production deployments must be run from the main branch."
@@ -39,6 +38,10 @@ jobs:
           fi
           if [ "$CONFIRM" != "deploy" ]; then
             echo 'Enter "deploy" in the confirmation field.'
+            exit 1
+          fi
+          if [ "$TARGET" != "public" ]; then
+            echo 'Admin deployment is paused during the backend restart. Select public.'
             exit 1
           fi
 
@@ -49,7 +52,7 @@ jobs:
   build-public:
     name: Build public website
     needs: [validate, quality]
-    if: inputs.target == 'both' || inputs.target == 'public'
+    if: inputs.target == 'public'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -88,36 +91,20 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  build-admin:
-    name: Build admin website
-    needs: [validate, quality]
-    if: inputs.target == 'both' || inputs.target == 'admin'
+  admin-paused:
+    name: Admin deployment paused
+    needs: validate
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-      - name: Set up Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: pnpm
-      - name: Validate Fly.io credentials
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}
-        run: test -n "$FLY_API_TOKEN" || { echo '::error::FLY_API_TOKEN_PROD is missing.'; exit 1; }
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Build admin website
-        run: pnpm build:admin
+      - name: Explain the backend restart pause
+        run: echo '::notice::Admin deployment is paused during the backend restart. The existing Fly application is unchanged.'
 
   deploy-public:
     name: Deploy public website
     needs: build-public
-    if: inputs.target == 'both' || inputs.target == 'public'
+    if: inputs.target == 'public'
     runs-on: ubuntu-latest
     environment: production
     permissions:
@@ -141,21 +128,3 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-  deploy-admin:
-    name: Deploy admin website
-    needs: build-admin
-    if: inputs.target == 'both' || inputs.target == 'admin'
-    runs-on: ubuntu-latest
-    environment: production
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Set up flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # master 2026-07, node24
-      - name: Deploy admin website to Fly.io
-        run: flyctl deploy --config fly.prod.toml --remote-only
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}

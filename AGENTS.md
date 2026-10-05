@@ -3,36 +3,32 @@
 ## Mandatory project context
 
 Read and follow [`CLAUDE.md`](./CLAUDE.md) completely before planning, reviewing,
-or changing this repository. It is the canonical guide for the architecture,
-database identity model, Paystack lifecycle, customer access, security
-boundaries, development commands, and Git handoff conventions.
+or changing this repository. It is the canonical guide for the current rebuild,
+security boundaries, development commands, and Git handoff conventions.
 
-When a task changes payments, orders, refunds, entitlements, authentication,
-email, private files, database relationships, or deployment, also consult:
-
-- [`docs/database-design.md`](./docs/database-design.md)
-- [`docs/deployment.md`](./docs/deployment.md)
+Read [`docs/admin-rebuild.md`](./docs/admin-rebuild.md) for the archive and reset
+boundaries. The old admin/backend is historical reference in the ignored
+`tilana-fitness-old/` folder, not an active application or migration source.
 
 ## Non-negotiable implementation rules
 
-- All application primary and foreign keys are auto-incrementing integers. The
-  only application-schema UUID is the Supabase bridge at `users.supabase_id`.
-- Store money as integer cents and treat order-item fields as immutable purchase
-  snapshots.
-- Follow `API route -> Zod contract -> service -> Drizzle`.
+- Preserve the public website and shared design packages while rebuilding.
+- Implement only features requested for the new admin. Do not restore archived
+  business logic, tests, credentials, deployments, or migrations automatically.
+- Keep website-facing contracts compatible and backend logic server-side.
 - Keep secrets and privileged packages in server-only code.
-- Treat signed Paystack verification/webhooks—not browser callbacks—as payment
-  and refund truth.
-- Preserve database constraints, webhook idempotency, refund overage protection,
-  entitlement checks, RLS, and the test/live environment boundary.
-- Use forward migrations and review generated SQL before applying it.
+- Use isolated development services. Never reset or migrate an existing remote
+  database as part of this local rebuild.
+- When payments/access return, verify provider evidence server-side, enforce
+  ownership, and make retries idempotent. Never fabricate successful delivery.
 - Preserve user changes and do not commit, deploy, or perform destructive work
   unless the user authorizes it.
 
 ## Verification and handoff
 
-Run checks proportionate to the changed area, normally `pnpm check`,
-`pnpm db:check` for schema work, and the production build for each affected app.
+Run checks proportionate to the changed area, normally `pnpm check`, `pnpm test`,
+and the production build for each affected app. Old database and financial tests
+are archived. Database tests need an isolated TEST_DATABASE_URL and skip without it.
 
 After every completed task that changes repository files, include one
 ready-to-copy Conventional Commit message in the final response. Use

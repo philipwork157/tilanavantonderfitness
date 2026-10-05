@@ -1,7 +1,7 @@
 name: Build and deploy (dev)
 
-# Every push to dev builds and deploys both applications. The jobs are
-# independent, so GitHub Actions runs them in parallel.
+# Every push to dev checks and deploys the public website.
+# The new admin scaffold must not replace the existing Fly application.
 on:
   push:
     branches: [dev]
@@ -59,33 +59,12 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-  admin:
-    name: Admin website
+  admin-paused:
+    name: Admin deployment paused
     needs: quality
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-      - name: Set up Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: pnpm
-      - name: Validate Fly.io credentials
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: test -n "$FLY_API_TOKEN" || { echo '::error::FLY_API_TOKEN is missing.'; exit 1; }
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Build admin website
-        run: pnpm build:admin
-      - name: Set up flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # master 2026-07, node24
-      - name: Deploy admin website to Fly.io
-        run: flyctl deploy --config fly.toml --remote-only
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Explain the backend restart pause
+        run: echo '::notice::Admin deployment is paused during the backend restart. The existing Fly application is unchanged.'

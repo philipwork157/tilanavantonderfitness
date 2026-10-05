@@ -1,90 +1,29 @@
-import { fileURLToPath } from 'node:url';
-
+// Tilana admin. Supabase checks the password; the users/roles tables decide who may enter.
 export default defineNuxtConfig({
   extends: ['@tilana/ui-nuxt'],
   modules: ['@nuxt/eslint'],
-  alias: {
-    '@app': fileURLToPath(new URL('./app', import.meta.url)),
-    '@server': fileURLToPath(new URL('./server', import.meta.url)),
-  },
   compatibilityDate: '2026-08-19',
   telemetry: false,
+  devtools: { enabled: false },
+  colorMode: { preference: 'system', fallback: 'light' },
   runtimeConfig: {
-    databaseUrl: '',
+    // Server-only. Set with NUXT_SUPABASE_URL, NUXT_SUPABASE_PUBLISHABLE_KEY and NUXT_DATABASE_URL.
     supabaseUrl: '',
     supabasePublishableKey: '',
-    supabaseServiceRoleKey: '',
-    contactAllowedOrigins:
-      'http://127.0.0.1:4321,http://localhost:4321,https://tilanavantonder.co.za,https://www.tilanavantonder.co.za',
-    turnstileSecretKey: '',
-    contactIpHashSecret: '',
-    trustedClientIpHeader: process.env.NODE_ENV === 'production' ? 'fly-client-ip' : '',
-    contactTurnstileRequired: process.env.NODE_ENV === 'production',
-    emailFromAddress: '',
-    emailFromName: 'Tilana van Tonder website',
-    contactNotificationEnabled: false,
-    contactNotificationTo: 'tilanavantonder@gmail.com',
-    newsletterFromEmail: '',
-    emailDevelopmentEnabled: false,
-    emailDevelopmentRecipient: '',
-    customerNotificationsEnabled: false,
-    invoiceBillingEnabled: false,
-    paystackSecretKey: '',
-    paystackEnvironment: 'test',
-    paystackRecoveryEnabled: false,
-    paystackRecoveryToken: '',
-    paystackRecoveryAlertTo: '',
-    accountBaseUrl: 'http://127.0.0.1:3001',
-    r2AccountId: '',
-    r2PublicMediaBucket: '',
-    r2PublicMediaBaseUrl: '',
-    r2PrivateProgramBucket: '',
-    r2DownloadAccessKeyId: '',
-    r2DownloadSecretAccessKey: '',
-    r2UploadAccessKeyId: '',
-    r2UploadSecretAccessKey: '',
-    public: {
-      siteUrl: 'http://127.0.0.1:4321',
-    },
-  },
-  devtools: {
-    enabled: false,
-  },
-  colorMode: {
-    preference: 'system',
-    fallback: 'light',
+    databaseUrl: '',
   },
   routeRules: {
-    '/dashboard/**': { headers: { 'cache-control': 'private, no-store' } },
-    '/contacts/**': { headers: { 'cache-control': 'private, no-store' } },
-    '/programs/**': { headers: { 'cache-control': 'private, no-store' } },
-    '/invoices/**': { headers: { 'cache-control': 'private, no-store' } },
-    '/api-docs': { headers: { 'cache-control': 'private, no-store' } },
-    '/api-docs/**': { headers: { 'cache-control': 'private, no-store' } },
-    '/api/auth/**': { headers: { 'cache-control': 'private, no-store' } },
-    '/api/admin/**': { headers: { 'cache-control': 'private, no-store' } },
-    '/api/public/**': { headers: { 'cache-control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=600' } },
-    '/api/checkout/**': { headers: { 'cache-control': 'no-store' } },
-    '/api/webhooks/**': { headers: { 'cache-control': 'no-store' } },
-    '/api/internal/**': { headers: { 'cache-control': 'private, no-store' } },
-    '/account/**': { headers: { 'cache-control': 'private, no-store' } },
-    '/api/customer/**': { headers: { 'cache-control': 'private, no-store' } },
+    '/**': { headers: { 'cache-control': 'private, no-store' } },
   },
   app: {
     head: {
       title: 'Tilana Admin',
       link: [{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
       meta: [
-        {
-          name: 'description',
-          content: 'Private administration portal for Tilana van Tonder.',
-        },
+        { name: 'robots', content: 'noindex, nofollow' },
+        { name: 'description', content: 'Private administration for Tilana van Tonder.' },
       ],
     },
   },
-  eslint: {
-    config: {
-      autoInit: false,
-    },
-  },
+  eslint: { config: { autoInit: false } },
 });

@@ -1,4 +1,4 @@
-import type { ProgrammeKey } from '@tilana/contracts/programs';
+import type { ProgramKey } from '@tilana/contracts/programs';
 
 export type MarketingProgram = {
   name: string;
@@ -6,7 +6,7 @@ export type MarketingProgram = {
   title: string;
   description: string;
   accent: 'beginner' | 'intermediate' | 'advanced' | 'reconnect' | 'nourish';
-  catalogueKey?: ProgrammeKey;
+  catalogueKey?: ProgramKey;
   interest?: 'move' | 'reconnect' | 'nourish';
   status?: 'Coming soon';
 };
