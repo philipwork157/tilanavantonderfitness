@@ -16,6 +16,12 @@ export default defineAppConfig({
         base: 'rounded-[var(--radius-md)] bg-[var(--color-surface-elevated)]!',
       },
     },
+    textarea: {
+      slots: {
+        root: 'w-full',
+        base: 'rounded-[var(--radius-md)] bg-[var(--color-surface-elevated)]!',
+      },
+    },
     select: {
       slots: {
         base: 'rounded-[var(--radius-md)] bg-[var(--color-surface-elevated)]!',

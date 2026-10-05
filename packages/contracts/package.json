@@ -6,6 +6,7 @@
   "exports": {
     "./admin-auth": "./src/admin-auth.ts",
     "./admin-inquiries": "./src/admin-inquiries.ts",
+    "./blog": "./src/blog.ts",
     "./catalogue": "./src/catalogue.ts",
     "./checkout": "./src/checkout.ts",
     "./contact": "./src/contact.ts",

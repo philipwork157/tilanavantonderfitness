@@ -1,39 +1,43 @@
 ---
-import { getCollection, render } from 'astro:content';
+import { readingTimeLabel, renderMarkdown } from '@tilana/content';
 import BaseLayout from '@web/layouts/BaseLayout.astro';
-export async function getStaticPaths() { const posts = await getCollection('blog', ({ data }) => !data.draft); return posts.map((post) => ({ params: { id: post.id }, props: { post } })); }
+import { getPublishedPosts } from '@web/utils/blog-posts';
+export async function getStaticPaths() { const posts = await getPublishedPosts(); return posts.map((post) => ({ params: { id: post.slug }, props: { post } })); }
 const { post } = Astro.props;
-const { Content } = await render(post);
-const featuredImage = post.data.image ?? (post.id === 'welcome-a-little-about-me' ? '/tilana-blog-welcome.jpg' : undefined);
-const featuredImageWidth = post.data.imageWidth ?? 944;
-const featuredImageHeight = post.data.imageHeight ?? 1104;
-const formattedPublishedAt = post.data.publishedAt.toLocaleDateString('en-ZA', {
+// Markdown is rendered with raw HTML disabled and unsafe links removed (see @tilana/content).
+const bodyHtml = renderMarkdown(post.bodyMarkdown);
+const readingTime = readingTimeLabel(post.bodyMarkdown);
+const featuredImage = post.coverImageUrl ?? undefined;
+const featuredImageWidth = post.coverImageWidth ?? 944;
+const featuredImageHeight = post.coverImageHeight ?? 1104;
+const formattedPublishedAt = post.publishedAt.toLocaleDateString('en-ZA', {
   day: 'numeric',
   month: 'long',
   year: 'numeric',
+  timeZone: 'Africa/Johannesburg',
 });
-const readingMinutes = Number.parseInt(post.data.readingTime, 10);
-const canonical = new URL(`/blog/${post.id}`, Astro.site).href;
+const readingMinutes = Number.parseInt(readingTime, 10);
+const canonical = new URL(`/blog/${post.slug}`, Astro.site).href;
 const pageId = `${canonical}#webpage`;
 const websiteId = new URL('/#website', Astro.site).href;
 const personId = new URL('/#person', Astro.site).href;
-const articleImage = featuredImage ? new URL(featuredImage, Astro.site).href : null;
+const articleImage = featuredImage ?? null;
 const webPageSchema = {
   '@type': 'WebPage',
   '@id': pageId,
   url: canonical,
-  name: `${post.data.title} | Tilana van Tonder`,
-  description: post.data.description,
+  name: `${post.title} | Tilana van Tonder`,
+  description: post.excerpt,
   isPartOf: { '@id': websiteId },
   about: { '@id': personId },
 };
 const articleSchema = {
   '@type': 'BlogPosting',
   '@id': `${canonical}#article`,
-  headline: post.data.title,
-  description: post.data.description,
-  datePublished: post.data.publishedAt.toISOString(),
-  dateModified: post.data.publishedAt.toISOString(),
+  headline: post.title,
+  description: post.excerpt,
+  datePublished: post.publishedAt.toISOString(),
+  dateModified: post.updatedAt.toISOString(),
   mainEntityOfPage: { '@id': pageId },
   isPartOf: { '@id': websiteId },
   author: { '@id': personId },
@@ -47,13 +51,13 @@ const breadcrumbSchema = {
   itemListElement: [
     { '@type': 'ListItem', position: 1, name: 'Home', item: new URL('/', Astro.site).href },
     { '@type': 'ListItem', position: 2, name: 'Blog', item: new URL('/blog', Astro.site).href },
-    { '@type': 'ListItem', position: 3, name: post.data.title, item: canonical },
+    { '@type': 'ListItem', position: 3, name: post.title, item: canonical },
   ],
 };
 ---
-<BaseLayout title={post.data.title} description={post.data.description} image={featuredImage ?? null} imageAlt={post.data.imageAlt} imageWidth={featuredImage ? featuredImageWidth : undefined} imageHeight={featuredImage ? featuredImageHeight : undefined} imageType={featuredImage ? 'image/jpeg' : undefined} pageType="article" publishedAt={post.data.publishedAt} structuredData={[webPageSchema, articleSchema, breadcrumbSchema]}>
+<BaseLayout title={post.title} description={post.excerpt} image={featuredImage ?? null} imageAlt={post.coverImageAlt ?? undefined} imageWidth={featuredImage ? featuredImageWidth : undefined} imageHeight={featuredImage ? featuredImageHeight : undefined} imageType={featuredImage ? 'image/webp' : undefined} pageType="article" publishedAt={post.publishedAt} structuredData={[webPageSchema, articleSchema, breadcrumbSchema]}>
   <div class="reading-progress" data-reading-progress role="progressbar" aria-label="Article reading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div>
-  <article data-blog-article><header><div class:list={['container', { 'header-grid': featuredImage }]}><div class="header-copy"><a href="/blog">← Back to blog</a><p class="article-eyebrow">A personal story</p><h1>{post.data.title}</h1><dl class="article-meta" aria-label="Article details"><div><dt>Published</dt><dd><time datetime={post.data.publishedAt.toISOString()}>{formattedPublishedAt}</time></dd></div><div><dt>Reading time</dt><dd>{post.data.readingTime}</dd></div><div><dt>Filed under</dt><dd>{post.data.category}</dd></div></dl></div>{featuredImage && <figure><img src={featuredImage} alt={post.data.imageAlt ?? 'Tilana van Tonder smiling in a white shirt'} width={featuredImageWidth} height={featuredImageHeight} loading="eager" decoding="async" fetchpriority="high" /></figure>}</div></header><div class="article-body"><div class="reading-card"><div class="reading-label"><span aria-hidden="true">♡</span> A personal note from Tilana</div><div class="prose"><Content /></div><aside><strong>Please note</strong><p>This article is general education based on lived experience. It does not diagnose, treat, or replace advice from an appropriately qualified healthcare professional.</p></aside></div></div></article>
+  <article data-blog-article><header><div class:list={['container', { 'header-grid': featuredImage }]}><div class="header-copy"><a href="/blog">← Back to blog</a><p class="article-eyebrow">A personal story</p><h1>{post.title}</h1><dl class="article-meta" aria-label="Article details"><div><dt>Published</dt><dd><time datetime={post.publishedAt.toISOString()}>{formattedPublishedAt}</time></dd></div><div><dt>Reading time</dt><dd>{readingTime}</dd></div><div><dt>Filed under</dt><dd>{post.category}</dd></div></dl></div>{featuredImage && <figure><img src={featuredImage} alt={post.coverImageAlt ?? ''} width={featuredImageWidth} height={featuredImageHeight} loading="eager" decoding="async" fetchpriority="high" /></figure>}</div></header><div class="article-body"><div class="reading-card"><div class="reading-label"><span aria-hidden="true">♡</span> A personal note from Tilana</div><div class="prose" set:html={bodyHtml} /><div class="prose"><div class="article-closing">{post.closingLine && <p><strong>{post.closingLine}</strong></p>}<div class="article-signature"><span>With love,</span><strong>Tilana</strong></div></div>{post.quoteText && <blockquote class="bible-verse"><span aria-hidden="true">✦</span><p>“{post.quoteText}”</p>{post.quoteCitation && <cite>{post.quoteCitation}</cite>}</blockquote>}</div><aside><strong>Please note</strong><p>This article is general education based on lived experience. It does not diagnose, treat, or replace advice from an appropriately qualified healthcare professional.</p></aside></div></div></article>
 </BaseLayout>
 <style>
   .reading-progress { position: fixed; z-index: 50; top: 0; right: 0; left: 0; height: 4px; overflow: hidden; background: color-mix(in srgb, var(--sage) 38%, transparent); pointer-events: none; }
@@ -80,6 +84,12 @@ const breadcrumbSchema = {
   :global(.reading-card .prose) { max-width: 46rem; margin-inline: auto; }
   :global(.reading-card .prose > p) { margin: 0 0 1.65rem; font-size: clamp(1rem, 1.4vw, 1.08rem); line-height: 1.95; }
   :global(.reading-card .article-intro) { display: grid; align-items: start; gap: clamp(0.8rem, 2vw, 1.25rem); color: var(--ink); font-family: var(--font-heading); font-size: clamp(1.3rem, 2.2vw, 1.65rem); line-height: 1.55; grid-template-columns: auto minmax(0, 1fr); }
+  :global(.reading-card .prose > p:first-child) { color: var(--ink); font-family: var(--font-heading); font-size: clamp(1.3rem, 2.2vw, 1.65rem); line-height: 1.55; }
+  :global(.reading-card .prose > p:first-child::first-letter) { float: left; margin: 0.06em 0.12em 0 0; color: var(--caramel); font-family: var(--font-heading); font-size: 4.25em; line-height: 0.8; }
+  :global(.reading-card .prose a) { color: var(--caramel); text-decoration: underline; text-underline-offset: 0.2em; }
+  :global(.reading-card .prose :is(h2, h3)) { margin: 2.4em 0 0.7em; color: var(--ink); font-family: var(--font-heading); line-height: 1.2; }
+  :global(.reading-card .prose blockquote:not(.bible-verse)) { margin: 2rem 0; padding-left: 1.25rem; border-left: 3px solid var(--terracotta); color: var(--ink); font-family: var(--font-heading); font-size: 1.2rem; }
+  :global(.reading-card .prose :is(ul, ol)) { margin: 0 0 1.65rem; padding-left: 1.4rem; line-height: 1.9; }
   :global(.reading-card .drop-cap) { display: block; margin-top: -0.08em; color: var(--caramel); font-family: var(--font-heading); font-size: 4.25em; line-height: 0.8; }
   :global(.reading-card .prose strong) { color: var(--ink); font-weight: 700; }
   :global(.reading-card .prose > p:last-child) { margin-bottom: 0; }

@@ -1,16 +1,16 @@
 ---
-import { getCollection } from 'astro:content';
+import { readingTimeLabel } from '@tilana/content';
+import { getPublishedPosts } from '@web/utils/blog-posts';
 import BaseLayout from '@web/layouts/BaseLayout.astro';
 import PageHero from '@tilana/ui-astro/PageHero.astro';
-const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
-const getPostImage = (post: (typeof posts)[number]) =>
-  post.data.image ?? (post.id === 'welcome-a-little-about-me' ? '/tilana-blog-welcome.jpg' : undefined);
+const posts = await getPublishedPosts();
 ---
 <BaseLayout title="Strength & Healthy Habits Blog" description="Practical strength-training guidance from Tilana van Tonder for building confidence, sound movement patterns, and sustainable progress.">
   <PageHero eyebrow="The blog" title="Useful notes for" script="real life." intro="Simple, encouraging writing about strength, movement, and sustainable progress - without miracle claims." />
-  <section class="section"><div class="container post-grid">{posts.map((post) => <article><div class="art">{getPostImage(post) && <img src={getPostImage(post)} alt={post.data.imageAlt ?? 'Tilana van Tonder smiling in a white shirt'} width={post.data.imageWidth ?? 944} height={post.data.imageHeight ?? 1104} loading="lazy" decoding="async" />}</div><div class="copy"><span>{post.data.category} · {post.data.readingTime}</span><h2>{post.data.title}</h2><p>{post.data.description}</p><a href={`/blog/${post.id}`}>Read article →</a></div></article>)}</div></section>
+  <section class="section"><div class="container post-grid">{posts.map((post) => <article><div class="art">{post.coverImageUrl && <img src={post.coverImageUrl} alt={post.coverImageAlt ?? ''} width={post.coverImageWidth ?? 944} height={post.coverImageHeight ?? 1104} loading="lazy" decoding="async" />}</div><div class="copy"><span>{post.category} · {readingTimeLabel(post.bodyMarkdown)}</span><h2>{post.title}</h2><p>{post.excerpt}</p><a href={`/blog/${post.slug}`}>Read article →</a></div></article>)}{posts.length === 0 && <p class="empty">New posts are on their way.</p>}</div></section>
 </BaseLayout>
 <style>
+  .empty { color: var(--chocolate); text-align: center; }
   .post-grid { display: flex; max-width: 78rem; align-items: stretch; justify-content: center; gap: clamp(1rem, 2vw, 1.5rem); margin-inline: auto; }
   article { display: flex; width: calc((100% - 3rem) / 3); min-width: 0; max-width: 25rem; overflow: hidden; flex: 1 1 calc((100% - 3rem) / 3); flex-direction: column; border: 1px solid color-mix(in srgb, var(--caramel) 20%, transparent); border-radius: var(--radius-md); background: color-mix(in srgb, var(--sand) 45%, var(--cream)); box-shadow: var(--shadow-sm); transition: transform 260ms ease, box-shadow 260ms ease, border-color 260ms ease; }
   article:hover, article:focus-within { border-color: color-mix(in srgb, var(--caramel) 46%, transparent); box-shadow: var(--shadow-md); transform: translateY(-0.35rem); }

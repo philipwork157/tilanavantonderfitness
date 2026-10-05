@@ -19,6 +19,7 @@
   "dependencies": {
     "@astrojs/sitemap": "3.7.4",
     "@lucide/astro": "^1.45.0",
+    "@tilana/content": "workspace:*",
     "@tilana/contracts": "workspace:*",
     "@tilana/design-system": "workspace:*",
     "@tilana/ui-astro": "workspace:*",

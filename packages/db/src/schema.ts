@@ -4,6 +4,7 @@ import {
   boolean,
   check,
   index,
+  integer,
   pgTable,
   primaryKey,
   smallint,
@@ -82,6 +83,41 @@ export const inquiries = pgTable('inquiries', {
   index('inquiries_created_at_idx').on(table.createdAt.desc()),
 ]).enableRLS();
 
+export const BLOG_POST_STATUSES = ['draft', 'published'] as const;
+
+/**
+ * Blog posts written in the admin. The body is Markdown (raw HTML is never
+ * rendered). The signature and "Please note" are part of the website template.
+ */
+export const blogPosts = pgTable('blog_posts', {
+  id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  slug: text('slug').notNull().unique(),
+  title: text('title').notNull(),
+  excerpt: text('excerpt').notNull().default(''),
+  category: text('category').notNull().default('Nurturance'),
+  bodyMarkdown: text('body_markdown').notNull().default(''),
+  // Object path inside the public "blog-images" storage bucket.
+  coverImagePath: text('cover_image_path'),
+  coverImageAlt: text('cover_image_alt'),
+  coverImageWidth: integer('cover_image_width'),
+  coverImageHeight: integer('cover_image_height'),
+  // Optional closing sentence shown above "With love, Tilana".
+  closingLine: text('closing_line'),
+  // Optional highlighted quote (e.g. a Bible verse) and its source.
+  quoteText: text('quote_text'),
+  quoteCitation: text('quote_citation'),
+  status: text('status', { enum: BLOG_POST_STATUSES }).notNull().default('draft'),
+  publishedAt: timestamp('published_at', { withTimezone: true }),
+  createdBy: bigint('created_by', { mode: 'number' }).references(() => users.id, { onDelete: 'set null' }),
+  ...timestamps,
+}, table => [
+  check('blog_posts_status_valid', sql`${table.status} in ('draft', 'published')`),
+  check('blog_posts_slug_format', sql`${table.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`),
+  check('blog_posts_published_has_date', sql`${table.status} <> 'published' or ${table.publishedAt} is not null`),
+  index('blog_posts_status_published_idx').on(table.status, table.publishedAt.desc()),
+]).enableRLS();
+
 export type User = typeof users.$inferSelect;
+export type BlogPost = typeof blogPosts.$inferSelect;
 export type Inquiry = typeof inquiries.$inferSelect;
 export type Role = typeof roles.$inferSelect;

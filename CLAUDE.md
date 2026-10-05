@@ -57,6 +57,8 @@ those are part of the website. Do not delete creative work when clearing caches.
   so the website changes only deliberately. Remove a line to adopt v2.
 - `packages/ui-astro`: shared Astro presentation components.
 - `packages/ui-nuxt`: shared Nuxt layer and components.
+- `packages/content`: safe Markdown rendering (`renderMarkdown`) and reading
+  time, shared by the website and admin.
 
 The website still calls catalogue, checkout, contact, newsletter and customer
 access endpoints on its configured API origin. The new local admin does not
@@ -123,6 +125,19 @@ Keep public deployment functional. An ignored archive is not a remote backup.
 - Website-facing endpoints are listed in `PUBLIC_WEBSITE_PATHS`
   (`server/utils/website-origins.ts`) and only accept `NUXT_WEBSITE_ORIGINS`.
   `/api/contact` also requires Turnstile in production, a honeypot and a rate limit.
+
+## Blog
+
+- Posts live in `blog_posts`; the body is Markdown. Render it only with
+  `renderMarkdown` from `@tilana/content` (raw HTML off, images off, safe links
+  only). Never render post text with raw HTML any other way.
+- Closing line and quote are separate fields; "With love, Tilana" and the
+  "Please note" box are fixed in the website template, not stored per post.
+- Cover photos go to the public Supabase Storage bucket `blog-images`, written
+  only by the server with `NUXT_SUPABASE_SERVICE_ROLE_KEY`. Uploads are
+  re-encoded to WebP with sharp (metadata stripped); SVG is rejected.
+- The website reads published posts at build time from
+  `/api/public/blog-posts`, so publishing needs a website rebuild.
 
 ## Admin UI
 
