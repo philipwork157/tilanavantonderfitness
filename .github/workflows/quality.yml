@@ -1,4 +1,4 @@
-name: Quality and financial integration tests
+name: Quality checks
 
 on:
   pull_request:
@@ -11,25 +11,11 @@ permissions:
 
 jobs:
   quality:
-    name: Checks and PostgreSQL integration tests
+    name: Lint, types and public website tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_DB: tilana_paystack_test_ci
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U postgres -d tilana_paystack_test_ci"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=10
-    env:
-      PAYSTACK_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/tilana_paystack_test_ci
+    timeout-minutes: 15
+    # Backend, migration and financial/browser tests are archived during the restart.
+    # These checks cover the active scaffold, shared packages and public website only.
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -44,19 +30,5 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Run lint and type checks
         run: pnpm check
-      - name: Validate migration history
-        run: pnpm db:check
-      - name: Run unit and client-flow tests
+      - name: Run public website unit tests
         run: pnpm test
-      - name: Run financial PostgreSQL integration tests
-        run: pnpm test:integration
-      - name: Create isolated browser database
-        env:
-          PGPASSWORD: postgres
-        run: createdb --host=127.0.0.1 --username=postgres tilana_paystack_test_browser_ci
-      - name: Install browser runtime
-        run: pnpm exec playwright install --with-deps chromium
-      - name: Run served-app checkout and customer access tests
-        env:
-          E2E_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/tilana_paystack_test_browser_ci
-        run: pnpm test:e2e

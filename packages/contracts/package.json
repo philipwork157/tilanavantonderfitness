@@ -4,19 +4,11 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./auth": "./src/auth.ts",
     "./catalogue": "./src/catalogue.ts",
-    "./clients": "./src/clients.ts",
     "./checkout": "./src/checkout.ts",
-    "./coaching": "./src/coaching.ts",
     "./contact": "./src/contact.ts",
-    "./dashboard": "./src/dashboard.ts",
-    "./identity": "./src/identity.ts",
-    "./invoices": "./src/invoices.ts",
     "./newsletter": "./src/newsletter.ts",
     "./newsletter.messages": "./src/newsletter.messages.ts",
-    "./payments": "./src/payments.ts",
-    "./payment-evidence": "./src/payment-evidence.ts",
     "./programs": "./src/programs.ts"
   },
   "scripts": {

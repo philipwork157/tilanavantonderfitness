@@ -2,6 +2,9 @@
 node_modules/
 .pnpm-store/
 
+# Local reference snapshot of the retired backend, including private environment files
+/tilana-fitness-old/
+
 # Astro, Nuxt, Nitro, and Turborepo output
 dist/
 .astro/

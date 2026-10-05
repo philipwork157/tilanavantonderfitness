@@ -5,6 +5,9 @@
 *.md
 .DS_Store
 
+# Never send the retired backend or its private environment files to a build context
+/tilana-fitness-old/
+
 # dependencies & package-manager state (reinstalled in the image)
 node_modules
 **/node_modules

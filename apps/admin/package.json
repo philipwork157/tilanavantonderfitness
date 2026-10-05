@@ -4,43 +4,23 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "NUXT_TELEMETRY_DISABLED=1 nuxt dev --host localhost --port 3001",
-    "build": "nuxt build",
+    "dev": "NUXT_TELEMETRY_DISABLED=1 nuxt dev --dotenv ../../.env --host localhost --port 3001",
+    "build": "nuxt build --dotenv ../../.env",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "pnpm lint --fix",
-    "test": "vitest run",
-    "test:integration": "vitest run --config vitest.integration.config.ts",
-    "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest",
-    "typecheck": "nuxt typecheck",
-    "prepare": "nuxt prepare",
-    "postinstall": "nuxt prepare"
+    "typecheck": "nuxt typecheck --dotenv ../../.env",
+    "prepare": "nuxt prepare --dotenv ../../.env",
+    "postinstall": "nuxt prepare --dotenv ../../.env"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1127.0",
-    "@aws-sdk/s3-request-presigner": "^3.1127.0",
-    "@internationalized/date": "^3.12.4",
-    "@pdf-lib/fontkit": "1.1.1",
-    "@scalar/api-reference": "^1.68.0",
-    "@supabase/ssr": "^0.12.4",
-    "@supabase/supabase-js": "^2.112.3",
-    "@tilana/contracts": "workspace:*",
-    "@tilana/db": "workspace:*",
-    "@tilana/email": "workspace:*",
     "@tilana/ui-nuxt": "workspace:*",
-    "chart.js": "^4.5.1",
-    "drizzle-orm": "^0.45.3",
-    "nuxt": "latest",
-    "pdf-lib": "1.17.1",
-    "vue-chartjs": "^5.3.4"
+    "nuxt": "4.5.2"
   },
   "devDependencies": {
-    "@iconify-json/lucide": "latest",
-    "@nuxt/eslint": "latest",
-    "@vitest/coverage-v8": "^5.0.0",
-    "eslint": "^10.8.1",
-    "typescript": "^6.0.0",
-    "vitest": "^5.0.0",
-    "vue-tsc": "latest"
+    "@iconify-json/lucide": "1.2.137",
+    "@nuxt/eslint": "1.17.0",
+    "eslint": "10.8.1",
+    "typescript": "6.0.3",
+    "vue-tsc": "3.3.11"
   }
 }

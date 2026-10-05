@@ -1,69 +1,70 @@
 # Tilana van Tonder platform
 
-A pnpm and Turborepo monorepo containing the public Astro website, the Nuxt UI admin portal, and the shared Tilana design system.
+A pnpm/Turborepo workspace with the existing Astro public website, a clean Nuxt
+admin starting point and shared Tilana design packages.
 
-## Workspace structure
+## Admin rebuild
+
+The old backend and its tests are preserved locally in `tilana-fitness-old/`.
+The new admin currently shows a branded starting page only. Authentication,
+database, email, payments and business APIs are not implemented yet.
+
+See [the rebuild notes](docs/admin-rebuild.md) for archive contents, recovery
+information and the next feature scope. No deployed service or remote database
+was reset. The ignored archive is local reference material, not a GitHub backup.
+
+## Active workspace
 
 ```text
 apps/
-  web/                 Astro public website
-  admin/               Nuxt UI admin portal
+  web/                 Existing Astro public website, unchanged
+  admin/               Clean Nuxt starting point
 packages/
-  design-system/       Shared brand tokens, fonts, themes, and CSS
+  contracts/           Existing website-compatible API contracts
+  design-system/       Shared brand tokens and CSS
   ui-astro/            Shared Astro components
-  ui-nuxt/             Shared Nuxt layer and Vue components
+  ui-nuxt/             Shared Nuxt layer and components
+tilana-fitness-old/     Ignored old backend, tests and private configuration
 ```
-
-The public website includes Home, About, Program, Pricing, Blog, Contact, and article pages. Blog articles live in `apps/web/src/content/blog` as Markdown files.
 
 ## Local development
 
-Install the workspace dependencies once from the repository root:
-
 ```sh
 pnpm install
-```
-
-Run both applications together:
-
-```sh
 pnpm dev
 ```
 
-Or run one application at a time:
+The website uses `http://localhost:4321`; admin uses `http://localhost:3001`.
+Use `pnpm dev:web` or `pnpm dev:admin` to run one application, and
+`pnpm dev:stop` to stop managed development servers.
+
+The local website's catalogue, enquiry/newsletter, checkout and customer access
+features need the backend APIs to be rebuilt, or an explicitly selected existing
+API origin. Do not mistake the clean admin page for a working backend.
+
+## Environment files
+
+The original backend environment is copied to the ignored root `.env`, kept
+private and explicitly loaded by Nuxt commands. None of the old integration
+credentials are consumed by the starter. A minimal root `.env.example` will
+document settings as each feature is implemented. Keep real secrets out of Git.
+
+The website retains `apps/web/.env` and `apps/web/.env.example`. Its public
+settings remain separate from private backend configuration.
+
+## Verification and deployment
 
 ```sh
-pnpm dev:web
-pnpm dev:admin
-```
-
-The Astro website uses port `4321`. The Nuxt admin uses port `3001` and currently starts with a branded login screen. Authentication is intentionally not connected yet.
-
-## Build and code quality
-
-```sh
-pnpm build
-pnpm lint
-pnpm typecheck
+pnpm test
 pnpm check
+pnpm build:web
+pnpm build:admin
 ```
 
-Turborepo runs the relevant command in each workspace. `pnpm check` runs all lint and type-check tasks.
+Existing website tests remain active. Old admin/database/browser tests and
+migrations are archived. Public deployment remains available; admin Fly
+deployment and scheduled legacy recovery are paused in this branch. Nothing
+should deploy the starter over an existing working admin.
 
-## Shared design system
-
-`@tilana/design-system` owns the colour, typography, spacing, shadow, animation, and light/dark theme tokens. Framework-specific packages consume those tokens:
-
-- `@tilana/ui-astro` exposes shared Astro presentation components.
-- `@tilana/ui-nuxt` is a reusable Nuxt layer that configures Nuxt UI and exposes shared Vue components.
-
-Keep brand decisions in the design-system package and framework behavior in the matching UI package.
-
-## Before launch
-
-- Replace the photo placeholders with approved photographs.
-- Confirm the final program price, domain, and email address.
-- Connect the contact form to an email or form service.
-- Add reviewed privacy and terms pages before collecting personal information or taking payments.
-- Add secure admin authentication and authorization before connecting content management.
-- Have all health, exercise, nutrition, and postpartum wording reviewed by appropriately qualified professionals.
+Keep brand decisions in the shared design system. Build the new admin a feature
+at a time: login, programs/volumes/private PDFs, sales and a small dashboard.
