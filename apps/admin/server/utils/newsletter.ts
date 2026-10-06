@@ -14,8 +14,18 @@ export function websiteUrl(): string {
   return value;
 }
 
-/** NUXT_NEWSLETTER_TEST_TO: the people who receive test emails. */
+/** Development redirect address (NUXT_EMAIL_DEV_REDIRECT_TO), or null in production. */
+export function devRedirectAddress(): string | null {
+  return String(useRuntimeConfig().emailDevRedirectTo ?? '').trim().toLowerCase() || null;
+}
+
+/**
+ * Who receives test emails: NUXT_NEWSLETTER_TEST_TO in production. In
+ * development only the developer (NUXT_EMAIL_DEV_REDIRECT_TO) gets one.
+ */
 export function newsletterTestRecipients(): string[] {
+  const developer = devRedirectAddress();
+  if (developer) return [developer];
   return String(useRuntimeConfig().newsletterTestTo ?? '')
     .split(/[\s,]+/)
     .map(value => value.trim().toLowerCase())

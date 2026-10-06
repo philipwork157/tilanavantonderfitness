@@ -1,18 +1,19 @@
 <script setup lang="ts">
-defineProps<{
+import type { StatusTone } from '~/utils/status-tones';
+
+withDefaults(defineProps<{
   to: string;
   icon: string;
   label: string;
   value: string | number;
   hint?: string;
-}>();
+  tone?: StatusTone;
+}>(), { hint: undefined, tone: 'brand' });
 </script>
 
 <template>
-  <NuxtLink :to="to" class="stat-tile">
-    <span class="stat-icon" aria-hidden="true">
-      <UIcon :name="icon" />
-    </span>
+  <NuxtLink :to="to" class="stat-tile" :class="`tone-${tone}`">
+    <AdminIconChip :icon="icon" :tone="tone" class="stat-icon" />
     <span class="stat-label">{{ label }}</span>
     <span class="stat-value">{{ value }}</span>
     <span v-if="hint" class="stat-hint">{{ hint }}</span>
@@ -29,7 +30,10 @@ defineProps<{
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   color: inherit;
-  background: var(--color-surface-elevated);
+  /* A soft wash of the tile's colour from the top-left corner. */
+  background:
+    radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--tone-wash) 55%, transparent), transparent 60%),
+    var(--color-surface-elevated);
   box-shadow: var(--shadow-xs);
   transition:
     border-color var(--duration-fast) var(--ease-standard),
@@ -44,15 +48,7 @@ defineProps<{
 }
 
 .stat-icon {
-  display: grid;
-  width: var(--control-md);
-  aspect-ratio: 1;
-  place-items: center;
   margin-bottom: var(--space-3);
-  border-radius: var(--radius-pill);
-  color: var(--color-text-primary);
-  background: var(--color-primary-subtle);
-  font-size: 1.1rem;
 }
 
 .stat-label {
@@ -88,6 +84,13 @@ defineProps<{
   color: var(--color-text-primary);
   transform: translate(2px, -2px);
 }
+
+.tone-neutral { --tone-wash: var(--color-surface-subtle); }
+.tone-brand { --tone-wash: var(--color-primary-subtle); }
+.tone-success { --tone-wash: var(--color-success-subtle); }
+.tone-warning { --tone-wash: var(--color-warning-subtle); }
+.tone-danger { --tone-wash: var(--color-error-subtle); }
+.tone-info { --tone-wash: var(--color-info-subtle); }
 
 @media (prefers-reduced-motion: reduce) {
   .stat-tile,

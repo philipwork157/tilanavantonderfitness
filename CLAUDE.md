@@ -153,7 +153,8 @@ Keep public deployment functional. An ignored archive is not a remote backup.
   `List-Unsubscribe` header.
 - A campaign shares one published blog post. It can only be sent after a test
   email to `NUXT_NEWSLETTER_TEST_TO` that is newer than the last edit, and only
-  when the reviewed recipient count still matches.
+  when the reviewed recipient count still matches. In development (redirect
+  set) test emails go only to `NUXT_EMAIL_DEV_REDIRECT_TO`.
 - Sending runs in the background (`startCampaignRunner`): one
   `newsletter_deliveries` row per subscriber, claimed before sending, so nobody
   is emailed twice. Rate limits are retried; SES account problems pause the
@@ -173,6 +174,9 @@ Keep public deployment functional. An ignored archive is not a remote backup.
   sidebar collapse button and theme toggle). Sidebar items live in
   `apps/admin/app/utils/admin-navigation.ts`; the account menu (email, log out)
   is `AdminUserMenu`.
+- Pages use the full width. Statuses use `AdminStatusBadge` with a tone from
+  `app/utils/status-tones.ts`; coloured icons use `AdminIconChip`; list pages
+  have an `AdminRefreshButton`.
 
 ## Database
 

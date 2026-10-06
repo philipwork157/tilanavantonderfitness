@@ -15,7 +15,7 @@ const tabs = [
 ];
 
 /* Emails */
-const { data: campaignData, status: campaignStatus } = await useFetch('/api/newsletter-campaigns');
+const { data: campaignData, status: campaignStatus, refresh: refreshCampaigns } = await useFetch('/api/newsletter-campaigns');
 const campaigns = computed(() => campaignData.value?.campaigns ?? []);
 const campaignColumns = [
   { accessorKey: 'subject', header: 'Email' },
@@ -25,8 +25,12 @@ const campaignColumns = [
 ];
 
 /* Subscribers */
-const view = ref<NewsletterSubscriberView>('subscribed');
-const { data: subscriberData, status: subscriberStatus } = await useFetch('/api/newsletter-subscribers', { query: { view } });
+const views: NewsletterSubscriberView[] = ['subscribed', 'pending', 'unsubscribed', 'suppressed'];
+const view = computed<NewsletterSubscriberView>({
+  get: () => views.find(value => value === route.query.view) ?? 'subscribed',
+  set: value => router.replace({ query: { tab: 'subscribers', ...(value === 'subscribed' ? {} : { view: value }) } }),
+});
+const { data: subscriberData, status: subscriberStatus, refresh: refreshSubscribers } = await useFetch('/api/newsletter-subscribers', { query: { view } });
 const subscribers = computed(() => subscriberData.value?.subscribers ?? []);
 const counts = computed(() => subscriberData.value?.counts);
 const viewItems = computed(() => [
@@ -53,6 +57,19 @@ function subscriberDate(row: { status: string; confirmedAt: string | null; conse
       : row.status === 'pending' ? row.consentedAt
         : row.suppressedAt;
   return date ? formatDateTime(date) : '';
+}
+
+const sentCampaigns = computed(() => campaigns.value.filter(campaign => campaign.status === 'sent').length);
+
+const refreshing = ref(false);
+async function refreshAll() {
+  refreshing.value = true;
+  try {
+    await Promise.all([refreshCampaigns(), refreshSubscribers()]);
+  }
+  finally {
+    refreshing.value = false;
+  }
 }
 
 /* New email */
@@ -97,14 +114,47 @@ onMounted(() => {
 <template>
   <AdminPage id="newsletter" title="Newsletter">
     <template #actions>
+      <AdminRefreshButton :loading="refreshing" @click="refreshAll" />
       <UButton label="New email" icon="i-lucide-plus" :ui="{ label: 'max-sm:sr-only' }" @click="openCreate" />
     </template>
 
+    <section class="stat-grid" aria-label="Newsletter summary">
+      <AdminStatTile
+        to="/newsletter?tab=subscribers"
+        icon="i-lucide-users"
+        tone="success"
+        :label="counts?.subscribed === 1 ? 'Subscriber' : 'Subscribers'"
+        :value="counts?.subscribed ?? 0"
+        hint="Confirmed and receiving emails"
+      />
+      <AdminStatTile
+        to="/newsletter?tab=subscribers&view=pending"
+        icon="i-lucide-hourglass"
+        tone="info"
+        label="Waiting"
+        :value="counts?.pending ?? 0"
+        hint="Signed up, not confirmed yet"
+      />
+      <AdminStatTile
+        to="/newsletter"
+        icon="i-lucide-send"
+        tone="brand"
+        label="Emails sent"
+        :value="sentCampaigns"
+        :hint="campaigns.length - sentCampaigns ? `${campaigns.length - sentCampaigns} not sent yet` : 'Nothing waiting'"
+      />
+      <AdminStatTile
+        to="/newsletter?tab=subscribers&view=suppressed"
+        icon="i-lucide-mail-x"
+        tone="danger"
+        label="Bounced or spam"
+        :value="counts?.suppressed ?? 0"
+        hint="Never emailed again"
+      />
+    </section>
+
     <div class="toolbar">
       <UTabs v-model="tab" :items="tabs" :content="false" variant="link" :ui="{ list: 'border-b-0' }" />
-      <p class="count">
-        {{ campaignData?.subscriberCount ?? 0 }} {{ campaignData?.subscriberCount === 1 ? 'subscriber' : 'subscribers' }}
-      </p>
     </div>
 
     <template v-if="tab === 'emails'">
@@ -132,12 +182,7 @@ onMounted(() => {
             </NuxtLink>
           </template>
           <template #status-cell="{ row }">
-            <UBadge
-              :label="campaignStatusLabel[row.original.status] ?? row.original.status"
-              color="neutral"
-              variant="subtle"
-              :class="`badge-${row.original.status}`"
-            />
+            <AdminStatusBadge :label="campaignStatusLabel[row.original.status] ?? row.original.status" :tone="campaignTone[row.original.status]" />
           </template>
           <template #recipientCount-cell="{ row }">
             <span v-if="row.original.status === 'draft'" class="secondary">Not sent</span>
@@ -177,7 +222,7 @@ onMounted(() => {
             </span>
           </template>
           <template #status-cell="{ row }">
-            <UBadge :label="subscriberStatusLabel[row.original.status] ?? row.original.status" color="neutral" variant="subtle" />
+            <AdminStatusBadge :label="subscriberStatusLabel[row.original.status] ?? row.original.status" :tone="subscriberTone[row.original.status]" />
           </template>
           <template #date-cell="{ row }">
             <span class="nowrap">{{ subscriberDate(row.original) }}</span>
@@ -229,10 +274,10 @@ onMounted(() => {
   color: var(--color-text-primary);
 }
 
-.count {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--text-body-sm);
+.stat-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
 }
 
 .view-select {
@@ -294,17 +339,6 @@ onMounted(() => {
   font-size: var(--text-body-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.badge-sent {
-  color: var(--color-text-primary);
-  background: var(--color-accent-subtle);
-}
-
-.badge-sending,
-.badge-paused {
-  color: var(--color-text-primary);
-  background: var(--color-warning-subtle);
 }
 
 .nowrap {

@@ -18,6 +18,7 @@ const inquiryHint = computed(() => {
       <AdminStatTile
         to="/inquiries"
         icon="i-lucide-inbox"
+        tone="brand"
         :label="inquiryCount === 1 ? 'Inquiry' : 'Inquiries'"
         :value="inquiryCount"
         :hint="inquiryHint"
@@ -25,6 +26,7 @@ const inquiryHint = computed(() => {
       <AdminStatTile
         to="/newsletter"
         icon="i-lucide-mail"
+        tone="success"
         :label="subscriberCount === 1 ? 'Subscriber' : 'Subscribers'"
         :value="subscriberCount"
         hint="Confirmed newsletter readers"

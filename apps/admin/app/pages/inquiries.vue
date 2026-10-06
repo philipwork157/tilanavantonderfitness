@@ -65,14 +65,7 @@ const statusLabel: Record<string, string> = { new: 'New', replied: 'Replied', ar
 <template>
   <AdminPage id="inquiries" title="Inquiries">
     <template #actions>
-      <UButton
-        icon="i-lucide-refresh-cw"
-        color="neutral"
-        variant="ghost"
-        aria-label="Refresh inquiries"
-        :loading="status === 'pending'"
-        @click="refresh()"
-      />
+      <AdminRefreshButton :loading="status === 'pending'" @click="refresh()" />
     </template>
 
     <div class="toolbar">
@@ -118,19 +111,8 @@ const statusLabel: Record<string, string> = { new: 'New', replied: 'Replied', ar
         </template>
         <template #status-cell="{ row }">
           <div class="badges">
-            <UBadge
-              :label="statusLabel[row.original.status] ?? row.original.status"
-              color="neutral"
-              variant="subtle"
-              :class="{ 'badge-new': row.original.status === 'new' }"
-            />
-            <UBadge
-              v-if="row.original.notificationError"
-              label="Email not sent"
-              color="error"
-              variant="subtle"
-              icon="i-lucide-mail-x"
-            />
+            <AdminStatusBadge :label="statusLabel[row.original.status] ?? row.original.status" :tone="inquiryTone[row.original.status]" />
+            <AdminStatusBadge v-if="row.original.notificationError" label="Email not sent" tone="danger" icon="i-lucide-mail-x" />
           </div>
         </template>
         <template #actions-cell="{ row }">
@@ -287,12 +269,6 @@ const statusLabel: Record<string, string> = { new: 'New', replied: 'Replied', ar
 .email {
   color: var(--color-text-muted);
   font-size: var(--text-body-sm);
-}
-
-/* Terracotta fill with dark text; terracotta text would be unreadable. */
-.badge-new {
-  color: var(--color-text-primary);
-  background: var(--color-primary-subtle);
 }
 
 .mobile-date {

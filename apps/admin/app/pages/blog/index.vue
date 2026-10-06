@@ -79,12 +79,7 @@ onMounted(() => {
           </NuxtLink>
         </template>
         <template #status-cell="{ row }">
-          <UBadge
-            :label="row.original.status === 'published' ? 'Published' : 'Draft'"
-            color="neutral"
-            variant="subtle"
-            :class="{ 'badge-live': row.original.status === 'published' }"
-          />
+          <AdminStatusBadge :label="row.original.status === 'published' ? 'Published' : 'Draft'" :tone="blogTone[row.original.status]" />
         </template>
         <template #updatedAt-cell="{ row }">
           <span class="nowrap">{{ formatDateTime(row.original.updatedAt) }}</span>
@@ -188,10 +183,6 @@ onMounted(() => {
   font-size: var(--text-body-sm);
 }
 
-.badge-live {
-  color: var(--color-text-primary);
-  background: var(--color-accent-subtle);
-}
 
 .nowrap {
   white-space: nowrap;

@@ -202,13 +202,9 @@ onBeforeRouteLeave(() => {
 <template>
   <AdminPage id="blog-post" :title="form.title || 'Untitled post'">
     <template #actions>
-      <UBadge
-        :label="isPublished ? 'Published' : 'Draft'"
-        color="neutral"
-        variant="subtle"
-        class="max-sm:hidden"
-        :class="{ 'badge-live': isPublished }"
-      />
+      <span class="max-sm:hidden">
+        <AdminStatusBadge :label="isPublished ? 'Published' : 'Draft'" :tone="isPublished ? 'success' : 'neutral'" />
+      </span>
       <UButton
         label="Save"
         icon="i-lucide-save"
@@ -539,10 +535,6 @@ onBeforeRouteLeave(() => {
   padding-inline: 0;
 }
 
-.badge-live {
-  color: var(--color-text-primary);
-  background: var(--color-accent-subtle);
-}
 
 .modal-actions {
   display: flex;

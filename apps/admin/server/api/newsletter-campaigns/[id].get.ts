@@ -36,5 +36,7 @@ export default defineEventHandler(async (event) => {
     counts,
     subscriberCount: subscribers.subscribed,
     testRecipients: newsletterTestRecipients(),
+    // Set in development: every email goes to this address instead.
+    devRedirectTo: devRedirectAddress(),
   };
 });
