@@ -113,7 +113,7 @@ async function setStatus(status: 'draft' | 'published') {
     applyServerPost(result.post);
     toast.add({
       title: status === 'published' ? 'Published' : 'Moved to drafts',
-      description: status === 'published' ? 'It appears on the website after the next site update.' : 'It is no longer shown on the website after the next site update.',
+      description: status === 'published' ? 'It appears on the website within about 5 minutes.' : 'It disappears from the website within about 5 minutes.',
       icon: status === 'published' ? 'i-lucide-globe' : 'i-lucide-file-pen',
     });
   }
@@ -159,6 +159,22 @@ async function removeCover() {
   }
   finally {
     uploading.value = false;
+  }
+}
+
+const emailing = ref(false);
+async function emailSubscribers() {
+  emailing.value = true;
+  try {
+    if (dirty.value && !(await save({ quiet: true }))) return;
+    const { id: campaignId } = await $fetch('/api/newsletter-campaigns', { method: 'POST', body: { blogPostId: id } });
+    await navigateTo(`/newsletter/${campaignId}`);
+  }
+  catch (caught) {
+    toast.add({ title: 'Could not start the email', description: errorMessage(caught, 'Please try again.'), color: 'error' });
+  }
+  finally {
+    emailing.value = false;
   }
 }
 
@@ -349,6 +365,16 @@ onBeforeRouteLeave(() => {
           />
         </section>
 
+        <section v-if="isPublished" class="panel" aria-labelledby="newsletter-heading">
+          <h2 id="newsletter-heading" class="panel-title">
+            Newsletter
+          </h2>
+          <p class="panel-hint">
+            Share this post with your subscribers. You can preview it and send yourself a test first.
+          </p>
+          <UButton label="Email to subscribers" icon="i-lucide-send" color="neutral" variant="outline" :loading="emailing" class="newsletter-button" @click="emailSubscribers" />
+        </section>
+
         <section class="panel danger" aria-labelledby="danger-heading">
           <h2 id="danger-heading" class="panel-title">
             Delete
@@ -501,6 +527,10 @@ onBeforeRouteLeave(() => {
 .slug-prefix {
   color: var(--color-text-muted);
   font-size: var(--text-body-sm);
+}
+
+.newsletter-button {
+  justify-self: start;
 }
 
 .slug-reset {

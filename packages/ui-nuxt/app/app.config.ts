@@ -27,5 +27,10 @@ export default defineAppConfig({
         base: 'rounded-[var(--radius-md)] bg-[var(--color-surface-elevated)]!',
       },
     },
+    selectMenu: {
+      slots: {
+        base: 'rounded-[var(--radius-md)] bg-[var(--color-surface-elevated)]!',
+      },
+    },
   },
 });

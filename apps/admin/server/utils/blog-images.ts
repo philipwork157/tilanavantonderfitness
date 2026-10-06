@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { ProcessedImage } from './image-processing';
+import { emailImageFromCover, type ProcessedImage } from './image-processing';
 
 const BUCKET = 'blog-images';
 export const MAX_COVER_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -21,6 +21,8 @@ function storageClient(): SupabaseClient {
   return client;
 }
 
+const ALLOWED_TYPES = ['image/webp', 'image/jpeg'];
+
 async function ensureBucket(storage: SupabaseClient) {
   if (bucketReady) return;
   const { data } = await storage.storage.getBucket(BUCKET);
@@ -28,9 +30,18 @@ async function ensureBucket(storage: SupabaseClient) {
     const { error } = await storage.storage.createBucket(BUCKET, {
       public: true,
       fileSizeLimit: '5MB',
-      allowedMimeTypes: ['image/webp'],
+      allowedMimeTypes: ALLOWED_TYPES,
     });
     if (error && !/already exists/i.test(error.message)) throw error;
+  }
+  else if (!ALLOWED_TYPES.every(type => data.allowed_mime_types?.includes(type))) {
+    // Buckets made before newsletter emails only allowed WebP.
+    const { error } = await storage.storage.updateBucket(BUCKET, {
+      public: true,
+      fileSizeLimit: '5MB',
+      allowedMimeTypes: ALLOWED_TYPES,
+    });
+    if (error) throw error;
   }
   bucketReady = true;
 }
@@ -62,4 +73,28 @@ export async function deleteBlogImage(path: string | null | undefined) {
   if (!path) return;
   const { error } = await storageClient().storage.from(BUCKET).remove([path]);
   if (error) console.warn('Could not delete blog image', path, error.message);
+}
+
+/**
+ * Public URL of a JPEG copy of a cover photo for emails, made once and kept
+ * next to it under email/. Returns null when there is no cover.
+ */
+export async function ensureEmailImage(coverPath: string | null | undefined): Promise<string | null> {
+  if (!coverPath) return null;
+  const emailPath = `email/${coverPath.replace(/\.webp$/i, '')}.jpg`;
+  const storage = storageClient();
+  await ensureBucket(storage);
+  const bucket = storage.storage.from(BUCKET);
+
+  const { data: existing } = await bucket.list(emailPath.slice(0, emailPath.lastIndexOf('/')), {
+    search: emailPath.slice(emailPath.lastIndexOf('/') + 1),
+  });
+  if (!existing?.some(file => emailPath.endsWith(file.name))) {
+    const { data: source, error: downloadError } = await bucket.download(coverPath);
+    if (downloadError || !source) throw new Error('The cover photo could not be read for the email.');
+    const jpeg = await emailImageFromCover(Buffer.from(await source.arrayBuffer()));
+    const { error } = await bucket.upload(emailPath, jpeg, { contentType: 'image/jpeg', cacheControl: '31536000', upsert: true });
+    if (error) throw new Error('The email copy of the cover photo could not be stored.');
+  }
+  return blogImagePublicUrl(emailPath);
 }

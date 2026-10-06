@@ -36,3 +36,15 @@ export async function processCoverImage(input: Buffer): Promise<ProcessedImage> 
     .toBuffer({ resolveWithObject: true });
   return { data, width: info.width, height: info.height };
 }
+
+/**
+ * Email copy of a cover photo: JPEG, because Outlook for Windows cannot show
+ * WebP. 1100px wide is sharp on high-density screens at the email's 550px.
+ */
+export async function emailImageFromCover(webp: Buffer): Promise<Buffer> {
+  return sharp(webp)
+    .resize({ width: 1100, withoutEnlargement: true })
+    .flatten({ background: '#fffaf7' })
+    .jpeg({ quality: 80, mozjpeg: true })
+    .toBuffer();
+}

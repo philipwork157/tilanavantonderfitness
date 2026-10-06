@@ -143,6 +143,28 @@ Keep public deployment functional. An ignored archive is not a remote backup.
   on Cloudflare for five minutes, with the last good copy served if the admin
   API is down. Publishing never needs a website rebuild.
 
+## Newsletter
+
+- Double opt-in: `POST /api/newsletter/subscribe` saves a `pending` subscriber
+  and emails a link to the website's `/newsletter/confirmed?token=...`, which
+  POSTs `/api/newsletter/confirm` (so email link scanners cannot confirm).
+  Only the SHA-256 of confirmation tokens is stored.
+- Every newsletter has a personal unsubscribe link (`unsubscribe_token`) and a
+  `List-Unsubscribe` header.
+- A campaign shares one published blog post. It can only be sent after a test
+  email to `NUXT_NEWSLETTER_TEST_TO` that is newer than the last edit, and only
+  when the reviewed recipient count still matches.
+- Sending runs in the background (`startCampaignRunner`): one
+  `newsletter_deliveries` row per subscriber, claimed before sending, so nobody
+  is emailed twice. Rate limits are retried; SES account problems pause the
+  campaign (Resume in the admin). A restart resumes `sending` campaigns.
+- SES bounces and complaints arrive through SNS at `POST /api/webhooks/ses`
+  (signature and `NUXT_SES_EVENTS_TOPIC_ARN` checked). Permanent bounces and
+  complaints mark the subscriber `bounced`/`complained`; they are never emailed
+  again unless they sign up and confirm again.
+- Emails use a JPEG copy of the cover photo (`email/...jpg` in the bucket),
+  because Outlook cannot show WebP.
+
 ## Admin UI
 
 - Built on Nuxt UI dashboard components (`UDashboardGroup`, `UDashboardSidebar`,

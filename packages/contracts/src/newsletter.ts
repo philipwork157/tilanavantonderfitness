@@ -13,5 +13,8 @@ export const newsletterSubscribeRequestSchema = z.object({
 export const newsletterSubscribeResponseSchema = z.object({ ok: z.literal(true) });
 export const newsletterTokenSchema = z.string().min(32).max(256);
 
+/** Body for POST /api/newsletter/confirm and /api/newsletter/unsubscribe. */
+export const newsletterTokenRequestSchema = z.object({ token: newsletterTokenSchema });
+
 export type NewsletterSubscribeRequest = z.infer<typeof newsletterSubscribeRequestSchema>;
 export type NewsletterSubscribeResponse = z.infer<typeof newsletterSubscribeResponseSchema>;

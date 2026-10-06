@@ -6,6 +6,10 @@ export interface OutgoingEmail {
   text: string;
   html?: string;
   replyTo?: string[];
+  /** Overrides NUXT_EMAIL_FROM_NAME, e.g. "Tilana van Tonder" for the newsletter. */
+  fromName?: string;
+  /** Extra headers such as List-Unsubscribe. */
+  headers?: { name: string; value: string }[];
 }
 
 /**

@@ -10,6 +10,7 @@ import {
   smallint,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -117,7 +118,94 @@ export const blogPosts = pgTable('blog_posts', {
   index('blog_posts_status_published_idx').on(table.status, table.publishedAt.desc()),
 ]).enableRLS();
 
+export const NEWSLETTER_SUBSCRIBER_STATUSES = ['pending', 'subscribed', 'unsubscribed', 'bounced', 'complained'] as const;
+
+/**
+ * Newsletter subscribers (double opt-in). Only `subscribed` people receive
+ * campaigns. `bounced` and `complained` come from Amazon SES and are never
+ * emailed again unless the person subscribes and confirms again.
+ */
+export const newsletterSubscribers = pgTable('newsletter_subscribers', {
+  id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  email: text('email').notNull().unique(),
+  status: text('status', { enum: NEWSLETTER_SUBSCRIBER_STATUSES }).notNull().default('pending'),
+  // Where the sign-up came from, e.g. 'website-footer'.
+  source: text('source').notNull(),
+  // When the person ticked "I agree to receive occasional emails".
+  consentedAt: timestamp('consented_at', { withTimezone: true }).notNull(),
+  confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+  unsubscribedAt: timestamp('unsubscribed_at', { withTimezone: true }),
+  // Bounce or complaint reported by SES, with its details.
+  suppressedAt: timestamp('suppressed_at', { withTimezone: true }),
+  suppressionReason: text('suppression_reason'),
+  // SHA-256 of the confirmation link token (the token itself is only emailed).
+  confirmationTokenHash: text('confirmation_token_hash').unique(),
+  confirmationExpiresAt: timestamp('confirmation_expires_at', { withTimezone: true }),
+  confirmationSentAt: timestamp('confirmation_sent_at', { withTimezone: true }),
+  // Secret used in every unsubscribe link. It can only unsubscribe this person.
+  unsubscribeToken: text('unsubscribe_token').notNull().unique(),
+  ...timestamps,
+}, table => [
+  check('newsletter_subscribers_email_lowercase', sql`${table.email} = lower(${table.email})`),
+  check('newsletter_subscribers_status_valid', sql`${table.status} in ('pending', 'subscribed', 'unsubscribed', 'bounced', 'complained')`),
+  index('newsletter_subscribers_status_idx').on(table.status),
+]).enableRLS();
+
+export const NEWSLETTER_CAMPAIGN_STATUSES = ['draft', 'sending', 'paused', 'sent'] as const;
+
+/** A newsletter email that shares one blog post with all subscribers. */
+export const newsletterCampaigns = pgTable('newsletter_campaigns', {
+  id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  blogPostId: bigint('blog_post_id', { mode: 'number' }).references(() => blogPosts.id, { onDelete: 'set null' }),
+  subject: text('subject').notNull(),
+  // Short line shown next to the subject in most inboxes.
+  previewText: text('preview_text').notNull().default(''),
+  // Optional personal note from Tilana above the blog post.
+  introduction: text('introduction').notNull().default(''),
+  status: text('status', { enum: NEWSLETTER_CAMPAIGN_STATUSES }).notNull().default('draft'),
+  // Set when a test email is sent; cleared by any edit. Sending needs a test.
+  testSentAt: timestamp('test_sent_at', { withTimezone: true }),
+  // Why sending stopped (paused), e.g. an Amazon SES account problem.
+  pauseReason: text('pause_reason'),
+  recipientCount: integer('recipient_count').notNull().default(0),
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  finishedAt: timestamp('finished_at', { withTimezone: true }),
+  createdBy: bigint('created_by', { mode: 'number' }).references(() => users.id, { onDelete: 'set null' }),
+  sentBy: bigint('sent_by', { mode: 'number' }).references(() => users.id, { onDelete: 'set null' }),
+  ...timestamps,
+}, table => [
+  check('newsletter_campaigns_status_valid', sql`${table.status} in ('draft', 'sending', 'paused', 'sent')`),
+  index('newsletter_campaigns_created_at_idx').on(table.createdAt.desc()),
+]).enableRLS();
+
+export const NEWSLETTER_DELIVERY_STATUSES = ['queued', 'sending', 'sent', 'skipped', 'failed', 'bounced', 'complained'] as const;
+
+/** One row per subscriber per campaign, so nobody is emailed twice. */
+export const newsletterDeliveries = pgTable('newsletter_deliveries', {
+  id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  campaignId: bigint('campaign_id', { mode: 'number' }).notNull()
+    .references(() => newsletterCampaigns.id, { onDelete: 'cascade' }),
+  subscriberId: bigint('subscriber_id', { mode: 'number' })
+    .references(() => newsletterSubscribers.id, { onDelete: 'set null' }),
+  // The address at the time of sending.
+  email: text('email').notNull(),
+  status: text('status', { enum: NEWSLETTER_DELIVERY_STATUSES }).notNull().default('queued'),
+  // Amazon SES message id, used to match bounce and complaint reports.
+  sesMessageId: text('ses_message_id'),
+  error: text('error'),
+  sentAt: timestamp('sent_at', { withTimezone: true }),
+  ...timestamps,
+}, table => [
+  check('newsletter_deliveries_status_valid', sql`${table.status} in ('queued', 'sending', 'sent', 'skipped', 'failed', 'bounced', 'complained')`),
+  uniqueIndex('newsletter_deliveries_campaign_subscriber_unique').on(table.campaignId, table.subscriberId),
+  index('newsletter_deliveries_campaign_status_idx').on(table.campaignId, table.status),
+  index('newsletter_deliveries_ses_message_idx').on(table.sesMessageId),
+]).enableRLS();
+
 export type User = typeof users.$inferSelect;
 export type BlogPost = typeof blogPosts.$inferSelect;
 export type Inquiry = typeof inquiries.$inferSelect;
 export type Role = typeof roles.$inferSelect;
+export type NewsletterSubscriber = typeof newsletterSubscribers.$inferSelect;
+export type NewsletterCampaign = typeof newsletterCampaigns.$inferSelect;
+export type NewsletterDelivery = typeof newsletterDeliveries.$inferSelect;

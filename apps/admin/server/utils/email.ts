@@ -6,8 +6,9 @@ let client: SESv2Client | undefined;
 /**
  * Send through Amazon SES. Region and credentials come from the standard
  * AWS_REGION / AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY environment variables.
+ * Returns the SES message id, used to match bounce and complaint reports.
  */
-export async function sendEmail(email: OutgoingEmail): Promise<void> {
+export async function sendEmail(email: OutgoingEmail): Promise<{ messageId: string | null }> {
   const config = useRuntimeConfig();
   if (!config.emailFromAddress) {
     throw new Error('NUXT_EMAIL_FROM_ADDRESS is not set.');
@@ -19,8 +20,8 @@ export async function sendEmail(email: OutgoingEmail): Promise<void> {
   });
 
   client ??= new SESv2Client({});
-  await client.send(new SendEmailCommand({
-    FromEmailAddress: formatFromAddress(config.emailFromAddress, config.emailFromName),
+  const result = await client.send(new SendEmailCommand({
+    FromEmailAddress: formatFromAddress(config.emailFromAddress, routed.fromName ?? config.emailFromName),
     Destination: { ToAddresses: routed.to },
     ReplyToAddresses: routed.replyTo,
     Content: {
@@ -30,7 +31,9 @@ export async function sendEmail(email: OutgoingEmail): Promise<void> {
           Text: { Data: routed.text, Charset: 'UTF-8' },
           ...(routed.html ? { Html: { Data: routed.html, Charset: 'UTF-8' } } : {}),
         },
+        ...(routed.headers?.length ? { Headers: routed.headers.map(({ name, value }) => ({ Name: name, Value: value })) } : {}),
       },
     },
   }));
+  return { messageId: result.MessageId ?? null };
 }

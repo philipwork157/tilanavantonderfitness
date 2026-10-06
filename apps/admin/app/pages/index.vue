@@ -5,6 +5,7 @@ const { data } = await useFetch('/api/overview');
 
 const inquiryCount = computed(() => data.value?.inquiries.active ?? 0);
 const newCount = computed(() => data.value?.inquiries.new ?? 0);
+const subscriberCount = computed(() => data.value?.newsletter.subscribers ?? 0);
 const inquiryHint = computed(() => {
   if (!inquiryCount.value) return 'Nothing waiting';
   return newCount.value ? `${newCount.value} new` : 'All read';
@@ -20,6 +21,13 @@ const inquiryHint = computed(() => {
         :label="inquiryCount === 1 ? 'Inquiry' : 'Inquiries'"
         :value="inquiryCount"
         :hint="inquiryHint"
+      />
+      <AdminStatTile
+        to="/newsletter"
+        icon="i-lucide-mail"
+        :label="subscriberCount === 1 ? 'Subscriber' : 'Subscribers'"
+        :value="subscriberCount"
+        hint="Confirmed newsletter readers"
       />
     </section>
   </AdminPage>

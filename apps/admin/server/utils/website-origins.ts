@@ -7,4 +7,9 @@ export function parseOrigins(raw: string | undefined | null): string[] {
 }
 
 /** Public website endpoints that the Astro site calls from the browser. */
-export const PUBLIC_WEBSITE_PATHS = new Set(['/api/contact']);
+export const PUBLIC_WEBSITE_PATHS = new Set([
+  '/api/contact',
+  '/api/newsletter/subscribe',
+  '/api/newsletter/confirm',
+  '/api/newsletter/unsubscribe',
+]);

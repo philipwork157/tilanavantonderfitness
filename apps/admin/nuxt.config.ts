@@ -22,6 +22,12 @@ export default defineNuxtConfig({
     turnstileSecretKey: '',
     // Website origins allowed to call the public endpoints (comma separated).
     websiteOrigins: '',
+    // Public website address used in email links, e.g. https://tilanavantonder.co.za.
+    websiteUrl: '',
+    // Who receives newsletter test emails (comma separated).
+    newsletterTestTo: '',
+    // Amazon SNS topic that delivers SES bounces and complaints (webhook is off when empty).
+    sesEventsTopicArn: '',
   },
   routeRules: {
     '/**': { headers: { 'cache-control': 'private, no-store' } },

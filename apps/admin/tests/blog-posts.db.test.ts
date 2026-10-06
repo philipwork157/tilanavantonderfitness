@@ -18,7 +18,7 @@ describe.skipIf(!url)('blog posts (database)', () => {
   });
 
   beforeEach(async () => {
-    await db.execute(sql`truncate table blog_posts restart identity`);
+    await db.execute(sql`truncate table blog_posts restart identity cascade`);
   });
 
   afterAll(async () => {
