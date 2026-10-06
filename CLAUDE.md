@@ -136,8 +136,12 @@ Keep public deployment functional. An ignored archive is not a remote backup.
 - Cover photos go to the public Supabase Storage bucket `blog-images`, written
   only by the server with `NUXT_SUPABASE_SERVICE_ROLE_KEY`. Uploads are
   re-encoded to WebP with sharp (metadata stripped); SVG is rejected.
-- The website reads published posts at build time from
-  `/api/public/blog-posts`, so publishing needs a website rebuild.
+- The website is a Cloudflare Worker (`apps/web/wrangler.jsonc`). Every page
+  is prebuilt except `/blog`, `/blog/<slug>` and `/sitemap-blog.xml`
+  (`prerender = false`), which read `/api/public/blog-posts` live through
+  `getPublishedPosts` (`apps/web/src/utils/blog-posts.ts`). Posts are cached
+  on Cloudflare for five minutes, with the last good copy served if the admin
+  API is down. Publishing never needs a website rebuild.
 
 ## Admin UI
 

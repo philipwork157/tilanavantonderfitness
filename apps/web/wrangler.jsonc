@@ -1,0 +1,14 @@
+// Cloudflare Worker for the public website. Prebuilt pages are served as
+// static assets (free, not counted as Worker requests); only the blog runs
+// the Worker. `pnpm build` writes the final config to dist/server.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tilanavantonder-website-dev",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+  "env": {
+    "production": {
+      "name": "tilanavantonder-website-prod"
+    }
+  }
+}

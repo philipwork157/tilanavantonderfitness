@@ -3,7 +3,12 @@ import { readingTimeLabel } from '@tilana/content';
 import { getPublishedPosts } from '@web/utils/blog-posts';
 import BaseLayout from '@web/layouts/BaseLayout.astro';
 import PageHero from '@tilana/ui-astro/PageHero.astro';
+import { setBlogCacheHeaders } from '@web/utils/blog-http';
+
+// Rendered on request so newly published posts appear without a rebuild.
+export const prerender = false;
 const posts = await getPublishedPosts();
+setBlogCacheHeaders(Astro.response.headers);
 ---
 <BaseLayout title="Strength & Healthy Habits Blog" description="Practical strength-training guidance from Tilana van Tonder for building confidence, sound movement patterns, and sustainable progress.">
   <PageHero eyebrow="The blog" title="Useful notes for" script="real life." intro="Simple, encouraging writing about strength, movement, and sustainable progress - without miracle claims." />

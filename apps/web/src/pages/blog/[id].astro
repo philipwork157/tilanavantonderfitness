@@ -1,9 +1,15 @@
 ---
 import { readingTimeLabel, renderMarkdown } from '@tilana/content';
 import BaseLayout from '@web/layouts/BaseLayout.astro';
-import { getPublishedPosts } from '@web/utils/blog-posts';
-export async function getStaticPaths() { const posts = await getPublishedPosts(); return posts.map((post) => ({ params: { id: post.slug }, props: { post } })); }
-const { post } = Astro.props;
+import { getPublishedPost } from '@web/utils/blog-posts';
+import { setBlogCacheHeaders } from '@web/utils/blog-http';
+
+// Rendered on request so edits and new posts appear without a rebuild.
+export const prerender = false;
+const post = await getPublishedPost(Astro.params.id ?? '');
+// An empty 404 makes Astro show the site's normal "Page not found" page.
+if (!post) return new Response(null, { status: 404 });
+setBlogCacheHeaders(Astro.response.headers);
 // Markdown is rendered with raw HTML disabled and unsafe links removed (see @tilana/content).
 const bodyHtml = renderMarkdown(post.bodyMarkdown);
 const readingTime = readingTimeLabel(post.bodyMarkdown);

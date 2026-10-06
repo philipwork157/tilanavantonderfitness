@@ -6,9 +6,9 @@
   "scripts": {
     "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev --host localhost --port 4321",
     "start": "ASTRO_TELEMETRY_DISABLED=1 astro dev --host localhost --port 4321",
-    "build": "pnpm typecheck && astro build && node scripts/prepare-sites.mjs",
-    "preview": "astro preview",
-    "lint": "eslint \"src/**/*.{astro,js,ts}\" \"scripts/**/*.mjs\" \"tests/**/*.ts\" \"worker/**/*.js\" \"*.{js,mjs,ts}\" --max-warnings 0",
+    "build": "pnpm typecheck && astro build",
+    "preview": "wrangler dev --config dist/server/wrangler.json",
+    "lint": "eslint \"src/**/*.{astro,js,ts}\" \"scripts/**/*.mjs\" \"tests/**/*.ts\" \"*.{js,mjs,ts}\" --max-warnings 0",
     "lint:fix": "pnpm lint --fix",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -17,6 +17,7 @@
     "check": "pnpm lint && pnpm typecheck"
   },
   "dependencies": {
+    "@astrojs/cloudflare": "14.3.3",
     "@astrojs/sitemap": "3.7.4",
     "@lucide/astro": "^1.45.0",
     "@tilana/content": "workspace:*",
@@ -36,6 +37,7 @@
     "globals": "^17.11.0",
     "typescript": "^6.0.0",
     "typescript-eslint": "^8.67.0",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.0",
+    "wrangler": "4.147.0"
   }
 }
