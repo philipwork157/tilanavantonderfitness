@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
 import { getPublishedPosts } from '@web/utils/blog-posts';
 
-// Blog pages are rendered on request, so the build-time sitemap cannot list
-// them. This sitemap is linked from sitemap-index.xml.
+// The blog pages are rendered on request, so the build-time
+// sitemap cannot list them. This sitemap is linked from sitemap-index.xml.
 export const prerender = false;
 
 export const GET: APIRoute = async ({ site }) => {

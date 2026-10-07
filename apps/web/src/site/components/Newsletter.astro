@@ -1,0 +1,14 @@
+---
+import { href } from '../config';
+import NewsletterForm from './NewsletterForm';
+---
+<section class="wrap news-wrap" aria-labelledby="news-title">
+  <div class="news card tone-sage" data-reveal>
+    <div class="news-copy">
+      <p class="eyebrow">A thoughtful note, occasionally</p>
+      <h2 class="h2" id="news-title">Stronger, <em>one step at a time.</em></h2>
+      <p>Practical training guidance, programme updates, and realistic healthy habits - sent without the noise.</p>
+    </div>
+    <NewsletterForm client:visible privacyHref={href('/privacy')} />
+  </div>
+</section>

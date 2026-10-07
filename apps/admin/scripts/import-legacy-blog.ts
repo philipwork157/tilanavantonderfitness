@@ -1,5 +1,5 @@
 /**
- * ONE-TIME: copy the three original Markdown blog posts (apps/web/src/content/blog)
+ * ONE-TIME: copy the original Markdown blog posts (apps/web/src/content/blog)
  * and their photos into the blog_posts table and Supabase Storage.
  *
  *   pnpm --filter @tilana/admin blog:import-legacy

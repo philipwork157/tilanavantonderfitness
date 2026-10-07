@@ -1,0 +1,30 @@
+---
+import SiteLayout from '@web/site/layouts/SiteLayout.astro';
+import Checkout from '@web/site/components/shop/Checkout';
+import Icon from '@web/site/components/Icon';
+import { checkoutEnabled, href } from '@web/site/config';
+---
+<SiteLayout title="Your basket" current="checkout" newsletter={false} robots="noindex, nofollow" description="Review your programs and pay once, securely through Paystack.">
+  <section class="shop-hero wrap">
+    <p class="eyebrow">Your basket</p>
+    <h1 class="display"><span class="line"><span style="--i:0">Choose more.</span></span><span class="line"><span style="--i:1"><em>Pay once.</em></span></span></h1>
+    <p class="lede">Review your programs, enter your details, and complete one secure payment.</p>
+  </section>
+  <section class="wrap shop-body">
+    {checkoutEnabled
+      ? <Checkout client:load programsHref={href('/program')} completeHref={href('/checkout/complete')} refundHref={href('/refund-policy')} privacyHref={href('/privacy')} />
+      : (
+        <div class="co-state co-empty">
+          <span class="co-empty-icon" aria-hidden="true"><Icon name="bag" /></span>
+          <div>
+            <h2>Online checkout is coming soon</h2>
+            <p>For now, choose a program and send me a message. I’ll reply personally with the next steps.</p>
+          </div>
+          <div class="done-actions">
+            <a class="btn btn-primary" href={href('/program')}>See the programs</a>
+            <a class="btn btn-ghost" href={href('/contact')}>Get in touch</a>
+          </div>
+        </div>
+      )}
+  </section>
+</SiteLayout>

@@ -1,0 +1,45 @@
+---
+import SiteLayout from '@web/site/layouts/SiteLayout.astro';
+import PageHero from '@web/site/components/PageHero.astro';
+import Icon from '@web/site/components/Icon';
+import KitchenExplorer from '@web/site/components/KitchenExplorer';
+import ProteinDay from '@web/site/components/ProteinDay';
+import { href } from '@web/site/config';
+import { getRecipes, meals, toRecipeCard } from '@web/site/kitchen';
+
+const cards = (await getRecipes()).map(toRecipeCard);
+const usedMeals = meals.filter((m) => cards.some((c) => c.meal === m));
+const dayMeals = cards.map((c) => ({ slug: c.slug, title: c.title, protein: c.protein }));
+---
+<SiteLayout title="Kitchen: Recipes & Real Food" current="kitchen" description="Simple, everyday recipes from Tilana van Tonder: how to make them, how much protein each one gives you, and why that matters.">
+  <PageHero
+    eyebrow="Recipes & real food"
+    lines={['In the', '*kitchen.*']}
+    intro="Simple, everyday meals: how to make them, how much protein each one gives you, and why that matters. Nothing is banned."
+  />
+
+  <section class="section wrap kitchen-list">
+    <p class="note-sample">These first recipes are built from meals I mention on the blog. My own favourites, with photos, are on their way.</p>
+    <KitchenExplorer client:load recipes={cards} meals={[...usedMeals]} />
+  </section>
+
+  <section class="section band" id="why-protein">
+    <div class="wrap protein-grid">
+      <div data-reveal>
+        <p class="eyebrow">Why protein?</p>
+        <h2 class="h2">Training and food <em>work together.</em></h2>
+        <ol class="why-list">
+          <li><b>01</b><div><strong>It helps you rebuild.</strong><span>Protein gives your body the amino acids it uses to repair and rebuild muscle. Training is the reason to adapt; protein is the building material.</span></div></li>
+          <li><b>02</b><div><strong>Enough, not endless.</strong><span>For healthy people who exercise regularly, about 1.4–2.0 g per kg of body weight a day is a useful range. More isn’t automatically better.</span></div></li>
+          <li><b>03</b><div><strong>Spread it out.</strong><span>Around 20–40 g a meal is far easier than realising at 8 p.m. that you’ve barely had any.</span></div></li>
+          <li><b>04</b><div><strong>Food first.</strong><span>Powder is convenient, not magic. Chicken, beef, fish, eggs, dairy, beans, lentils and soy all count.</span></div></li>
+        </ol>
+        <div class="why-links">
+          <a class="link-arrow" href={href('/blog/protein-my-favourite-macronutrient')}>Read my protein post <Icon name="arrow" /></a>
+          <a class="link-arrow" href={href('/program#nourish')}>Learn more in Nourish <Icon name="arrow" /></a>
+        </div>
+      </div>
+      <div data-reveal data-reveal-delay="0.1"><ProteinDay client:visible meals={dayMeals} /></div>
+    </div>
+  </section>
+</SiteLayout>

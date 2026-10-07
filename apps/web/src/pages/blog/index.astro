@@ -1,33 +1,23 @@
 ---
-import { readingTimeLabel } from '@tilana/content';
-import { getPublishedPosts } from '@web/utils/blog-posts';
-import BaseLayout from '@web/layouts/BaseLayout.astro';
-import PageHero from '@tilana/ui-astro/PageHero.astro';
+import SiteLayout from '@web/site/layouts/SiteLayout.astro';
+import PageHero from '@web/site/components/PageHero.astro';
+import BlogExplorer from '@web/site/components/BlogExplorer';
+import { blogCategories } from '@web/site/data';
+import { getPosts, toCard } from '@web/site/blog';
 import { setBlogCacheHeaders } from '@web/utils/blog-http';
 
 // Rendered on request so newly published posts appear without a rebuild.
 export const prerender = false;
-const posts = await getPublishedPosts();
+const cards = (await getPosts()).map(toCard);
 setBlogCacheHeaders(Astro.response.headers);
 ---
-<BaseLayout title="Strength & Healthy Habits Blog" description="Practical strength-training guidance from Tilana van Tonder for building confidence, sound movement patterns, and sustainable progress.">
-  <PageHero eyebrow="The blog" title="Useful notes for" script="real life." intro="Simple, encouraging writing about strength, movement, and sustainable progress - without miracle claims." />
-  <section class="section"><div class="container post-grid">{posts.map((post) => <article><div class="art">{post.coverImageUrl && <img src={post.coverImageUrl} alt={post.coverImageAlt ?? ''} width={post.coverImageWidth ?? 944} height={post.coverImageHeight ?? 1104} loading="lazy" decoding="async" />}</div><div class="copy"><span>{post.category} · {readingTimeLabel(post.bodyMarkdown)}</span><h2>{post.title}</h2><p>{post.excerpt}</p><a href={`/blog/${post.slug}`}>Read article →</a></div></article>)}{posts.length === 0 && <p class="empty">New posts are on their way.</p>}</div></section>
-</BaseLayout>
-<style>
-  .empty { color: var(--chocolate); text-align: center; }
-  .post-grid { display: flex; max-width: 78rem; align-items: stretch; justify-content: center; gap: clamp(1rem, 2vw, 1.5rem); margin-inline: auto; }
-  article { display: flex; width: calc((100% - 3rem) / 3); min-width: 0; max-width: 25rem; overflow: hidden; flex: 1 1 calc((100% - 3rem) / 3); flex-direction: column; border: 1px solid color-mix(in srgb, var(--caramel) 20%, transparent); border-radius: var(--radius-md); background: color-mix(in srgb, var(--sand) 45%, var(--cream)); box-shadow: var(--shadow-sm); transition: transform 260ms ease, box-shadow 260ms ease, border-color 260ms ease; }
-  article:hover, article:focus-within { border-color: color-mix(in srgb, var(--caramel) 46%, transparent); box-shadow: var(--shadow-md); transform: translateY(-0.35rem); }
-  .art { position: relative; aspect-ratio: 4/5; min-height: 0; overflow: hidden; flex: none; background: var(--sage); }
-  .art img { position: absolute; width: 100%; height: 100%; object-fit: cover; object-position: center 34%; transition: transform 500ms ease; inset: 0; }
-  article:hover .art img, article:focus-within .art img { transform: scale(1.035); }
-  .copy { display: flex; flex: 1; flex-direction: column; padding: clamp(1.2rem, 2.2vw, 1.65rem); }
-  span { color: var(--caramel); font-size: 0.63rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-  h2 { margin: 0.8rem 0; color: var(--ink); font-family: var(--font-heading); font-size: 1.45rem; line-height: 1.25; }
-  p { flex: 1; margin: 0; font-size: 0.8rem; }
-  a { display: inline-block; margin-top: 1.2rem; color: var(--caramel); font-size: 0.75rem; font-weight: 650; }
-  @media (max-width: 64rem) { .post-grid { max-width: 52rem; } article { width: calc((100% - 1.5rem) / 2); max-width: 25rem; flex-basis: calc((100% - 1.5rem) / 2); } }
-  @media (max-width: 42rem) { .post-grid { max-width: 26rem; flex-direction: column; } article { width: 100%; max-width: none; flex-basis: auto; } }
-  @media (prefers-reduced-motion: reduce) { article, .art img { transition: none; } article:hover, article:focus-within, article:hover .art img, article:focus-within .art img { transform: none; } }
-</style>
+<SiteLayout title="Strength & Healthy Habits Blog" current="blog" description="Simple, encouraging writing about strength, movement, and sustainable progress - without miracle claims.">
+  <PageHero
+    eyebrow="The blog"
+    lines={['Useful notes', 'for *real life.*']}
+    intro="Simple, encouraging writing about strength, movement, and sustainable progress - without miracle claims."
+  />
+  <section class="section wrap">
+    <BlogExplorer client:load posts={cards} categories={[...blogCategories]} />
+  </section>
+</SiteLayout>

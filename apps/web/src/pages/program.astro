@@ -1,15 +1,112 @@
 ---
-import PageHero from '@tilana/ui-astro/PageHero.astro';
-import ProgramCatalogue from '@web/components/ProgramCatalogue.astro';
-import BaseLayout from '@web/layouts/BaseLayout.astro';
+import SiteLayout from '@web/site/layouts/SiteLayout.astro';
+import PageHero from '@web/site/components/PageHero.astro';
+import Icon from '@web/site/components/Icon';
+import FitQuiz from '@web/site/components/FitQuiz';
+import Faq from '@web/site/components/Faq';
+import ProgramRow from '@web/site/components/ProgramRow.astro';
+import { checkoutEnabled, href } from '@web/site/config';
+import { programDisclaimer, programFaqs, programs } from '@web/site/data';
+
+const strength = programs.filter((p) => p.series === 'strength');
+const focus = programs.filter((p) => p.series === 'focus');
 ---
+<SiteLayout title="Programs & Pricing" current="program" description="Beginner, Intermediate, Advanced, Reconnect and Nourish: once-off digital programs by Tilana van Tonder.">
+  <PageHero
+    eyebrow="Programs for real life"
+    lines={['Find your', '*next step.*']}
+    intro="Start where you are and choose the support that suits you - from foundational movement and nourishment to pelvic-floor connection and progressive strength."
+  >
+    <nav class="hero-jump card" aria-label="Jump to a program" data-reveal data-reveal-delay="0.3">
+      <p>The strength series</p>
+      <ol class="jump-steps">
+        {strength.map((p) => (
+          <li>
+            <a href={`#${p.key}`}>
+              <span class="pm-bars" aria-hidden="true">{[1, 2, 3].map((n) => <i class={n <= (p.step ?? 0) ? 'on' : undefined} />)}</span>
+              <strong>{p.name}</strong>
+              <small>{p.marker}</small>
+            </a>
+          </li>
+        ))}
+      </ol>
+      <p>Focus programs</p>
+      <ul class="jump-focus">
+        {focus.map((p) => <li><a href={`#${p.key}`}><Icon name={p.icon} /><strong>{p.name}</strong><small>{p.marker}</small></a></li>)}
+      </ul>
+    </nav>
+  </PageHero>
 
-<BaseLayout title="Programs & Pricing" description="Explore Tilana van Tonder's currently available movement, strength, nourishment and pelvic-floor programs.">
-  <PageHero eyebrow="Programs for real life" title="Find your" script="next step." intro="Start where you are and choose the support that suits you - from foundational movement and nourishment to pelvic-floor connection and progressive strength." />
-  <ProgramCatalogue />
-  <section class="safety"><div class="container"><strong>Important:</strong> All programs provide general education based on personal experience and are not a substitute for medical, physiotherapy, dietetic, or other qualified professional care. Seek appropriate clearance before beginning, particularly during pregnancy, after birth, or when managing an injury or health condition. Stop and consult an appropriately qualified healthcare professional if movement causes pain, dizziness, unusual shortness of breath, pelvic-floor symptoms, or other concerns.</div></section>
-</BaseLayout>
+  <section class="section wrap" aria-labelledby="series-title">
+    <div class="section-head split" data-reveal>
+      <div>
+        <p class="eyebrow">The strength series</p>
+        <h2 class="h2" id="series-title">One bar, <em>three steps.</em></h2>
+      </div>
+      <p class="lede">Each volume builds on the one before. When the basics feel comfortable, the next one is waiting. No rush.</p>
+    </div>
+    <ol class="series">
+      {strength.map((p) => (
+        <li class="series-step">
+          <span class="series-dot" aria-hidden="true">{p.step}</span>
+          <ProgramRow program={p} />
+        </li>
+      ))}
+    </ol>
+  </section>
 
-<style>
-  .safety { padding-block: 2rem; color: var(--ink); background: var(--sage); font-size: 0.8rem; line-height: 1.6; }
-</style>
+  <section class="section band" aria-labelledby="focus-title">
+    <div class="wrap">
+      <div class="section-head split" data-reveal>
+        <div>
+          <p class="eyebrow">Focus programs</p>
+          <h2 class="h2" id="focus-title">Breath, body <em>&amp; plate.</em></h2>
+        </div>
+        <p class="lede">Stand-alone programs you can start any time, on their own or alongside the strength series.</p>
+      </div>
+      <div class="focus-grid">
+        {focus.map((p, i) => <ProgramRow program={p} layout="stack" delay={i * 0.08} />)}
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="quiz">
+    <div class="wrap quiz-grid">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">Find your fit</p>
+        <h2 class="h2">Not sure where <em>to start?</em></h2>
+        <p class="lede">Three quick questions and you’ll have a recommendation{checkoutEnabled ? ', ready to add to your basket' : ''}. Still unsure? <a href={href('/contact')}>Ask me directly</a>.</p>
+      </div>
+      <div data-reveal data-reveal-delay="0.1"><FitQuiz client:visible /></div>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="cta-band card private-card" data-reveal>
+      <div>
+        <p class="eyebrow">Private training</p>
+        <h3>Want to train <em>one-on-one?</em></h3>
+        <p>Please contact me to discuss private training: a plan built around you, with regular check-ins along the way.</p>
+      </div>
+      <div class="private-actions">
+        <a class="btn btn-accent" href={href('/contact?interest=one-on-one')}>Get in touch <Icon name="arrow" /></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap faq-grid">
+    <div class="section-head" data-reveal>
+      <p class="eyebrow">Buying a program</p>
+      <h2 class="h2">Good to <em>know.</em></h2>
+      <p class="lede">The <a href={href('/refund-policy')}>refund policy</a> and <a href={href('/privacy')}>privacy policy</a> have the full details.</p>
+    </div>
+    <div data-reveal data-reveal-delay="0.1"><Faq client:visible items={programFaqs} /></div>
+  </section>
+
+  <section class="wrap">
+    <div class="disclaimer card" data-reveal>
+      <strong>Important</strong>
+      <p>{programDisclaimer}</p>
+    </div>
+  </section>
+</SiteLayout>

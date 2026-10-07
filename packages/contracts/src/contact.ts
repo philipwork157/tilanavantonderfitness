@@ -3,6 +3,7 @@ import { programCatalogByKey } from './programs';
 
 export const contactInterestValues = [
   'move',
+  'intermediate',
   'strong',
   'nourish',
   'reconnect',
@@ -14,10 +15,17 @@ export const contactInterestSchema = z.enum(contactInterestValues);
 
 export type ContactInterest = z.infer<typeof contactInterestSchema>;
 
+/** Older and friendlier ?interest= values on contact links, mapped to the stored keys. */
+export const contactInterestAliases: Record<string, ContactInterest> = {
+  beginner: 'move',
+  advanced: 'strong',
+};
+
 /** Shared display labels used by the public form, admin portal, and notifications. */
 export const contactInterestLabels = {
-  strong: `${programCatalogByKey['strong-volume-1'].volumeName} · Coming soon`,
   move: programCatalogByKey['move-volume-1'].volumeName,
+  intermediate: 'Intermediate · Volume 1',
+  strong: programCatalogByKey['strong-volume-1'].volumeName,
   nourish: programCatalogByKey['nourish-volume-1'].volumeName,
   reconnect: programCatalogByKey['reconnect-volume-1'].volumeName,
   'one-on-one': 'One-on-one training',

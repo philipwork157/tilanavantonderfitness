@@ -1,0 +1,116 @@
+---
+import { render } from 'astro:content';
+import SiteLayout from '@web/site/layouts/SiteLayout.astro';
+import Icon from '@web/site/components/Icon';
+import RecipeCard from '@web/site/components/RecipeCard';
+import RecipeMethod from '@web/site/components/RecipeMethod';
+import { href } from '@web/site/config';
+import { getRecipes, toRecipeCard, type Recipe } from '@web/site/kitchen';
+
+export async function getStaticPaths() {
+  const recipes = await getRecipes();
+  return recipes.map((entry) => ({
+    params: { slug: entry.id },
+    // Related: the closest in protein first, so a high-protein dinner suggests other hearty meals.
+    props: {
+      entry,
+      others: recipes
+        .filter((r) => r.id !== entry.id)
+        .sort((a, b) => Math.abs(a.data.nutrition.protein - entry.data.nutrition.protein) - Math.abs(b.data.nutrition.protein - entry.data.nutrition.protein))
+        .slice(0, 3),
+    },
+  }));
+}
+
+const { entry, others } = Astro.props as { entry: Recipe; others: Recipe[] };
+const { Content } = await render(entry);
+const d = entry.data;
+const n = d.nutrition;
+const macroKcal = n.protein * 4 + n.carbs * 4 + n.fat * 9;
+const macros = [
+  { key: 'protein', label: 'Protein', g: n.protein, kcal: n.protein * 4 },
+  { key: 'carbs', label: 'Carbs', g: n.carbs, kcal: n.carbs * 4 },
+  { key: 'fat', label: 'Fat', g: n.fat, kcal: n.fat * 9 },
+].map((m) => ({ ...m, pct: Math.round((m.kcal / macroKcal) * 100) }));
+---
+<SiteLayout title={d.title} description={d.description} current="kitchen">
+  <article>
+    <header class="wrap recipe-head">
+      <div>
+        <a class="back-link" href={href('/kitchen')}>← Back to the kitchen</a>
+        <p class="eyebrow">{d.meal}</p>
+        <h1>{d.title}</h1>
+        <p class="lede">{d.description}</p>
+        <dl class="article-meta recipe-meta">
+          <div><dt>Prep</dt><dd>{d.prepMinutes} min</dd></div>
+          {d.cookMinutes > 0 && <div><dt>Cook</dt><dd>{d.cookMinutes} min</dd></div>}
+          <div><dt>Serves</dt><dd>{d.servings}</dd></div>
+          <div><dt>Energy</dt><dd>{n.kcal} kcal</dd></div>
+        </dl>
+        {d.tags.length > 0 && <ul class="tag-list">{d.tags.map((t) => <li>{t}</li>)}</ul>}
+      </div>
+      <figure class={`recipe-cover tone-${d.tone}`}>
+        {d.image ? <img src={d.image} alt={d.imageAlt ?? ''} /> : <Icon name={d.icon} className="recipe-cover-icon" />}
+        <span class="recipe-protein recipe-protein-lg" aria-label={`${n.protein} grams of protein per serving`}>
+          <b aria-hidden="true">{n.protein}<i>g</i></b>
+          <small aria-hidden="true">protein a serving</small>
+        </span>
+      </figure>
+    </header>
+
+    {d.sample && (
+      <div class="wrap">
+        <p class="sample-banner"><Icon name="spark" />A simple version of a meal I mention on the blog. My own recipe and photos are on their way.</p>
+      </div>
+    )}
+
+    <div class="wrap recipe-layout">
+      <div class="recipe-main">
+        <RecipeMethod client:visible servings={d.servings} ingredients={d.ingredients} steps={d.steps} />
+        <section class="prose recipe-notes" aria-labelledby="notes-title">
+          <h2 id="notes-title">Tilana’s notes</h2>
+          <Content />
+        </section>
+      </div>
+      <aside class="recipe-side">
+        <section class="nutri card" aria-labelledby="nutri-title">
+          <h2 id="nutri-title">Per serving</h2>
+          <p class="nutri-kcal"><b>{n.kcal}</b> kcal</p>
+          <ul class="nutri-bars">
+            {macros.map((m) => (
+              <li class={`nutri-${m.key}`}>
+                <span>{m.label}</span><b>{m.g} g</b>
+                <i style={`--w:${m.pct}%`} aria-hidden="true"></i>
+                <small>{m.pct}% of energy</small>
+              </li>
+            ))}
+          </ul>
+          <p class="nutri-note">Estimated from standard food values. Brands and portions vary, so treat it as a guide.</p>
+        </section>
+        <section class="protein-note card tone-terracotta" aria-labelledby="pn-title">
+          <h2 id="pn-title"><Icon name="spark" />The protein part</h2>
+          <p>{d.proteinNote}</p>
+          <a class="link-arrow" href={href('/kitchen#why-protein')}>Why protein matters <Icon name="arrow" /></a>
+        </section>
+        {d.fromPost && d.fromPostTitle && (
+          <a class="from-post card lift" href={href(`/blog/${d.fromPost}`)}>
+            <small>From the blog</small>
+            <strong>{d.fromPostTitle}</strong>
+            <span class="link-arrow">Read the post <Icon name="arrow" /></span>
+          </a>
+        )}
+      </aside>
+    </div>
+  </article>
+
+  <section class="section wrap">
+    <div class="section-head split" data-reveal>
+      <div>
+        <p class="eyebrow">More from the kitchen</p>
+        <h2 class="h2">Hungry for <em>more?</em></h2>
+      </div>
+      <a class="link-arrow" href={href('/kitchen')}>All recipes <Icon name="arrow" /></a>
+    </div>
+    <div class="recipe-grid snap-mobile">{others.map((r) => <RecipeCard recipe={toRecipeCard(r)} />)}</div>
+  </section>
+</SiteLayout>

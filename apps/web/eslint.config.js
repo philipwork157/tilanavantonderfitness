@@ -11,8 +11,14 @@ export default defineConfig(
   },
   js.configs.recommended,
   {
-    files: ['**/*.ts'],
+    files: ['**/*.ts', '**/*.tsx'],
     extends: [tseslint.configs.recommended],
+  },
+  {
+    files: ['src/**/*.tsx', 'src/**/*.ts'],
+    languageOptions: {
+      globals: globals.browser,
+    },
   },
   ...eslintPluginAstro.configs.recommended,
   {

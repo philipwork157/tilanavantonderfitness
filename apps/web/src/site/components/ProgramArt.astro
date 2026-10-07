@@ -1,0 +1,140 @@
+---
+/**
+ * One illustration per program, drawn in SVG so it follows the light/dark theme.
+ *  - Beginner / Intermediate / Advanced: the same barbell, loaded with 1, 2 or 3 plates.
+ *    Dashed "ghost" plates show the room still to grow into.
+ *  - Reconnect: the breathing "canister": diaphragm on top, pelvic floor below, moving together.
+ *  - Nourish: a balanced plate (veg, protein, carbs) with a fork and knife.
+ * The parts animate in when the art scrolls into view, then idle gently.
+ */
+import type { Program } from '../data';
+
+interface Props { program: Program; class?: string }
+const { program: p, class: className } = Astro.props;
+
+// Plate heights, from the collar outwards.
+const plates = [84, 70, 56];
+const level = p.step ?? 0;
+const note = { 1: 'room to grow', 2: 'building up', 3: 'fully loaded' }[level as 1 | 2 | 3];
+---
+<svg
+  class:list={['pa', `pa-${p.key}`, className]}
+  viewBox="0 0 240 150"
+  role="img"
+  aria-label={
+    p.series === 'strength'
+      ? `A barbell loaded with ${level} of 3 plates`
+      : p.key === 'reconnect'
+        ? 'The diaphragm and pelvic floor moving together with each breath'
+        : 'A balanced plate with vegetables, protein and carbs'
+  }
+>
+  {p.series === 'strength' && (
+    <g class="pa-barbell">
+      <line class="pa-floor" x1="14" y1="136" x2="226" y2="136" />
+      <ellipse class="pa-shadow" cx="120" cy="136" rx="78" ry="5" />
+      <g class="pa-lift">
+        <line class="pa-bar" x1="12" y1="78" x2="228" y2="78" />
+        <g class="pa-knurl">
+          {Array.from({ length: 12 }, (_, i) => <line x1={98 + i * 4} y1="73" x2={98 + i * 4} y2="83" />)}
+        </g>
+        <rect class="pa-collar" x="63" y="69" width="7" height="18" rx="2" />
+        <rect class="pa-collar" x="170" y="69" width="7" height="18" rx="2" />
+        {plates.map((h, i) => {
+          const y = 78 - h / 2;
+          const solid = i < level;
+          const cls = solid ? `pa-plate pa-plate-${i % 2 ? 'b' : 'a'}` : 'pa-ghost';
+          return (
+            <>
+              <g class={`${cls} pa-left`} style={`--d:${i * 0.12}s`}>
+                <rect x={49 - i * 14} y={y} width="12" height={h} rx="4" />
+                {solid && <line class="pa-shine" x1={53 - i * 14} y1={y + 9} x2={53 - i * 14} y2={y + h - 9} />}
+              </g>
+              <g class={`${cls} pa-right`} style={`--d:${i * 0.12}s`}>
+                <rect x={179 + i * 14} y={y} width="12" height={h} rx="4" />
+                {solid && <line class="pa-shine" x1={183 + i * 14} y1={y + 9} x2={183 + i * 14} y2={y + h - 9} />}
+              </g>
+            </>
+          );
+        })}
+      </g>
+      {level === 3 && (
+        <g class="pa-sparks">
+          <path style="--d:0s" d="M24 22c.5 4 2 5.5 6 6-4 .5-5.5 2-6 6-.5-4-2-5.5-6-6 4-.5 5.5-2 6-6z" />
+          <path style="--d:.6s" d="M212 112c.4 3 1.5 4.1 4.5 4.5-3 .4-4.1 1.5-4.5 4.5-.4-3-1.5-4.1-4.5-4.5 3-.4 4.1-1.5 4.5-4.5z" />
+          <path style="--d:1.2s" d="M218 14c.4 3 1.5 4.1 4.5 4.5-3 .4-4.1 1.5-4.5 4.5-.4-3-1.5-4.1-4.5-4.5 3-.4 4.1-1.5 4.5-4.5z" />
+        </g>
+      )}
+      <g class="pa-note">
+        <text x="120" y="30" text-anchor="middle">{note}</text>
+        <path class="pa-arrow" d={level === 3 ? 'M163 26c16-4 26 2 30 12' : 'M163 26c22-6 38 2 44 16'} />
+        <path class="pa-arrow-head" d={level === 3 ? 'M187 35l6 3 1-7' : 'M201 39l6 3 1-7'} />
+      </g>
+    </g>
+  )}
+
+  {p.key === 'reconnect' && (
+    <g class="pa-breath">
+      <path class="pa-wall" d="M70 50c-12 24-11 52 8 72M170 50c12 24 11 52-8 72" />
+      <g class="pa-ripples">
+        <circle class="pa-ripple" cx="120" cy="86" r="24" style="--d:0s" />
+        <circle class="pa-ripple" cx="120" cy="86" r="24" style="--d:3s" />
+      </g>
+      <g class="pa-ball">
+        <circle class="pa-ball-fill" cx="120" cy="86" r="12" />
+        <circle class="pa-ball-ring" cx="120" cy="86" r="21" />
+      </g>
+      <path class="pa-dia" d="M64 54Q120 12 176 54Q120 40 64 54Z" />
+      <path class="pa-pf" d="M76 118Q120 146 164 118Q120 128 76 118Z" />
+      <text class="pa-word pa-in" x="214" y="40" text-anchor="middle">inhale</text>
+      <text class="pa-word pa-out" x="214" y="40" text-anchor="middle">exhale</text>
+      <path class="pa-updown" d="M214 54v52M208 98l6 8 6-8M208 62l6-8 6 8" />
+      <text class="pa-small" x="26" y="40" text-anchor="middle">DIAPHRAGM</text>
+      <path class="pa-pointer" d="M26 46c0 10 14 14 34 12" />
+      <text class="pa-small" x="26" y="134" text-anchor="middle">PELVIC FLOOR</text>
+      <path class="pa-pointer" d="M26 124c0-6 18-6 44-4" />
+    </g>
+  )}
+
+  {p.key === 'nourish' && (
+    <g class="pa-meal">
+      <g class="pa-fork">
+        <path d="M30 26v22M38 26v22M46 26v22" />
+        <path d="M30 48q8 12 16 0" />
+        <path class="pa-handle" d="M38 58v66" />
+      </g>
+      <g class="pa-knife">
+        <path class="pa-blade" d="M202 24q14 18 6 50h-8z" />
+        <path class="pa-handle" d="M204 78v46" />
+      </g>
+      <circle class="pa-plate-rim" cx="120" cy="78" r="58" />
+      <circle class="pa-plate-in" cx="120" cy="78" r="47" />
+      <g class="pa-wedges">
+        <path class="pa-veg" style="--d:0s" d="M120 78V36A42 42 0 0 0 120 120Z" />
+        <path class="pa-protein" style="--d:.14s" d="M120 78V36A42 42 0 0 1 162 78Z" />
+        <path class="pa-carbs" style="--d:.28s" d="M120 78H162A42 42 0 0 1 120 120Z" />
+        <g class="pa-bits">
+          <path d="M96 58c6-8 14-8 16-2-6 6-12 7-16 2zM104 57l-6 3" />
+          <path d="M92 92c5-9 13-10 16-4-5 7-11 9-16 4zM100 90l-6 4" />
+          <path d="M101 74c4-6 10-6 12-2-4 5-9 6-12 2z" />
+          <path d="M133 50l14 14M130 58l12 12" />
+          <circle cx="134" cy="94" r="2.6" />
+          <circle cx="144" cy="88" r="2.6" />
+          <circle cx="141" cy="100" r="2.6" />
+          <circle cx="129" cy="104" r="2.6" />
+          <circle cx="151" cy="96" r="2.6" />
+        </g>
+      </g>
+      <g class="pa-steam">
+        <path style="--d:0s" d="M138 18c-4-5 4-8 0-14" />
+        <path style="--d:.8s" d="M148 20c-4-5 4-8 0-14" />
+      </g>
+    </g>
+  )}
+</svg>
+
+<script>
+  import { inView } from 'motion';
+  // Start each illustration's entrance when it scrolls into view (CSS does the animating).
+  inView('.pa', (el) => { el.classList.add('is-on'); }, { amount: 0.35 });
+</script>

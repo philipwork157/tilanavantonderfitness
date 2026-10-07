@@ -18,12 +18,13 @@ was reset. The ignored archive is local reference material, not a GitHub backup.
 
 ```text
 apps/
-  web/                 Existing Astro public website, unchanged
+  web/                 Astro public website (new design, live blog, kitchen)
   admin/               Clean Nuxt starting point
 packages/
   contracts/           Existing website-compatible API contracts
-  design-system/       Shared brand tokens and CSS
-  ui-astro/            Shared Astro components
+  content/             Safe Markdown rendering shared by web and admin
+  db/                  Drizzle schema and migrations
+  design-system/       Admin brand tokens and CSS
   ui-nuxt/             Shared Nuxt layer and components
 tilana-fitness-old/     Ignored old backend, tests and private configuration
 tilana-content-work/    Ignored PDF/Word work, marketing exports and UI previews
@@ -34,8 +35,8 @@ tilana-content-work/    Ignored PDF/Word work, marketing exports and UI previews
 Personal PDF/Word drafts, renders, reels and generated images live in
 `tilana-content-work/`, not in the application folders. See its local `README.md`
 for the retained folder layout and generator scripts. Git does not back up this
-folder; keep a separate copy of important documents. Website assets remain in
-`apps/web/src/assets` and `apps/web/public`.
+folder; keep a separate copy of important documents. Website images live in
+`apps/web/public`.
 
 `.turbo/cache`, old root `.cache`/`.astro`, root `dist` and `.pnpm-store` are
 regenerable build/dependency caches, not creative documents. Keep installed

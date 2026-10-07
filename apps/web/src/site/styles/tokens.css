@@ -1,0 +1,37 @@
+/* Shared brand tokens: same palette + fonts as the live Tilana design system. */
+:root {
+  --cream: #f6e4d9;
+  --terracotta: #d5a27f;
+  --caramel: #a87e63;
+  --ink: #0f0e13;
+  --sand: #e0c3ae;
+  --chocolate: #614635;
+  --sage: #c9d2b3;
+  --white: #ffffff;
+
+  --font-heading: 'Playfair Display Variable', 'Playfair Display', Georgia, serif;
+  --font-body: 'Montserrat Variable', 'Montserrat', system-ui, sans-serif;
+  --font-script: 'Allura', cursive;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --page-pad: clamp(1.1rem, 4vw, 3.5rem);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body { margin: 0; font-family: var(--font-body); font-variant-numeric: lining-nums; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+img { display: block; max-width: 100%; height: auto; }
+a { color: inherit; }
+button { font: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--terracotta); outline-offset: 3px; }
+
+.wrap { width: min(100% - 2 * var(--page-pad), 1320px); margin-inline: auto; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Scroll reveal (driven by Motion in Base.astro). Hidden only once JS confirms it can animate. */
+.motion-ok [data-reveal] { opacity: 0; transform: translateY(28px); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}

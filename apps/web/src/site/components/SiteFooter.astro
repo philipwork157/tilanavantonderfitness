@@ -1,0 +1,43 @@
+---
+import { href, navigation, site } from '../config';
+import { programs } from '../data';
+const year = 2026;
+---
+<footer class="site-footer">
+  <div class="wrap footer-top">
+    <div class="footer-brand">
+      <a class="wordmark" href={href('/')}>TILANA<span>van Tonder</span></a>
+      <p>{site.tagline}</p>
+      <a class="footer-mail" href={`mailto:${site.email}`}>{site.email}</a>
+    </div>
+    <div class="footer-col">
+      <h3>Explore</h3>
+      <ul>{navigation.map((n) => <li><a href={href(n.path)}>{n.label}</a></li>)}</ul>
+    </div>
+    <div class="footer-col">
+      <h3>Programs</h3>
+      <ul>{programs.map((p) => <li><a href={href(`/program#${p.key}`)}>{p.name}</a></li>)}</ul>
+    </div>
+    <div class="footer-col">
+      <h3>Good to know</h3>
+      <ul>
+        <li><a href={href('/privacy')}>Privacy policy</a></li>
+        <li><a href={href('/refund-policy')}>Refund policy</a></li>
+      </ul>
+    </div>
+  </div>
+  <!-- Sign-off: Tilana's name as a handwritten signature that writes itself in
+       when the footer scrolls into view (see SiteLayout), with a swash and heart. -->
+  <div class="footer-sign" aria-hidden="true">
+    <svg viewBox="0 0 1000 380" focusable="false">
+      <text class="sign-name" x="500" y="250" text-anchor="middle">Tilana</text>
+      <path class="sign-swash" pathLength="1" d="M250 318 C 370 290, 540 334, 690 302 C 760 288, 808 284, 836 292" />
+      <path class="sign-heart" pathLength="1" d="M868 288 c -9 -15, -31 -9, -27 6 c 3 12, 19 20, 27 30 c 8 -10, 24 -18, 27 -30 c 4 -15, -18 -21, -27 -6 z" />
+    </svg>
+    <p class="sign-line">van Tonder <span>·</span> Real · Raw · Honest</p>
+  </div>
+  <div class="wrap footer-bottom">
+    <p>© {year} {site.name} · {site.disclaimer}</p>
+    <p class="dev-credit">Developed by <a href={site.developer.url} target="_blank" rel="noopener">{site.developer.name}</a></p>
+  </div>
+</footer>

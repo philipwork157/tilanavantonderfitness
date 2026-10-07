@@ -1,0 +1,33 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+import PageHero from './PageHero.astro';
+import Icon from './Icon';
+
+type Section = { title: string; body: readonly string[] };
+type Summary = { eyebrow: string; title: string; script: string; intro: string; heading: string; points: string[]; effective: string };
+interface Props { pageTitle: string; description: string; summary: Summary; sections: readonly Section[] }
+const { pageTitle, description, summary, sections } = Astro.props;
+---
+<SiteLayout title={pageTitle} description={description} current="legal" newsletter={false}>
+  <PageHero eyebrow={summary.eyebrow} lines={[summary.title, `*${summary.script}*`]} intro={summary.intro} />
+  <section class="section wrap legal-grid">
+    <aside class="legal-summary card tone-sage" data-reveal>
+      <p class="eyebrow">At a glance</p>
+      <h2>{summary.heading}</h2>
+      <ul>{summary.points.map((p) => <li><Icon name="check" />{p}</li>)}</ul>
+      <p class="effective">Effective date: {summary.effective}</p>
+    </aside>
+    <ol class="legal-list">
+      {sections.map((s, i) => (
+        <li data-reveal>
+          <span class="n">{String(i + 1).padStart(2, '0')}</span>
+          <div>
+            <h2>{s.title}</h2>
+            {s.body.map((p) => <p>{p}</p>)}
+          </div>
+        </li>
+      ))}
+      <slot />
+    </ol>
+  </section>
+</SiteLayout>

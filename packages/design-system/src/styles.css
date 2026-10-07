@@ -34,7 +34,6 @@
   --ochre-700: #8a5a12;
   --slate-100: #dce5e8;
   --slate-600: #476270;
-  /* `--white` is a legacy theme-aware alias (see below), so pure white is named explicitly. */
   --pure-white: #fff;        /* brand · Pure White */
 
   /* Numbered brand scale for UI libraries that need shades (Nuxt UI). */
@@ -212,18 +211,6 @@
   --z-modal: 400;
   --z-toast: 500;
 
-  /* Legacy v1 names, still used by the public website. They follow the
-     theme (see .dark). New code should use the semantic tokens above. */
-  --cream: var(--cream-100);
-  --terracotta: var(--terracotta-400);
-  --caramel: var(--caramel-500);
-  --ink: var(--ink-950);
-  --sand: var(--sand-300);
-  --chocolate: var(--chocolate-800);
-  --sage: var(--sage-300);
-  --white: var(--pure-white);
-  --color-text: var(--color-text-primary);
-  --font-heading: var(--font-display);
 }
 
 /* Dark theme: derived from the brand palette. Every text pairing below
@@ -279,16 +266,6 @@
   --shadow-md: 0 10px 28px -6px rgb(0 0 0 / 45%);
   --shadow-lg: 0 24px 56px -12px rgb(0 0 0 / 55%);
   --shadow-button: 0 12px 30px rgb(0 0 0 / 28%);
-
-  /* Legacy v1 dark values, unchanged so the website looks the same. */
-  --cream: #171317;
-  --terracotta: #dda986;
-  --caramel: #c28e70;
-  --ink: #fff7f1;
-  --sand: #3a2b30;
-  --chocolate: #d8c0b2;
-  --sage: #667255;
-  --white: #241c21;
 }
 
 /* Admin density: same token names, tighter values. Set on <html data-density="compact">. */

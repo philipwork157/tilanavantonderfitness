@@ -1,87 +1,11 @@
 ---
+import SiteLayout from '@web/site/layouts/SiteLayout.astro';
+import CheckoutComplete from '@web/site/components/shop/CheckoutComplete';
+import { href } from '@web/site/config';
 import { publicApiUrl } from '@web/utils/public-api';
-import BaseLayout from '@web/layouts/BaseLayout.astro';
-
-const statusApiUrl = publicApiUrl('/api/checkout/status');
-const accountUrl = publicApiUrl('/account/sign-in');
 ---
-
-<BaseLayout title="Payment status" description="Check the status of your program payment." showNewsletter={false}>
-  <main class="section complete-page" data-payment-status data-api-url={statusApiUrl}>
-    <div class="container status-card" aria-live="polite" aria-atomic="true">
-      <p class="eyebrow">Secure checkout</p>
-      <h1 data-status-title>Confirming your payment…</h1>
-      <p data-status-copy>Please keep this page open while Paystack confirms the payment.</p>
-      <p data-reference hidden>Payment reference: <code data-reference-value></code></p>
-      <a class="button button-secondary" href="/program" data-status-link hidden>Back to programs</a>
-      <button class="button button-secondary" type="button" data-recheck-status hidden>Check payment again</button>
-      <a class="button button-primary account-link" href={accountUrl} data-account-link hidden>Access my programs</a>
-    </div>
-  </main>
-</BaseLayout>
-
-<script>
-  import { clearPaidBasket } from '@web/scripts/basket';
-  import { clearCompletedCheckoutIntent } from '@web/scripts/checkout-intent';
-  import { confirmCheckoutStatus } from '@web/scripts/checkout-completion';
-
-  const root = document.querySelector<HTMLElement>('[data-payment-status]');
-  const title = root?.querySelector<HTMLElement>('[data-status-title]');
-  const copy = root?.querySelector<HTMLElement>('[data-status-copy]');
-  const link = root?.querySelector<HTMLAnchorElement>('[data-status-link]');
-  const recheck = root?.querySelector<HTMLButtonElement>('[data-recheck-status]');
-  const accountLink = root?.querySelector<HTMLElement>('[data-account-link]');
-  const reference = new URLSearchParams(window.location.search).get('reference');
-  const referenceRow = root?.querySelector<HTMLElement>('[data-reference]');
-  const referenceValue = root?.querySelector<HTMLElement>('[data-reference-value]');
-
-  const show = (heading: string, message: string) => {
-    if (title) title.textContent = heading;
-    if (copy) copy.textContent = message;
-    if (link) link.hidden = false;
-  };
-
-  const checkStatus = async () => {
-    if (recheck) { recheck.hidden = true; recheck.disabled = true; }
-    if (!root || !reference) {
-      show('Payment reference missing', 'Please contact Tilana if you completed a payment but cannot see its status.');
-      return;
-    }
-
-    if (referenceValue) referenceValue.textContent = reference;
-    if (referenceRow) referenceRow.hidden = false;
-    if (!/^[A-Za-z0-9.=-]{10,160}$/.test(reference)) {
-      show('Payment reference invalid', 'Please contact Tilana with the payment reference below if you completed a payment.');
-      return;
-    }
-    const result = await confirmCheckoutStatus(root.dataset.apiUrl ?? '', reference, {
-      fetch,
-      pause: () => new Promise((resolve) => window.setTimeout(resolve, 2000)),
-      clearPaid: clearPaidBasket,
-      retireIntent: clearCompletedCheckoutIntent,
-    });
-    show(result.heading, result.message);
-    if (link) {
-      link.href = result.retry ? '/checkout' : '/program';
-      link.textContent = result.retry ? 'Return to checkout' : 'Back to programs';
-    }
-    if (recheck) { recheck.hidden = !result.recheck; recheck.disabled = false; }
-    if (accountLink) accountLink.hidden = !result.access;
-  };
-
-  recheck?.addEventListener('click', () => {
-    show('Confirming your payment…', 'Please wait while we check the latest payment status.');
-    void checkStatus();
-  });
-  void checkStatus();
-</script>
-
-<style>
-  .complete-page { min-height: 65vh; display: grid; place-items: center; background: var(--cream); }
-  .status-card { max-width: 46rem; padding: clamp(2rem, 6vw, 4rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-md); text-align: center; }
-  .status-card h1 { margin: 0.75rem 0 1rem; font-family: var(--font-heading); font-size: clamp(2.2rem, 6vw, 4rem); }
-  .status-card p:not(.eyebrow) { margin: 0 auto 1.8rem; max-width: 36rem; line-height: 1.7; }
-  .account-link { margin-left: 0.6rem; }
-  [data-recheck-status] { margin-left: 0.6rem; }
-  [data-reference-value] { overflow-wrap: anywhere; }
-</style>
+<SiteLayout title="Payment status" current="checkout" newsletter={false} robots="noindex, nofollow" description="Check the status of your program payment.">
+  <section class="wrap">
+    <CheckoutComplete client:load checkoutHref={href('/checkout')} programsHref={href('/program')} homeHref={href('/')} accountHref={publicApiUrl('/account/sign-in')} />
+  </section>
+</SiteLayout>

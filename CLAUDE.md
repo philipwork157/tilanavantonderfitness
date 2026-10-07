@@ -32,13 +32,21 @@ in the ignored root `tilana-content-work/` folder. Its `output/` contains finish
 deliverables, `tmp/` contains drafts/generators/render previews, `artifacts/` holds
 social media exports and `Claude outputs/` holds UI screenshots. These are local
 work, not app source or disposable caches, and need a separate backup.
-Do not move or delete assets under `apps/web/src/assets` or `apps/web/public`:
-those are part of the website. Do not delete creative work when clearing caches.
+Do not move or delete files under `apps/web/public`: they are part of the
+website. Do not delete creative work when clearing caches.
 
 ## Active packages
 
-- `apps/web`: existing Astro public website. Preserve its appearance, content,
-  assets and public environment setup unless the user requests changes.
+- `apps/web`: Astro public website, built from the "Full site" mockup
+  (`/Applications/development/Mockups`, route `/site/`). Everything for it lives
+  in `apps/web/src/site/`: `config.ts` (nav, email, WhatsApp), `data.ts`
+  (programs, prices, quiz, FAQ), `layouts/SiteLayout.astro` (SEO, theme,
+  header/footer, basket drawer, WhatsApp), `components/` (Astro + React
+  islands with Motion), `styles/` (its own light and "espresso" dark tokens)
+  and `content/kitchen/` (one Markdown file per recipe). Program slugs are the
+  catalogue slugs (`move-volume-1` = Beginner, `strong-volume-1` = Advanced).
+  Preserve its appearance, content, assets and public environment setup unless
+  the user requests changes.
 - `apps/admin`: Nuxt admin. It extends `@tilana/ui-nuxt`.
 - `packages/contracts`: Zod request/response contracts (website-facing plus
   `admin-auth`). Legacy admin-only contracts are archived. Keep public API
@@ -49,13 +57,10 @@ those are part of the website. Do not delete creative work when clearing caches.
   dark theme under `.dark`, compact admin density under
   `[data-density='compact']`). Components use semantic tokens
   (`--color-text-primary`, `--color-surface`, `--space-4`, `--radius-md`...),
-  never hex values or primitives. The v1 colour names (`--cream`, `--caramel`...)
-  remain as theme-aware aliases for the website only. The design-system
+  never hex values or primitives. The admin uses these tokens; the website
+  has its own in `apps/web/src/site/styles/base.css`. The design-system
   document targets Next.js/HeroUI; this repo maps the same tokens onto Nuxt UI
   in `packages/ui-nuxt/app/assets/css/main.css`.
-- `apps/web/src/styles/legacy-tokens.css`: v1 values for names v2 redefines,
-  so the website changes only deliberately. Remove a line to adopt v2.
-- `packages/ui-astro`: shared Astro presentation components.
 - `packages/ui-nuxt`: shared Nuxt layer and components.
 - `packages/content`: safe Markdown rendering (`renderMarkdown`) and reading
   time, shared by the website and admin.
@@ -110,8 +115,9 @@ Keep public deployment functional. An ignored archive is not a remote backup.
 
 ## Every screen (website and admin)
 
-- Supports light and dark mode using the design-system tokens (they switch
-  under `.dark`). Check both themes before handoff.
+- Supports light and dark mode. The admin uses the design-system tokens
+  (switching under `.dark`); the website uses its own tokens, switching under
+  `[data-theme='dark']`. Check both themes before handoff.
 - Works on mobile: usable from 360px wide, no horizontal page scroll, touch
   targets at least 44px on the website and 36px in the admin.
 - Use semantic tokens, keep a visible focus ring and respect reduced motion.
@@ -196,7 +202,11 @@ Keep public deployment functional. An ignored archive is not a remote backup.
 Keep modules focused and avoid unnecessary abstractions. Reuse the design system
 and existing helpers where appropriate. Add concise comments explaining security
 boundaries or non-obvious behavior. Preserve accessibility, responsive layouts,
-themes and reduced-motion support. Avoid em dashes in user-facing website copy.
+themes and reduced-motion support.
+
+Never use em dashes (—) anywhere on the website: copy, data, labels, alt text,
+meta descriptions or code comments in `apps/web`. Use a comma, colon, full stop
+or brackets instead. En dashes in number ranges (1–3 days) are fine.
 
 Preserve unrelated changes. Do not commit, push, deploy, reset databases or remove
 remote resources without explicit authorization. After repository changes,

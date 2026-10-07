@@ -1,0 +1,24 @@
+---
+import { checkoutEnabled, href, navigation, site, type NavKey } from '../config';
+import ThemeToggle from './ThemeToggle.astro';
+import BasketButton from './shop/BasketButton';
+import MobileMenu from './MobileMenu';
+
+interface Props { current: NavKey }
+const { current } = Astro.props;
+const links = navigation.map((n) => ({ label: n.label, href: href(n.path), current: n.key === current }));
+---
+<header class="site-header">
+  <div class="wrap header-row">
+    <a class="wordmark" href={href('/')} aria-label="Tilana van Tonder, home">TILANA<span>van Tonder</span></a>
+    <nav class="main-nav" aria-label="Primary">
+      {links.map((l) => <a href={l.href} aria-current={l.current ? 'page' : undefined}>{l.label}</a>)}
+    </nav>
+    <div class="header-actions">
+      <ThemeToggle />
+      {checkoutEnabled && <BasketButton client:load />}
+      {current !== 'contact' && <a class="btn btn-primary btn-sm header-cta" href={href('/contact')}>Get in touch</a>}
+      <MobileMenu client:idle links={links} homeHref={href('/')} contactHref={href('/contact')} email={site.email} />
+    </div>
+  </div>
+</header>
