@@ -37,6 +37,17 @@ const focus = programs.filter((p) => p.series === 'focus');
     </nav>
   </PageHero>
 
+  <section class="section band" id="quiz">
+    <div class="wrap quiz-grid">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">Find your fit</p>
+        <h2 class="h2">Not sure where <em>to start?</em></h2>
+        <p class="lede">Three quick questions and you’ll have a recommendation{checkoutEnabled ? ', ready to add to your basket' : ''}. Still unsure? <a href={href('/contact')}>Ask me directly</a>.</p>
+      </div>
+      <div data-reveal data-reveal-delay="0.1"><FitQuiz client:visible /></div>
+    </div>
+  </section>
+
   <section class="section wrap" aria-labelledby="series-title">
     <div class="section-head split" data-reveal>
       <div>
@@ -70,16 +81,6 @@ const focus = programs.filter((p) => p.series === 'focus');
     </div>
   </section>
 
-  <section class="section" id="quiz">
-    <div class="wrap quiz-grid">
-      <div class="section-head" data-reveal>
-        <p class="eyebrow">Find your fit</p>
-        <h2 class="h2">Not sure where <em>to start?</em></h2>
-        <p class="lede">Three quick questions and you’ll have a recommendation{checkoutEnabled ? ', ready to add to your basket' : ''}. Still unsure? <a href={href('/contact')}>Ask me directly</a>.</p>
-      </div>
-      <div data-reveal data-reveal-delay="0.1"><FitQuiz client:visible /></div>
-    </div>
-  </section>
 
   <section class="wrap">
     <div class="cta-band card private-card" data-reveal>

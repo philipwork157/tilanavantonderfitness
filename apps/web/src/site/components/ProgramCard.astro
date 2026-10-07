@@ -1,5 +1,8 @@
 ---
-/** Compact program card (home page). The full version lives on the program page (ProgramRow). */
+/**
+ * Compact program card for the home page: name, one line, price and the buy
+ * button. Descriptions and tags live on the program page (ProgramRow).
+ */
 import AddToBasket from './shop/AddToBasket';
 import ProgramArt from './ProgramArt.astro';
 import ProgramMarks from './ProgramMarks.astro';
@@ -18,8 +21,6 @@ const { program: p, index = 0 } = Astro.props;
   </header>
   <div class="prog-body">
     <p class="prog-title">{p.title}</p>
-    <p class="prog-short">{p.short}</p>
-    <ul class="tag-list">{p.tags.map((t) => <li>{t}</li>)}</ul>
     <div class="prog-foot">
       <div class="price"><strong>{rand(p.priceCents)}</strong><span>once-off</span></div>
       {checkoutEnabled

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type SubmitEvent } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import Icon from './Icon';
 
-const GREETING = ['Hi there 👋', 'Have a question about training or one of my programmes? I’m here to help - send me a WhatsApp!'];
+const GREETING = ['Hi there 👋', 'Have a question about training or one of my programmes? I’m here to help, send me a WhatsApp!'];
 const INITIAL = 'Hi Tilana, I’d like to find out more about your training options.';
 const QUICK = [
   { label: 'Which program should I start with?', text: 'Hi Tilana, which program should I start with?' },
@@ -10,6 +10,8 @@ const QUICK = [
   { label: 'A question about my order', text: 'Hi Tilana, I have a question about my order.' },
 ];
 const TEASER_KEY = 'tilana-wa-teaser';
+/** Things the floating button must never cover. When one is underneath it, the button tucks into the page edge. */
+const KEEP_CLEAR = 'a, button, input, select, textarea, label, summary, [role="button"], .sticker';
 
 /** Floating WhatsApp button with a little chat window. Sending opens WhatsApp with the message ready. */
 export default function WhatsAppChat({ phone, avatar }: { phone: string; avatar: string }) {
@@ -20,6 +22,49 @@ export default function WhatsAppChat({ phone, avatar }: { phone: string; avatar:
   const [message, setMessage] = useState(INITIAL);
   const inputRef = useRef<HTMLInputElement>(null);
   const launchRef = useRef<HTMLButtonElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [tucked, setTucked] = useState(false);
+
+  // Checks what sits under the round button (its centre and eight points just
+  // inside its edge) on scroll and resize, at most once per frame, and once more
+  // after scrolling settles so content that animates into place is caught too.
+  // The wrapper's box is used because it never moves when the button tucks.
+  useEffect(() => {
+    let frame = 0;
+    let settle = 0;
+    const check = () => {
+      frame = 0;
+      const wrap = wrapRef.current;
+      if (!wrap) return;
+      const r = wrap.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const radius = (Math.min(r.width, r.height) / 2) * 0.85;
+      const points: Array<[number, number]> = [[cx, cy]];
+      for (let i = 0; i < 8; i += 1) {
+        const angle = (i / 8) * Math.PI * 2;
+        points.push([cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius]);
+      }
+      setTucked(points.some(([x, y]) => {
+        const under = document.elementsFromPoint(x, y).find((el) => !wrap.contains(el));
+        return Boolean(under?.closest(KEEP_CLEAR));
+      }));
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(check);
+      window.clearTimeout(settle);
+      settle = window.setTimeout(() => requestAnimationFrame(check), 900);
+    };
+    schedule();
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(settle);
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
+    };
+  }, []);
 
   useEffect(() => {
     try { if (sessionStorage.getItem(TEASER_KEY) === 'off') { setSeen(true); return; } } catch { /* ignore */ }
@@ -50,7 +95,7 @@ export default function WhatsAppChat({ phone, avatar }: { phone: string; avatar:
   };
 
   return (
-    <div className="wa">
+    <div ref={wrapRef} className={tucked && !open && !teaser ? 'wa is-tucked' : 'wa'}>
       <AnimatePresence>
         {open && (
           <motion.section

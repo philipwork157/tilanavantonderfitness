@@ -3,17 +3,8 @@ import SiteLayout from '@web/site/layouts/SiteLayout.astro';
 import Img from '@web/site/components/Img.astro';
 import Icon from '@web/site/components/Icon';
 import ProgramCard from '@web/site/components/ProgramCard.astro';
-import DisciplinePicker from '@web/site/components/DisciplinePicker';
-import NumbersCalculator from '@web/site/components/NumbersCalculator';
-import MythCards from '@web/site/components/MythCards';
 import { checkoutEnabled, href } from '@web/site/config';
-import { disciplines, myths, programs, values } from '@web/site/data';
-
-const pickerItems = disciplines.map((d) => {
-  const p = programs.find((x) => x.key === d.program);
-  return { ...d, href: href(d.link.path), programName: p?.name };
-});
-const nourish = programs.find((p) => p.key === 'nourish')!;
+import { programs } from '@web/site/data';
 ---
 <SiteLayout title="Strength, Movement & Healthy Habits" current="home">
   <section class="hero">
@@ -30,6 +21,7 @@ const nourish = programs.find((p) => p.key === 'nourish')!;
           <a class="btn btn-primary" href={href('/program')}>Explore the programs <Icon name="arrow" /></a>
           <a class="btn" href={href('/about')}>Meet Tilana</a>
         </div>
+        <p class="hero-quiz" data-reveal data-reveal-delay="0.65">Not sure where to start? <a href={href('/program#quiz')}>Take the 3-question quiz <Icon name="arrow" /></a></p>
       </div>
       <div class="hero-visual" data-reveal data-reveal-delay="0.2">
         <div class="hero-arch">
@@ -48,16 +40,6 @@ const nourish = programs.find((p) => p.key === 'nourish')!;
     </div>
   </section>
 
-  <section class="section wrap" id="disciplines">
-    <div class="section-head split" data-reveal>
-      <div>
-        <p class="eyebrow">Find your strong</p>
-        <h2 class="h2">Pick your <em>thing.</em></h2>
-      </div>
-      <p class="lede">Every body moves differently. Tap a discipline to see how Tilana approaches it, and which program fits.</p>
-    </div>
-    <DisciplinePicker client:visible items={pickerItems} />
-  </section>
 
   <section class="section band" id="programs">
     <div class="wrap">
@@ -70,7 +52,7 @@ const nourish = programs.find((p) => p.key === 'nourish')!;
           ? 'Choose one or a few. Add them to your basket and pay once, securely with Paystack. Every program is a once-off purchase.'
           : 'Choose one or a few and get in touch. Every program is a once-off purchase, emailed to you as a PDF.'}</p>
       </div>
-      <div class="prog-grid snap-mobile">
+      <div class="prog-grid">
         {programs.map((p, i) => <ProgramCard program={p} index={i} />)}
         <article class="prog-card card private-card" data-reveal data-reveal-delay="0.16">
           <p class="eyebrow">Private training</p>
@@ -84,24 +66,7 @@ const nourish = programs.find((p) => p.key === 'nourish')!;
     </div>
   </section>
 
-  <section class="section wrap" id="numbers">
-    <div class="section-head" data-reveal>
-      <p class="eyebrow">Your starting point</p>
-      <h2 class="h2">Know your numbers, <em>gently.</em></h2>
-      <p class="lede">A quick estimate of what your body needs. It’s the beginning of the conversation, not a rulebook.</p>
-    </div>
-    <NumbersCalculator client:visible nourishHref={href(`/program#${nourish.key}`)} />
-  </section>
 
-  <section class="section band" id="myths">
-    <div class="wrap">
-      <div class="section-head" data-reveal>
-        <p class="eyebrow">Myth vs fact</p>
-        <h2 class="h2">Things we’re <em>done</em> believing.</h2>
-      </div>
-      <MythCards client:visible items={myths} />
-    </div>
-  </section>
 
   <section class="section">
     <div class="wrap meet-grid">
@@ -113,9 +78,6 @@ const nourish = programs.find((p) => p.key === 'nourish')!;
         <h2 class="h2">Hi, I’m <em>Tilana.</em></h2>
         <blockquote>“Today I train because I love what my body can do, not because I’m trying to earn my worth.”</blockquote>
         <p>I’m not perfect, and I don’t want to pretend to be. I’m simply someone who loves movement, values health, and wants to be strong enough to enjoy every season.</p>
-        <ul class="meet-values">
-          {values.map((v) => <li class={`tone-${v.tone}`}><b>{v.n}</b><strong>{v.title}</strong><span>{v.copy}</span></li>)}
-        </ul>
         <a class="btn btn-primary" href={href('/about')}>Read my story <Icon name="arrow" /></a>
       </div>
     </div>

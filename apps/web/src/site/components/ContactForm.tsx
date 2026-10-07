@@ -16,7 +16,7 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * emailed to Tilana). Supports ?interest=beginner and the stored keys.
  */
 export default function ContactForm({ options, privacyHref }: { options: Option[]; privacyHref: string }) {
-  const [fields, setFields] = useState<Fields>({ name: '', email: '', interest: options[0]!.value, message: '', consent: false, website: '' });
+  const [fields, setFields] = useState<Fields>({ name: '', email: '', interest: '', message: '', consent: false, website: '' });
   const [errors, setErrors] = useState<Errors>({});
   const [state, setState] = useState<'idle' | 'sending' | 'done'>('idle');
   const turnstile = useTurnstile('contact');
@@ -41,6 +41,7 @@ export default function ContactForm({ options, privacyHref }: { options: Option[
     const next: Errors = {};
     if (fields.name.trim().length < 2) next.name = 'Please enter your name.';
     if (!emailPattern.test(fields.email.trim())) next.email = 'Please enter a valid email address so I can reply.';
+    if (!options.some((o) => o.value === fields.interest)) next.interest = 'Please choose what you are interested in.';
     if (fields.message.trim().length < 10) next.message = 'Please tell me a little more (at least 10 characters).';
     if (!fields.consent) next.consent = 'Please confirm you have read the privacy policy.';
     if (turnstile.enabled && !turnstile.token) next.security = 'Please complete the security check.';
@@ -95,13 +96,15 @@ export default function ContactForm({ options, privacyHref }: { options: Option[
               <input id="c-email" name="email" type="email" autoComplete="email" maxLength={254} placeholder="you@example.com" value={fields.email} onChange={(e) => set('email', e.target.value)} aria-invalid={Boolean(errors.email)} aria-describedby="c-email-error" />
               <p className="field-error" id="c-email-error">{errors.email}</p>
             </div>
-            <div className="field">
+            <div className={errors.interest ? 'field invalid' : 'field'}>
               <label htmlFor="c-interest">What are you interested in?</label>
               <div className="select">
-                <select id="c-interest" name="interest" value={fields.interest} onChange={(e) => set('interest', e.target.value)}>
+                <select id="c-interest" name="interest" value={fields.interest} onChange={(e) => set('interest', e.target.value)} aria-invalid={Boolean(errors.interest)} aria-describedby="c-interest-error">
+                  <option value="" disabled>Choose an option</option>
                   {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
+              <p className="field-error" id="c-interest-error">{errors.interest}</p>
             </div>
             <div className={errors.message ? 'field invalid' : 'field'}>
               <label htmlFor="c-message">Message</label>

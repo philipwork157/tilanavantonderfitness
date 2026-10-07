@@ -3,8 +3,10 @@
  * One illustration per program, drawn in SVG so it follows the light/dark theme.
  *  - Beginner / Intermediate / Advanced: the same barbell, loaded with 1, 2 or 3 plates.
  *    Dashed "ghost" plates show the room still to grow into.
- *  - Reconnect: the breathing "canister": diaphragm on top, pelvic floor below, moving together.
- *  - Nourish: a balanced plate (veg, protein, carbs) with a fork and knife.
+ *  - Reconnect: the breathing "canister". On the in-breath the diaphragm flattens and
+ *    lowers and the pelvic floor lowers with it; on the out-breath both lift together.
+ *  - Nourish: a balanced plate with labelled building blocks: veg, protein, carbs and
+ *    a little healthy fat (avocado).
  * The parts animate in when the art scrolls into view, then idle gently.
  */
 import type { Program } from '../data';
@@ -26,7 +28,7 @@ const note = { 1: 'room to grow', 2: 'building up', 3: 'fully loaded' }[level as
       ? `A barbell loaded with ${level} of 3 plates`
       : p.key === 'reconnect'
         ? 'The diaphragm and pelvic floor moving together with each breath'
-        : 'A balanced plate with vegetables, protein and carbs'
+        : 'A balanced plate: vegetables, protein, carbs and a little healthy fat'
   }
 >
   {p.series === 'strength' && (
@@ -75,20 +77,16 @@ const note = { 1: 'room to grow', 2: 'building up', 3: 'fully loaded' }[level as
 
   {p.key === 'reconnect' && (
     <g class="pa-breath">
-      <path class="pa-wall" d="M70 50c-12 24-11 52 8 72M170 50c12 24 11 52-8 72" />
-      <g class="pa-ripples">
-        <circle class="pa-ripple" cx="120" cy="86" r="24" style="--d:0s" />
-        <circle class="pa-ripple" cx="120" cy="86" r="24" style="--d:3s" />
-      </g>
-      <g class="pa-ball">
-        <circle class="pa-ball-fill" cx="120" cy="86" r="12" />
-        <circle class="pa-ball-ring" cx="120" cy="86" r="21" />
-      </g>
+      <g class="pa-walls"><path class="pa-wall" d="M70 50c-12 24-11 52 8 72M170 50c12 24 11 52-8 72" /></g>
       <path class="pa-dia" d="M64 54Q120 12 176 54Q120 40 64 54Z" />
       <path class="pa-pf" d="M76 118Q120 146 164 118Q120 128 76 118Z" />
+      <!-- Both move the same way: down on the in-breath, up on the out-breath. -->
+      <g class="pa-dir pa-in"><path d="M111 68l9 8 9-8" /><path d="M111 98l9 8 9-8" /></g>
+      <g class="pa-dir pa-out"><path d="M111 76l9-8 9 8" /><path d="M111 106l9-8 9 8" /></g>
       <text class="pa-word pa-in" x="214" y="40" text-anchor="middle">inhale</text>
       <text class="pa-word pa-out" x="214" y="40" text-anchor="middle">exhale</text>
-      <path class="pa-updown" d="M214 54v52M208 98l6 8 6-8M208 62l6-8 6 8" />
+      <path class="pa-updown pa-in" d="M214 54v46M207 92l7 8 7-8" />
+      <path class="pa-updown pa-out" d="M214 100v-46M207 62l7-8 7 8" />
       <text class="pa-small" x="26" y="40" text-anchor="middle">DIAPHRAGM</text>
       <path class="pa-pointer" d="M26 46c0 10 14 14 34 12" />
       <text class="pa-small" x="26" y="134" text-anchor="middle">PELVIC FLOOR</text>
@@ -98,15 +96,6 @@ const note = { 1: 'room to grow', 2: 'building up', 3: 'fully loaded' }[level as
 
   {p.key === 'nourish' && (
     <g class="pa-meal">
-      <g class="pa-fork">
-        <path d="M30 26v22M38 26v22M46 26v22" />
-        <path d="M30 48q8 12 16 0" />
-        <path class="pa-handle" d="M38 58v66" />
-      </g>
-      <g class="pa-knife">
-        <path class="pa-blade" d="M202 24q14 18 6 50h-8z" />
-        <path class="pa-handle" d="M204 78v46" />
-      </g>
       <circle class="pa-plate-rim" cx="120" cy="78" r="58" />
       <circle class="pa-plate-in" cx="120" cy="78" r="47" />
       <g class="pa-wedges">
@@ -118,16 +107,33 @@ const note = { 1: 'room to grow', 2: 'building up', 3: 'fully loaded' }[level as
           <path d="M92 92c5-9 13-10 16-4-5 7-11 9-16 4zM100 90l-6 4" />
           <path d="M101 74c4-6 10-6 12-2-4 5-9 6-12 2z" />
           <path d="M133 50l14 14M130 58l12 12" />
-          <circle cx="134" cy="94" r="2.6" />
-          <circle cx="144" cy="88" r="2.6" />
-          <circle cx="141" cy="100" r="2.6" />
-          <circle cx="129" cy="104" r="2.6" />
-          <circle cx="151" cy="96" r="2.6" />
+          <circle cx="134" cy="92" r="2.6" />
+          <circle cx="145" cy="87" r="2.6" />
+          <circle cx="139" cy="101" r="2.6" />
+          <circle cx="127" cy="106" r="2.6" />
         </g>
       </g>
+      <!-- Healthy fat: half an avocado resting on the rim. -->
+      <g class="pa-fat" style="--d:.42s">
+        <g transform="translate(160 114) rotate(-35)">
+          <path class="pa-avo-skin" d="M0-17C9-17 12-6 12 3C12 12 7 17 0 17C-7 17-12 12-12 3C-12-6-9-17 0-17Z" />
+          <path class="pa-avo-flesh" d="M0-13C6.5-13 8.5-5 8.5 2.5C8.5 9.5 5 13 0 13C-5 13-8.5 9.5-8.5 2.5C-8.5-5-6.5-13 0-13Z" />
+          <circle class="pa-avo-pit" cx="0" cy="4" r="5.2" />
+        </g>
+      </g>
+      <g class="pa-labels">
+        <text class="pa-small" x="26" y="34" text-anchor="middle">VEG</text>
+        <path class="pa-pointer" d="M26 40c0 10 26 14 56 16" />
+        <text class="pa-small" x="214" y="26" text-anchor="middle">PROTEIN</text>
+        <path class="pa-pointer" d="M214 32c0 10-26 16-62 20" />
+        <text class="pa-small" x="216" y="80" text-anchor="middle">CARBS</text>
+        <path class="pa-pointer" d="M200 84c-14 6-34 8-50 6" />
+        <text class="pa-small" x="214" y="140" text-anchor="middle">FATS</text>
+        <path class="pa-pointer" d="M200 136c-12 0-22-4-28-12" />
+      </g>
       <g class="pa-steam">
-        <path style="--d:0s" d="M138 18c-4-5 4-8 0-14" />
-        <path style="--d:.8s" d="M148 20c-4-5 4-8 0-14" />
+        <path style="--d:0s" d="M134 18c-4-5 4-8 0-14" />
+        <path style="--d:.8s" d="M144 20c-4-5 4-8 0-14" />
       </g>
     </g>
   )}

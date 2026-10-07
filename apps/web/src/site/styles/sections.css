@@ -9,6 +9,10 @@
 .hero-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr); align-items: center; gap: clamp(2.5rem, 6vw, 5.5rem); min-height: min(calc(100svh - var(--header-h) - 6rem), 46rem); }
 .hero-title { font-size: clamp(2.7rem, 4.9vw, 5.8rem); }
 .hero-ctas { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 2rem; }
+.hero-quiz { margin: 1.2rem 0 0; color: var(--fg-soft); font-size: 0.9rem; }
+.hero-quiz a { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--fg); font-weight: 700; text-underline-offset: 4px; }
+.hero-quiz svg { width: 0.9rem; height: 0.9rem; transition: translate 200ms var(--ease-out); }
+.hero-quiz a:hover svg { translate: 3px 0; }
 .hero-visual { position: relative; justify-self: center; width: min(100%, 25rem); }
 .hero-arch { overflow: hidden; aspect-ratio: 4 / 5.1; border: 2px solid var(--line); border-radius: 999px 999px 1.8rem 1.8rem; background: var(--tone-sand); box-shadow: 12px 12px 0 var(--hard-shadow); transition: transform 500ms var(--ease-out), box-shadow 500ms var(--ease-out); }
 .hero-arch:hover { transform: rotate(-1.5deg) translate(-3px, -3px); box-shadow: 16px 16px 0 var(--hard-shadow); }
@@ -31,9 +35,7 @@
 .prog-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.3rem; }
 .prog-card { display: flex; flex-direction: column; overflow: hidden; }
 .prog-body { display: flex; flex: 1; flex-direction: column; padding: 1.4rem; }
-.prog-title { margin: 0 0 0.5rem; font-size: 1rem; font-weight: 800; }
-.prog-short { margin: 0 0 1.1rem; color: var(--fg-soft); font-size: 0.9rem; line-height: 1.65; }
-.prog-body .tag-list { margin-bottom: 1.4rem; color: var(--fg); }
+.prog-title { margin: 0 0 1.2rem; font-size: 1rem; font-weight: 800; }
 .prog-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.8rem; margin-top: auto; padding-top: 1.1rem; border-top: 2px solid var(--line); }
 .price { display: flex; flex-direction: column; line-height: 1; }
 .price strong { font-size: 1.7rem; font-weight: 900; letter-spacing: -0.03em; }
@@ -222,6 +224,9 @@
 }
 @media (max-width: 40rem) {
   .prog-grid, .post-grid, .timeline { grid-template-columns: minmax(0, 1fr); }
+  /* Home program cards stack on phones, so keep each one short. */
+  .prog-card .prog-art { width: min(100%, 11rem); margin-block: -0.4rem 0.2rem; }
+  .prog-card .prog-body { padding: 1.1rem 1.2rem 1.2rem; }
   .sticker-a { right: -0.8rem; }
   .sticker-b { left: -0.8rem; }
   .spin-badge { left: -1.2rem; width: 7.4rem; }

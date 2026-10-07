@@ -146,9 +146,16 @@
 .contact-done { padding: 2.5rem 1rem; text-align: center; }
 
 /* ── WhatsApp ── */
-.wa { position: fixed; right: clamp(1rem, 2vw, 1.6rem); bottom: clamp(1rem, 2vw, 1.6rem); z-index: 70; display: flex; flex-direction: column; align-items: flex-end; gap: 0.8rem; }
-.wa-launch { position: relative; display: grid; place-items: center; width: 3.9rem; height: 3.9rem; padding: 0; border: 2px solid var(--line); border-radius: 50%; background: var(--wa-green); color: #fff; box-shadow: 4px 4px 0 var(--hard-shadow); transition: transform 250ms var(--ease-out), box-shadow 250ms var(--ease-out); }
+.wa { position: fixed; right: clamp(1rem, 2vw, 1.6rem); bottom: clamp(1rem, 2vw, 1.6rem); z-index: 70; display: flex; flex-direction: column; align-items: flex-end; gap: 0.8rem; pointer-events: none; }
+/* The wrapper never blocks clicks on the page; only its contents are clickable. */
+.wa > * { pointer-events: auto; }
+.wa-launch { position: relative; display: grid; place-items: center; width: 3.9rem; height: 3.9rem; padding: 0; border: 2px solid var(--line); border-radius: 50%; background: var(--wa-green); color: #fff; box-shadow: 4px 4px 0 var(--hard-shadow); transition: transform 250ms var(--ease-out), box-shadow 250ms var(--ease-out), translate 350ms var(--ease-out); }
 .wa-launch:hover { transform: translate(-2px, -2px) rotate(-6deg); box-shadow: 6px 6px 0 var(--hard-shadow); }
+/* Tucked: slides into the page edge (a sliver stays visible) while a button or
+   link is underneath it. Hover or keyboard focus brings it back out. */
+.wa.is-tucked .wa-launch { translate: calc(100% + clamp(1rem, 2vw, 1.6rem) - 1.15rem) 0; box-shadow: none; }
+.wa.is-tucked .wa-launch:is(:hover, :focus-visible) { translate: 0 0; box-shadow: 4px 4px 0 var(--hard-shadow); }
+.wa.is-tucked :is(.wa-ring, .wa-dot) { display: none; }
 .wa-launch.is-open { background: var(--btn-bg); color: var(--btn-fg); }
 .wa-glyph { display: grid; place-items: center; }
 .wa-glyph svg { width: 1.9rem; height: 1.9rem; }

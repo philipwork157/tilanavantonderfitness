@@ -2,8 +2,14 @@
 import SiteLayout from '@web/site/layouts/SiteLayout.astro';
 import Img from '@web/site/components/Img.astro';
 import Icon from '@web/site/components/Icon';
+import DisciplinePicker from '@web/site/components/DisciplinePicker';
 import { href } from '@web/site/config';
-import { timeline, values } from '@web/site/data';
+import { disciplines, programs, timeline, values } from '@web/site/data';
+
+const pickerItems = disciplines.map((d) => {
+  const p = programs.find((x) => x.key === d.program);
+  return { ...d, href: href(d.link.path), programName: p?.name };
+});
 ---
 <SiteLayout title="About Tilana van Tonder" current="about" description="Tilana's story: rebuilding after pregnancy, an honest relationship with food, and realistic strength for women and men.">
   <section class="about-hero">
@@ -89,7 +95,20 @@ import { timeline, values } from '@web/site/data';
     </div>
   </section>
 
-  <section class="wrap">
+  <section class="section band" id="disciplines">
+    <div class="wrap">
+      <div class="section-head split" data-reveal>
+        <div>
+          <p class="eyebrow">How I train</p>
+          <h2 class="h2">Pick your <em>thing.</em></h2>
+        </div>
+        <p class="lede">Every body moves differently. Tap a discipline to see how I approach it, and which program fits.</p>
+      </div>
+      <DisciplinePicker client:visible items={pickerItems} />
+    </div>
+  </section>
+
+  <section class="section wrap">
     <div class="cta-band card tone-white" data-reveal>
       <h2 class="h2">Find the program that meets you <em>where you are.</em></h2>
       <div class="cta-actions">

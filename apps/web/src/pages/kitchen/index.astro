@@ -4,6 +4,7 @@ import PageHero from '@web/site/components/PageHero.astro';
 import Icon from '@web/site/components/Icon';
 import KitchenExplorer from '@web/site/components/KitchenExplorer';
 import ProteinDay from '@web/site/components/ProteinDay';
+import NumbersCalculator from '@web/site/components/NumbersCalculator';
 import { href } from '@web/site/config';
 import { getRecipes, meals, toRecipeCard } from '@web/site/kitchen';
 
@@ -41,5 +42,14 @@ const dayMeals = cards.map((c) => ({ slug: c.slug, title: c.title, protein: c.pr
       </div>
       <div data-reveal data-reveal-delay="0.1"><ProteinDay client:visible meals={dayMeals} /></div>
     </div>
+  </section>
+
+  <section class="section wrap" id="numbers">
+    <div class="section-head" data-reveal>
+      <p class="eyebrow">Your starting point</p>
+      <h2 class="h2">Know your numbers, <em>gently.</em></h2>
+      <p class="lede">A quick estimate of what your body needs. It’s the beginning of the conversation, not a rulebook.</p>
+    </div>
+    <NumbersCalculator client:visible nourishHref={href('/program#nourish')} />
   </section>
 </SiteLayout>

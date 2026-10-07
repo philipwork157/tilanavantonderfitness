@@ -2,7 +2,8 @@
 import SiteLayout from '@web/site/layouts/SiteLayout.astro';
 import PageHero from '@web/site/components/PageHero.astro';
 import BlogExplorer from '@web/site/components/BlogExplorer';
-import { blogCategories } from '@web/site/data';
+import MythCards from '@web/site/components/MythCards';
+import { blogCategories, myths } from '@web/site/data';
 import { getPosts, toCard } from '@web/site/blog';
 import { setBlogCacheHeaders } from '@web/utils/blog-http';
 
@@ -19,5 +20,15 @@ setBlogCacheHeaders(Astro.response.headers);
   />
   <section class="section wrap">
     <BlogExplorer client:load posts={cards} categories={[...blogCategories]} />
+  </section>
+
+  <section class="section band" id="myths">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">Myth vs fact</p>
+        <h2 class="h2">Things we’re <em>done</em> believing.</h2>
+      </div>
+      <MythCards client:visible items={myths} />
+    </div>
   </section>
 </SiteLayout>
