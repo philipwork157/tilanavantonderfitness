@@ -33,10 +33,10 @@
 
 /* ── The illustrations ── */
 .pa {
-  --pa-veg: #a9b78c; --pa-protein: #a87e63; --pa-carbs: #e2bf86;
+  --pa-protein: #a87e63; --pa-carbs: #e2bf86;
   display: block; overflow: visible; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round;
 }
-:root[data-theme='dark'] .pa { --pa-veg: #97a67a; --pa-protein: #c9946e; --pa-carbs: #dcb67c; }
+:root[data-theme='dark'] .pa { --pa-protein: #c9946e; --pa-carbs: #dcb67c; }
 .pa text { fill: currentColor; stroke: none; font-family: var(--font-script); font-size: 22px; }
 .pa .pa-small { font-family: var(--font-body); font-size: 8.5px; font-weight: 800; letter-spacing: 0.14em; opacity: 0.75; }
 
@@ -77,38 +77,40 @@
 @keyframes pa-dia { 0%, 100% { transform: translateY(0) scaleY(1); } 45%, 55% { transform: translateY(9px) scaleY(0.6); } }
 @keyframes pa-pf { 0%, 100% { transform: translateY(0) scaleY(1); } 45%, 55% { transform: translateY(4px) scaleY(1.45); } }
 /* Labels and arrows switch as the movement changes direction (holds at 45-55%). */
-@keyframes pa-in { 0%, 50% { opacity: 1; } 56%, 95% { opacity: 0; } 100% { opacity: 1; } }
-@keyframes pa-out { 0%, 50% { opacity: 0; } 56%, 95% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes pa-in { 0%, 52% { opacity: 1; } 54%, 97% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes pa-out { 0%, 52% { opacity: 0; } 54%, 97% { opacity: 1; } 100% { opacity: 0; } }
 
-/* Nourish: a balanced plate with its building blocks labelled */
-.pa-meal { --pa-avo: #d9dc9a; --pa-avo-skin: #5f7038; }
-:root[data-theme='dark'] .pa-meal { --pa-avo: #c9cf86; --pa-avo-skin: #8a9d55; }
+/* Nourish: a plate split into protein, carbs and fats */
+.pa-meal { --pa-fats: #a9b78c; --pa-avo: #e4e6b4; --pa-avo-skin: #4f5f2e; }
+:root[data-theme='dark'] .pa-meal { --pa-fats: #97a67a; }
 .pa-plate-rim { fill: var(--surface); stroke-width: 3; }
 .pa-plate-in { stroke-width: 1.5; opacity: 0.35; }
-.pa-veg, .pa-protein, .pa-carbs { stroke: var(--surface); stroke-width: 3; transform-box: view-box; transform-origin: 120px 78px; }
-.pa-veg { fill: var(--pa-veg); }
+.pa-protein, .pa-carbs, .pa-fats { stroke: var(--surface); stroke-width: 3; transform-box: view-box; transform-origin: 120px 78px; }
 .pa-protein { fill: var(--pa-protein); }
 .pa-carbs { fill: var(--pa-carbs); }
-.pa-bits { color: #0f0e13; }
-.pa-bits path { stroke-width: 1.6; opacity: 0.7; }
-.pa-bits circle { fill: currentColor; stroke: none; opacity: 0.5; }
-.pa-fat { transform-box: fill-box; transform-origin: center; }
-.pa-avo-skin { fill: var(--pa-avo-skin); stroke-width: 2.4; }
+.pa-fats { fill: var(--pa-fats); }
+/* Food drawings: cream with dark ink in both themes, so they read on every wedge. */
+.pa-icons { color: #0f0e13; }
+.pa-icon { fill: #fffaf6; stroke: currentColor; stroke-width: 1.6; }
+.pa-icon-line { stroke: currentColor; stroke-width: 1.4; opacity: 0.7; }
+.pa-bone-ink { stroke: currentColor; stroke-width: 5.2; }
+.pa-bone { stroke: #fffaf6; stroke-width: 2; }
+.pa-avo-skin { fill: var(--pa-avo-skin); stroke: currentColor; stroke-width: 1.6; }
 .pa-avo-flesh { fill: var(--pa-avo); stroke: none; }
-.pa-avo-pit { fill: var(--pa-protein); stroke-width: 2; }
+.pa-avo-pit { fill: #a87e63; stroke: currentColor; stroke-width: 1.4; }
 .pa-steam path { stroke-width: 2; opacity: 0; animation: pa-steam 3.2s ease-in-out infinite; animation-delay: var(--d); }
 @keyframes pa-steam { 0% { transform: translateY(6px); opacity: 0; } 40% { opacity: 0.6; } 100% { transform: translateY(-6px); opacity: 0; } }
 
 /* Entrance: plates slide on, wedges pop in, the note writes itself (only when motion is OK) */
-.motion-ok .pa-plate, .motion-ok .pa-veg, .motion-ok .pa-protein, .motion-ok .pa-carbs, .motion-ok .pa-fat {
+.motion-ok .pa-plate, .motion-ok .pa-protein, .motion-ok .pa-carbs, .motion-ok .pa-fats {
   transition: transform 750ms cubic-bezier(0.34, 1.4, 0.64, 1), opacity 450ms ease; transition-delay: calc(0.15s + var(--d, 0s));
 }
-.motion-ok .pa-note, .motion-ok .pa-bits, .motion-ok .pa-labels { transition: opacity 600ms ease 0.75s; }
+.motion-ok .pa-note, .motion-ok .pa-icons, .motion-ok .pa-labels { transition: opacity 600ms ease 0.75s; }
 .motion-ok .pa-arrow { stroke-dasharray: 90; stroke-dashoffset: 0; transition: stroke-dashoffset 800ms ease 0.85s; }
 .motion-ok .pa:not(.is-on) .pa-plate.pa-left { transform: translateX(-30px); opacity: 0; }
 .motion-ok .pa:not(.is-on) .pa-plate.pa-right { transform: translateX(30px); opacity: 0; }
-.motion-ok .pa:not(.is-on) :is(.pa-veg, .pa-protein, .pa-carbs, .pa-fat) { transform: scale(0.2); opacity: 0; }
-.motion-ok .pa:not(.is-on) :is(.pa-note, .pa-bits, .pa-labels) { opacity: 0; }
+.motion-ok .pa:not(.is-on) :is(.pa-protein, .pa-carbs, .pa-fats) { transform: scale(0.2); opacity: 0; }
+.motion-ok .pa:not(.is-on) :is(.pa-note, .pa-icons, .pa-labels) { opacity: 0; }
 .motion-ok .pa:not(.is-on) .pa-arrow { stroke-dashoffset: 90; }
 @media (prefers-reduced-motion: reduce) {
   .pa *, .pa-vol { animation: none !important; transition: none !important; }

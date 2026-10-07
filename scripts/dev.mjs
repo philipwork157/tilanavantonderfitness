@@ -90,6 +90,7 @@ const turbo = spawn(pnpmCommand, ['exec', 'turbo', 'run', 'dev'], {
     ...process.env,
     ASTRO_TELEMETRY_DISABLED: '1',
     NUXT_TELEMETRY_DISABLED: '1',
+    NEXT_TELEMETRY_DISABLED: '1',
   },
   stdio: 'inherit',
 });

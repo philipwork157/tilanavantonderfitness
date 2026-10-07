@@ -47,7 +47,24 @@ website. Do not delete creative work when clearing caches.
   catalogue slugs (`move-volume-1` = Beginner, `strong-volume-1` = Advanced).
   Preserve its appearance, content, assets and public environment setup unless
   the user requests changes.
-- `apps/admin`: Nuxt admin. It extends `@tilana/ui-nuxt`.
+- `apps/admin`: Nuxt admin (port 3001). It extends `@tilana/ui-nuxt`. The
+  website's API calls still go here.
+- `apps/admin-next`: the new admin, built side by side (port 3002): Next.js
+  (App Router), shadcn/ui on Tailwind CSS v4, Motion, TanStack Query. It has
+  every Nuxt API endpoint (same URLs and behaviour; point the website's
+  PUBLIC_API_BASE_URL at it to switch) and every screen: overview, inquiries,
+  blog list and Markdown editor (Tiptap, configured like the Nuxt editor so
+  posts round-trip unchanged), newsletter subscribers and campaigns. Brand
+  theme in `src/app/globals.css` (light + `.dark` espresso). API routes keep the
+  Nuxt URLs and `{ statusCode, statusMessage }` error shape; screens call them
+  with `api()` from `src/lib/api.ts` (no server actions). `src/proxy.ts`
+  refreshes the session and redirects signed-out visitors; the dashboard layout
+  and every API route still check `getAdmin()`/`requireAdmin()`. Settings in
+  `apps/admin-next/.env.local` (see `.env.example`). shadcn components live in
+  `src/components/ui`, copied from the shadcn registry and owned here; local
+  changes to them are marked with a `Tilana:` comment.
+  Next.js 16 changed conventions (e.g. `middleware` is now `proxy`, async
+  `cookies()`): check `node_modules/next/dist/docs/` before writing Next-specific code.
 - `packages/contracts`: Zod request/response contracts (website-facing plus
   `admin-auth`). Legacy admin-only contracts are archived. Keep public API
   contracts compatible while rebuilding. Use `program` in code identifiers;
@@ -93,14 +110,14 @@ necessary safety boundaries.
 
 ## Testing and commands
 
-- `pnpm dev`: both local applications; `pnpm dev:stop` stops managed servers.
+- `pnpm dev`: all local applications (website, Nuxt admin, Next admin); `pnpm dev:stop` stops managed servers.
 - `pnpm db:generate`: create a migration from schema changes; `pnpm db:migrate`:
   apply pending migrations to the database in `apps/admin/.env`; `pnpm db:add-admin --email ...`.
-- `pnpm dev:web` / `pnpm dev:admin`: one application.
+- `pnpm dev:web` / `pnpm dev:admin` / `pnpm dev:admin-next`: one application.
 - `pnpm test`: tests in active workspaces (currently the existing website tests).
 - `pnpm test:coverage`: active test coverage.
 - `pnpm check`: active lint/type checks.
-- `pnpm build:web` / `pnpm build:admin` / `pnpm build`: production builds.
+- `pnpm build:web` / `pnpm build:admin` / `pnpm build:admin-next` / `pnpm build`: production builds.
 
 Old financial/integration/browser tests and database commands are archived.
 Write regression tests for newly implemented behavior. Use isolated databases
@@ -183,6 +200,54 @@ Keep public deployment functional. An ignored archive is not a remote backup.
 - Pages use the full width. Statuses use `AdminStatusBadge` with a tone from
   `app/utils/status-tones.ts`; coloured icons use `AdminIconChip`; list pages
   have an `AdminRefreshButton`.
+
+## Next.js admin (apps/admin-next): standards
+
+The Nuxt admin is being ported here; new admin work goes in `apps/admin-next`.
+
+- **Checks must pass before handing over**: `pnpm --filter @tilana/admin-next lint`
+  (zero warnings), `typecheck`, `test` and `build`. Also open the changed screens
+  under `next dev` and confirm the browser console has no errors or warnings
+  (React only reports hydration and nesting problems in dev).
+- **Layout**: `src/app` routes and pages; `src/components` (shared UI,
+  `components/ui` = shadcn primitives); `src/lib` (browser-safe helpers);
+  `src/server` (server-only code: `config`, `db`, `services`, `utils`).
+  Server modules start with `import 'server-only'`.
+- **Server vs client**: pages and layouts are Server Components by default; add
+  `'use client'` only to the smallest interactive part. Never import `src/server`
+  from client code. Never put secrets in `NEXT_PUBLIC_*` variables.
+- **Data**: screens read and write through the API routes with `api()` and
+  TanStack Query (query keys per resource, invalidate after mutations). No
+  server actions and no Next data caching (`fetch` cache, `unstable_cache`,
+  `revalidate*`); admin data is always fresh. Dynamic pages set
+  `export const dynamic = 'force-dynamic'`.
+- **API routes**: one `route.ts` per URL, wrapped in `handle()`. Validate input
+  with the zod contracts in `@tilana/contracts`; errors are `HttpError` and
+  reach the client as `{ statusCode, statusMessage }`. Admin routes call
+  `requireAdmin()`/`requireRole()` first; state-changing routes also call
+  `sameOriginOnly()`. Public website routes use the CORS helper and keep their
+  URLs and response shapes unchanged.
+- **Config**: read settings only through `src/server/config.ts` (plain names
+  such as `DATABASE_URL`, no `NUXT_` prefix); document every variable in
+  `.env.example`.
+- **UI**: build from shadcn components and the theme tokens in `globals.css`
+  (`bg-card`, `text-muted-foreground`, `bg-tone-sage`...), never raw hex in
+  components. Light and dark, mobile first, keyboard and screen-reader
+  friendly; Motion for animation, always respecting reduced motion. HTML must
+  nest validly (no block elements inside `<p>`).
+- **Navigation feedback**: a click must always show something. Internal links
+  use `NavLink` (`src/components/nav-link.tsx`), never `next/link` directly;
+  code navigation uses `useNavigate()` from `src/lib/navigation-progress.ts`,
+  never a bare `router.push`. Both start the top progress bar. Every dashboard
+  route gets a `loading.tsx` built from `PageSkeleton`.
+- **Code style**: TypeScript strict, no `any`, no unused code, small focused
+  modules, comments only for non-obvious behaviour and security boundaries.
+  Pin exact dependency versions and respect pnpm's minimum release age (do not
+  add `minimumReleaseAgeExclude`).
+- **Package manager**: pnpm only, from the repo root. Add packages with
+  `pnpm --filter <app> add <pkg>@<exact version>`, run one-off tools with
+  `pnpm dlx` (e.g. `pnpm dlx shadcn@<version> add table`). Never use npm,
+  npx, yarn or bun, and never commit their lockfiles.
 
 ## Database
 
