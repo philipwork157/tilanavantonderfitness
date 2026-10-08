@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import Icon from '../Icon';
 import { addToBasket, basketItems, loadCatalogue, onOpenBasket, productMap, rand, removeFromBasket, totalCents, useBasket, useCatalogue, type OpenDetail, type Product } from './basket';
+import ProgramThumb from './ProgramThumb';
 
 function joinNames(names: string[]) {
   if (names.length <= 1) return names.join('');
@@ -118,7 +119,7 @@ export default function BasketDrawer({ checkoutHref, programsHref, products: ini
                   <AnimatePresence initial={false}>
                     {items.map((p) => (
                       <motion.li key={p.slug} layout className={`basket-item tone-${p.tone}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 40, transition: { duration: 0.2 } }}>
-                        <span className="basket-swatch" aria-hidden="true">{p.name.charAt(0)}</span>
+                        <ProgramThumb illustration={p.illustration} step={p.step} tone={p.tone} />
                         <div className="basket-item-copy">
                           <strong>{p.name}</strong>
                           <span>{p.volume} · Digital program (PDF)</span>

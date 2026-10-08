@@ -58,8 +58,8 @@ describe('programs from the admin, shaped for the website', () => {
       program({ slug: 'beginner-volume-2', volumeNumber: 2, priceCents: 45900 }),
     ]);
     expect(toProducts(programs)).toEqual([
-      { slug: 'beginner-volume-1', key: 'beginner-volume-1', name: 'Beginner', label: 'Beginner · Volume 1', volume: 'Volume 1', title: 'Build a confident foundation.', priceCents: 39900, tone: 'terracotta' },
-      { slug: 'beginner-volume-2', key: 'beginner-volume-2', name: 'Beginner Vol. 2', label: 'Beginner · Volume 2', volume: 'Volume 2', title: 'Build a confident foundation.', priceCents: 45900, tone: 'terracotta' },
+      { slug: 'beginner-volume-1', key: 'beginner-volume-1', name: 'Beginner', label: 'Beginner · Volume 1', volume: 'Volume 1', title: 'Build a confident foundation.', priceCents: 39900, tone: 'terracotta', illustration: 'barbell', step: 1 },
+      { slug: 'beginner-volume-2', key: 'beginner-volume-2', name: 'Beginner Vol. 2', label: 'Beginner · Volume 2', volume: 'Volume 2', title: 'Build a confident foundation.', priceCents: 45900, tone: 'terracotta', illustration: 'barbell', step: 1 },
     ]);
   });
 });

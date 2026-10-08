@@ -9,6 +9,7 @@ import { createCheckoutSelectionGuard, sameBasketSelection } from '@web/scripts/
 import { publicApiUrl } from '@web/utils/public-api';
 import Icon from '../Icon';
 import { addToBasket, productMap, rand, removeFromBasket, useBasket, useCatalogue } from './basket';
+import ProgramThumb from './ProgramThumb';
 
 type Fields = { firstName: string; lastName: string; email: string; phone: string; consent: boolean; website: string };
 type Errors = Partial<Record<keyof Fields, string>>;
@@ -283,7 +284,7 @@ export default function Checkout({ programsHref, completeHref, refundHref, priva
                 const p = productBySlug.get(volume.slug);
                 return (
                   <motion.li key={volume.slug} layout className={`tone-${p?.tone ?? 'sand'}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, height: 0, transition: { duration: 0.2 } }}>
-                    <span className="basket-swatch" aria-hidden="true">{(p?.name ?? volume.program.name).charAt(0)}</span>
+                    <ProgramThumb illustration={p?.illustration ?? 'barbell'} step={p?.step} tone={p?.tone ?? 'sand'} />
                     <div><strong>{p?.name ?? volume.program.name}</strong><span>{p ? `${p.volume} · ${p.title}` : volume.name}</span></div>
                     <div className="co-item-end">
                       <b>{rand(volume.priceCents)}</b>

@@ -27,12 +27,58 @@
 .basket-empty p { margin: 0 0 1rem; line-height: 1.7; color: var(--fg-soft); }
 .basket-list { display: grid; gap: 0.6rem; margin: 0; padding: 0; list-style: none; }
 .basket-item { display: flex; align-items: center; gap: 0.9rem; padding: 0.85rem; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
-.basket-swatch { display: grid; flex: none; place-items: center; width: 3rem; height: 3rem; border-radius: 999px 999px 10px 10px; font-family: var(--font-heading); font-size: 1.35rem; font-style: italic; color: var(--on-tone); }
-.tone-terracotta .basket-swatch { background: var(--tone-terracotta); }
-.tone-sage .basket-swatch { background: var(--tone-sage); }
-.tone-sand .basket-swatch { background: var(--tone-sand); }
-.tone-white .basket-swatch { background: var(--tone-white); border: 2px solid var(--line); }
-.tone-caramel .basket-swatch { background: var(--tone-caramel); }
+/* Program tile in the basket and checkout: the program's colour and a mini of its card drawing, set down like a sticker. */
+.program-thumb {
+  --pt-protein: #a87e63; --pt-carbs: #e2bf86; --pt-fats: #a9b78c;
+  display: grid; flex: none; place-items: center; width: 3.4rem; height: 3.4rem;
+  border: 2px solid var(--line); border-radius: 15px; box-shadow: 3px 3px 0 var(--line);
+  color: var(--on-tone); rotate: -4deg;
+  transition: rotate 300ms var(--ease-out), translate 300ms var(--ease-out);
+}
+:root[data-theme='dark'] .program-thumb { --pt-protein: #c9946e; --pt-carbs: #dcb67c; --pt-fats: #97a67a; }
+.basket-item:hover .program-thumb, .co-items li:hover .program-thumb { rotate: 0deg; translate: 0 -2px; }
+.program-thumb svg { width: 2.85rem; height: 2.85rem; overflow: visible; }
+.program-thumb.tone-terracotta { background: var(--tone-terracotta); }
+.program-thumb.tone-sage { background: var(--tone-sage); }
+.program-thumb.tone-sand { background: var(--tone-sand); }
+.program-thumb.tone-white { background: var(--tone-white); }
+.program-thumb.tone-caramel { background: var(--tone-caramel); }
+.program-thumb :is(.pt-line, .pt-walls, .pt-arrow, .pt-mark) { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+.program-thumb .pt-line { stroke-width: 2.4; }
+.program-thumb .pt-ink { fill: currentColor; }
+.program-thumb .pt-plate { fill: currentColor; }
+.program-thumb .pt-ghost { fill: none; stroke: currentColor; stroke-width: 1.1; stroke-dasharray: 2.2 1.8; opacity: 0.55; }
+/* Reconnect */
+.program-thumb .pt-walls { stroke-width: 2.4; opacity: 0.6; transform-box: fill-box; transform-origin: center; }
+.program-thumb .pt-dia { fill: var(--surface); stroke: currentColor; stroke-width: 2.2; stroke-linejoin: round; transform-box: fill-box; transform-origin: 50% 100%; }
+.program-thumb .pt-arrow { stroke-width: 2.2; }
+.program-thumb .pt-pf { fill: currentColor; stroke: currentColor; stroke-width: 2.2; stroke-linejoin: round; transform-box: fill-box; transform-origin: 50% 0%; }
+/* Nourish */
+.program-thumb .pt-rim { fill: var(--surface); stroke: currentColor; stroke-width: 2.4; }
+.program-thumb .pt-rim-in { fill: none; stroke: currentColor; stroke-width: 1; opacity: 0.3; }
+.program-thumb :is(.pt-protein, .pt-carbs, .pt-fats) { stroke: var(--surface); stroke-width: 1.6; stroke-linejoin: round; }
+.program-thumb .pt-protein { fill: var(--pt-protein); }
+.program-thumb .pt-carbs { fill: var(--pt-carbs); }
+.program-thumb .pt-fats { fill: var(--pt-fats); }
+.program-thumb .pt-food :is(path, circle) { vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+.program-thumb .pt-food-fill { fill: #fffaf6; stroke: #0f0e13; stroke-width: 0.9; }
+.program-thumb .pt-bone-ink { stroke: #0f0e13; stroke-width: 2.6; }
+.program-thumb .pt-bone { stroke: #fffaf6; stroke-width: 1; }
+.program-thumb .pt-avo-skin { fill: #4f5f2e; stroke: #0f0e13; stroke-width: 0.9; }
+.program-thumb .pt-avo-flesh { fill: #e4e6b4; }
+.program-thumb .pt-avo-pit { fill: #a87e63; stroke: #0f0e13; stroke-width: 0.8; }
+/* Reconnect breathes slowly, like its card. */
+@media (prefers-reduced-motion: no-preference) {
+  .program-thumb .pt-dia { animation: pt-dia 6s ease-in-out infinite; }
+  .program-thumb .pt-pf { animation: pt-pf 6s ease-in-out infinite; }
+  .program-thumb .pt-walls { animation: pt-walls 6s ease-in-out infinite; }
+  .program-thumb .pt-arrow { animation: pt-arrow 6s ease-in-out infinite; }
+}
+@keyframes pt-dia { 0%, 100% { transform: translateY(0) scaleY(1); } 45%, 55% { transform: translateY(4px) scaleY(0.55); } }
+@keyframes pt-pf { 0%, 100% { transform: translateY(0) scaleY(1); } 45%, 55% { transform: translateY(1.5px) scaleY(1.45); } }
+@keyframes pt-arrow { 0%, 100% { opacity: 0.45; transform: translateY(-1px); } 45%, 55% { opacity: 1; transform: translateY(2px); } }
+@keyframes pt-walls { 0%, 100% { transform: scaleX(1); } 45%, 55% { transform: scaleX(1.06); } }
+@media (prefers-reduced-motion: reduce) { .program-thumb { transition: none; } }
 .basket-item-copy { flex: 1; min-width: 0; }
 .basket-item-copy strong { display: block; font-size: 0.98rem; }
 .basket-item-copy span { display: block; margin-top: 0.15rem; font-size: 0.76rem; color: var(--fg-soft); }

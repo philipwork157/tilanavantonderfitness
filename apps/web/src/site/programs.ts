@@ -39,7 +39,19 @@ export type Program = {
 };
 
 /** What the basket and checkout need to show a program. */
-export type Product = { slug: string; key: string; name: string; label: string; volume: string; title: string; priceCents: number; tone: Tone };
+export type Product = {
+  slug: string;
+  key: string;
+  name: string;
+  label: string;
+  volume: string;
+  title: string;
+  priceCents: number;
+  tone: Tone;
+  /** Which mini drawing the basket shows (and `step`, the barbell's plates). */
+  illustration: PublicProgram['illustration'];
+  step?: 1 | 2 | 3;
+};
 
 const barbellIcons: Record<1 | 2 | 3, ProgramIcon> = { 1: 'dumbbell', 2: 'stairs', 3: 'bolt' };
 
@@ -93,5 +105,7 @@ export function toProducts(programs: Program[]): Product[] {
     title: p.title,
     priceCents: p.priceCents,
     tone: p.tone,
+    illustration: p.illustration,
+    ...(p.step ? { step: p.step } : {}),
   }));
 }
