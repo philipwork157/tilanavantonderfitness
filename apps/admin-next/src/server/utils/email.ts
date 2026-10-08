@@ -34,6 +34,17 @@ export async function sendEmail(email: OutgoingEmail): Promise<{ messageId: stri
           ...(routed.html ? { Html: { Data: routed.html, Charset: 'UTF-8' } } : {}),
         },
         ...(routed.headers?.length ? { Headers: routed.headers.map(({ name, value }) => ({ Name: name, Value: value })) } : {}),
+        ...(routed.attachments?.length
+          ? {
+              Attachments: routed.attachments.map(file => ({
+                FileName: file.fileName,
+                ContentType: file.contentType,
+                ContentDisposition: 'ATTACHMENT' as const,
+                ContentTransferEncoding: 'BASE64' as const,
+                RawContent: file.data,
+              })),
+            }
+          : {}),
       },
     },
   }));

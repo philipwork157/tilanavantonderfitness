@@ -1,7 +1,7 @@
 'use client';
 
 import type { AdminUser } from '@tilana/contracts/admin-auth';
-import { LayoutDashboard, Loader2, Mail, MessageSquare, Newspaper, type LucideIcon } from 'lucide-react';
+import { Dumbbell, LayoutDashboard, Loader2, Mail, MessageSquare, Newspaper, type LucideIcon } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { NavLink } from '@/components/nav-link';
 import {
@@ -17,6 +17,7 @@ const navigation: { title: string; href: string; icon: LucideIcon }[] = [
   { title: 'Inquiries', href: '/inquiries', icon: MessageSquare },
   { title: 'Newsletter', href: '/newsletter', icon: Mail },
   { title: 'Blog', href: '/blog', icon: Newspaper },
+  { title: 'Programs', href: '/programs', icon: Dumbbell },
 ];
 
 const isActive = (pathname: string, href: string) => (href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`));

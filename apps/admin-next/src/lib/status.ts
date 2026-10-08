@@ -17,6 +17,12 @@ export const blogStatus: Record<string, StatusStyle> = {
   published: { label: 'Published', tone: 'success' },
 };
 
+export const programStatus: Record<string, StatusStyle> = {
+  draft: { label: 'Draft', tone: 'neutral' },
+  published: { label: 'On the website', tone: 'success' },
+  archived: { label: 'Archived', tone: 'warning' },
+};
+
 export const campaignStatus: Record<string, StatusStyle> = {
   draft: { label: 'Draft', tone: 'neutral' },
   sending: { label: 'Sending', tone: 'info' },

@@ -7,6 +7,7 @@
     "./admin-auth": "./src/admin-auth.ts",
     "./admin-inquiries": "./src/admin-inquiries.ts",
     "./admin-newsletter": "./src/admin-newsletter.ts",
+    "./admin-programs": "./src/admin-programs.ts",
     "./blog": "./src/blog.ts",
     "./catalogue": "./src/catalogue.ts",
     "./checkout": "./src/checkout.ts",

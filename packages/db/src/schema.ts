@@ -202,6 +202,99 @@ export const newsletterDeliveries = pgTable('newsletter_deliveries', {
   index('newsletter_deliveries_ses_message_idx').on(table.sesMessageId),
 ]).enableRLS();
 
+export const PROGRAM_STATUSES = ['draft', 'published', 'archived'] as const;
+export const PROGRAM_TONES = ['terracotta', 'sage', 'sand', 'white', 'caramel'] as const;
+export const PROGRAM_ILLUSTRATIONS = ['barbell', 'breath', 'plate'] as const;
+export const PROGRAM_SERIES = ['strength', 'focus'] as const;
+
+/**
+ * A program as shown on the website (Beginner, Reconnect, ...). What people
+ * buy is a volume of it (program_volumes). Archived programs stay for past
+ * orders but are hidden from the website.
+ */
+export const programs = pgTable('programs', {
+  id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  // Public identifier; volume slugs are "<program slug>-volume-<n>".
+  slug: text('slug').notNull().unique(),
+  name: text('name').notNull(),
+  // Headline on the program page, e.g. "Build a confident foundation."
+  title: text('title').notNull().default(''),
+  // One or two sentences for the program cards.
+  summary: text('summary').notNull().default(''),
+  description: text('description').notNull().default(''),
+  // Who it is for, e.g. "New or returning".
+  audience: text('audience').notNull().default(''),
+  tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
+  tone: text('tone', { enum: PROGRAM_TONES }).notNull().default('sand'),
+  // Which website illustration to draw (the barbell uses `step` plates).
+  illustration: text('illustration', { enum: PROGRAM_ILLUSTRATIONS }).notNull().default('barbell'),
+  // "The strength series" (steps 1 to 3) or a stand-alone focus program.
+  series: text('series', { enum: PROGRAM_SERIES }).notNull().default('focus'),
+  step: smallint('step'),
+  // Short label on the colour panel, e.g. "Start here" or "Pelvic floor".
+  marker: text('marker').notNull().default(''),
+  sortOrder: integer('sort_order').notNull().default(0),
+  status: text('status', { enum: PROGRAM_STATUSES }).notNull().default('draft'),
+  publishedAt: timestamp('published_at', { withTimezone: true }),
+  createdBy: bigint('created_by', { mode: 'number' }).references(() => users.id, { onDelete: 'set null' }),
+  updatedBy: bigint('updated_by', { mode: 'number' }).references(() => users.id, { onDelete: 'set null' }),
+  ...timestamps,
+}, table => [
+  check('programs_slug_format', sql`${table.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`),
+  check('programs_name_length', sql`char_length(${table.name}) between 1 and 60`),
+  check('programs_status_valid', sql`${table.status} in ('draft', 'published', 'archived')`),
+  check('programs_tone_valid', sql`${table.tone} in ('terracotta', 'sage', 'sand', 'white', 'caramel')`),
+  check('programs_illustration_valid', sql`${table.illustration} in ('barbell', 'breath', 'plate')`),
+  check('programs_series_valid', sql`${table.series} in ('strength', 'focus')`),
+  check('programs_step_matches_series', sql`(${table.series} = 'strength' and ${table.step} is not null and ${table.step} between 1 and 3) or (${table.series} = 'focus' and ${table.step} is null)`),
+  check('programs_tags_count', sql`coalesce(array_length(${table.tags}, 1), 0) <= 6`),
+  check('programs_published_has_date', sql`${table.status} <> 'published' or ${table.publishedAt} is not null`),
+  check('programs_sort_order_non_negative', sql`${table.sortOrder} >= 0`),
+  index('programs_status_order_idx').on(table.status, table.sortOrder),
+]).enableRLS();
+
+/**
+ * What people buy: one volume of a program, with its price and the private
+ * PDF that is emailed after payment. `file_path` is the object key in the
+ * private Cloudflare R2 bucket (R2_PRIVATE_PROGRAM_BUCKET); only the server can read it.
+ */
+export const programVolumes = pgTable('program_volumes', {
+  id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  programId: bigint('program_id', { mode: 'number' }).notNull()
+    .references(() => programs.id, { onDelete: 'cascade' }),
+  // Public identifier used by the basket and checkout, e.g. "move-volume-1".
+  slug: text('slug').notNull().unique(),
+  volumeNumber: smallint('volume_number').notNull(),
+  // As shown in the basket and emails, e.g. "Beginner · Volume 1".
+  name: text('name').notNull(),
+  priceCents: integer('price_cents').notNull(),
+  currency: text('currency').notNull().default('ZAR'),
+  // For sale on the website. Needs a PDF.
+  isAvailable: boolean('is_available').notNull().default(false),
+  // The current PDF. Replacing it bumps the version; new orders and resends
+  // get the latest file.
+  filePath: text('file_path'),
+  fileName: text('file_name'),
+  fileSizeBytes: integer('file_size_bytes'),
+  fileSha256: text('file_sha256'),
+  fileVersion: integer('file_version').notNull().default(0),
+  fileUploadedAt: timestamp('file_uploaded_at', { withTimezone: true }),
+  fileUploadedBy: bigint('file_uploaded_by', { mode: 'number' }).references(() => users.id, { onDelete: 'set null' }),
+  ...timestamps,
+}, table => [
+  uniqueIndex('program_volumes_program_number_unique').on(table.programId, table.volumeNumber),
+  check('program_volumes_slug_format', sql`${table.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`),
+  check('program_volumes_number_positive', sql`${table.volumeNumber} between 1 and 99`),
+  check('program_volumes_name_length', sql`char_length(${table.name}) between 1 and 120`),
+  check('program_volumes_price_valid', sql`${table.priceCents} between 100 and 10000000`),
+  check('program_volumes_currency_valid', sql`${table.currency} = 'ZAR'`),
+  check('program_volumes_file_complete', sql`(${table.filePath} is null) = (${table.fileName} is null)
+    and (${table.filePath} is null) = (${table.fileSizeBytes} is null)
+    and (${table.filePath} is null) = (${table.fileSha256} is null)
+    and (${table.filePath} is null) = (${table.fileUploadedAt} is null)`),
+  check('program_volumes_available_has_file', sql`not ${table.isAvailable} or ${table.filePath} is not null`),
+]).enableRLS();
+
 export type User = typeof users.$inferSelect;
 export type BlogPost = typeof blogPosts.$inferSelect;
 export type Inquiry = typeof inquiries.$inferSelect;
@@ -209,3 +302,5 @@ export type Role = typeof roles.$inferSelect;
 export type NewsletterSubscriber = typeof newsletterSubscribers.$inferSelect;
 export type NewsletterCampaign = typeof newsletterCampaigns.$inferSelect;
 export type NewsletterDelivery = typeof newsletterDeliveries.$inferSelect;
+export type Program = typeof programs.$inferSelect;
+export type ProgramVolume = typeof programVolumes.$inferSelect;

@@ -189,6 +189,26 @@ Keep public deployment functional. An ignored archive is not a remote backup.
 - Emails use a JPEG copy of the cover photo (`email/...jpg` in the bucket),
   because Outlook cannot show WebP.
 
+## Programs
+
+- `programs` holds what the website shows (name, headline, summary, description,
+  tags, tone, illustration, strength series step or focus program).
+  `program_volumes` is what people buy: price, "for sale" switch and the current PDF.
+  Public slugs: program `move`, volume `move-volume-1`; volume slugs follow the
+  program slug and are fixed once a program has been published.
+- PDFs live in a private Cloudflare R2 bucket (`R2_PRIVATE_PROGRAM_BUCKET`, one per
+  environment), reached through the S3 API with two scoped tokens: upload
+  (read & write) and download (read only). Server only, never a public URL. Uploads must start with `%PDF-` and end
+  with `%%EOF`, max 15 MB; the SHA-256 is stored. Replacing a PDF bumps
+  `file_version` and keeps the old file.
+- A volume can only be for sale with a PDF; a program can only be published
+  with a headline, summary, description and a volume for sale. Price changes
+  need the `admin` role.
+- "Send me a test email" sends the real delivery email with the PDF attached to
+  `NEWSLETTER_TEST_TO` (in development only `EMAIL_DEV_REDIRECT_TO`).
+- Not built yet: the website reading programs from the API, checkout/Paystack,
+  orders, the delivery runner and the resend form.
+
 ## Admin UI
 
 - Built on Nuxt UI dashboard components (`UDashboardGroup`, `UDashboardSidebar`,

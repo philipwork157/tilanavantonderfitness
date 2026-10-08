@@ -11,6 +11,14 @@ export interface OutgoingEmail {
   fromName?: string;
   /** Extra headers such as List-Unsubscribe. */
   headers?: { name: string; value: string }[];
+  /** Files attached to the email, e.g. a purchased program PDF. */
+  attachments?: EmailAttachment[];
+}
+
+export interface EmailAttachment {
+  fileName: string;
+  contentType: string;
+  data: Uint8Array;
 }
 
 /**

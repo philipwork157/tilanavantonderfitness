@@ -18,6 +18,16 @@ export function serverConfig() {
     /** Development only: every outgoing email goes here instead. */
     emailDevRedirectTo: env.EMAIL_DEV_REDIRECT_TO ?? '',
     contactNotifyTo: env.CONTACT_NOTIFY_TO ?? '',
+    /**
+     * Cloudflare R2 for private program PDFs. Two scoped API tokens, like the
+     * old admin: one may only write (uploads), one may only read (emails).
+     */
+    r2AccountId: env.R2_ACCOUNT_ID ?? '',
+    r2ProgramBucket: env.R2_PRIVATE_PROGRAM_BUCKET ?? '',
+    r2UploadAccessKeyId: env.R2_UPLOAD_ACCESS_KEY_ID ?? '',
+    r2UploadSecretAccessKey: env.R2_UPLOAD_SECRET_ACCESS_KEY ?? '',
+    r2DownloadAccessKeyId: env.R2_DOWNLOAD_ACCESS_KEY_ID ?? '',
+    r2DownloadSecretAccessKey: env.R2_DOWNLOAD_SECRET_ACCESS_KEY ?? '',
     turnstileSecretKey: env.TURNSTILE_SECRET_KEY ?? '',
     /** Website origins allowed to call the public endpoints (comma separated). */
     websiteOrigins: env.WEBSITE_ORIGINS ?? '',

@@ -102,3 +102,34 @@ export interface TestPreview {
   html: string;
   devRedirectTo: string | null;
 }
+
+export interface AdminProgramVolume {
+  id: number;
+  slug: string;
+  volumeNumber: number;
+  name: string;
+  priceCents: number;
+  isAvailable: boolean;
+  file: { name: string; sizeBytes: number; version: number; uploadedAt: string } | null;
+}
+
+export interface AdminProgram {
+  id: number;
+  slug: string;
+  name: string;
+  title: string;
+  summary: string;
+  description: string;
+  audience: string;
+  tags: string[];
+  tone: 'terracotta' | 'sage' | 'sand' | 'white' | 'caramel';
+  illustration: 'barbell' | 'breath' | 'plate';
+  series: 'strength' | 'focus';
+  step: number | null;
+  marker: string;
+  sortOrder: number;
+  status: 'draft' | 'published' | 'archived';
+  publishedAt: string | null;
+  updatedAt: string;
+  volumes: AdminProgramVolume[];
+}

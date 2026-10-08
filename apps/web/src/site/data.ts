@@ -227,7 +227,7 @@ export const timeline = [
 
 const buyingFaqs = checkoutEnabled
   ? [
-      { q: 'How do I receive my program?', a: 'Once your payment is confirmed, your program is emailed to you as a PDF. You can also sign in later with the same email address to download it again. No password needed.' },
+      { q: 'How do I receive my program?', a: 'Once your payment is confirmed, your program is emailed to you with the PDF attached. Lost the email? Ask for it to be sent again from the checkout page, or email me. No account or password needed.' },
       { q: 'Can I buy more than one program?', a: 'Yes. Add as many as you like to your basket and pay once, securely through Paystack.' },
     ]
   : [
@@ -240,7 +240,7 @@ export const programFaqs = [
   { q: 'Is this a subscription?', a: 'No. Every program is a once-off purchase. There is nothing to cancel and nothing renews.' },
   buyingFaqs[1]!,
   { q: 'Do I need a gym?', a: 'Beginner works with bodyweight or dumbbells, at home or in the gym. Each program description explains who it is designed for.' },
-  { q: 'Can I get a refund?', a: 'If you change your mind within 7 days and have not accessed or downloaded the program, a refund will ordinarily be approved. The refund policy explains everything else.' },
+  { q: 'Can I get a refund?', a: 'The program is emailed to you straight after payment, so change-of-mind refunds are not normally available once it has been sent. If something went wrong, like a double charge or a file that will not open, I will fix it or refund you. The refund policy explains everything.' },
 ];
 
 /** Contact form options come from the shared contract (the admin stores these keys). */
