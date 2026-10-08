@@ -81,6 +81,7 @@ describe('live blog posts with a shared cache', () => {
     apiUp = false;
     vi.advanceTimersByTime(60 * 60 * 1000);
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     expect((await getPublishedPosts())[0]?.title).toBe('First title');
   });
 

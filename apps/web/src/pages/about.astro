@@ -4,12 +4,9 @@ import Img from '@web/site/components/Img.astro';
 import Icon from '@web/site/components/Icon';
 import DisciplinePicker from '@web/site/components/DisciplinePicker';
 import { href } from '@web/site/config';
-import { disciplines, programs, timeline, values } from '@web/site/data';
+import { disciplines, timeline, values } from '@web/site/data';
 
-const pickerItems = disciplines.map((d) => {
-  const p = programs.find((x) => x.key === d.program);
-  return { ...d, href: href(d.link.path), programName: p?.name };
-});
+const pickerItems = disciplines.map((d) => ({ ...d, href: href(d.link.path) }));
 ---
 <SiteLayout title="About Tilana van Tonder" current="about" description="Tilana's story: rebuilding after pregnancy, an honest relationship with food, and realistic strength for women and men.">
   <section class="about-hero">

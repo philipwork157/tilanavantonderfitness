@@ -6,20 +6,30 @@ import FitQuiz from '@web/site/components/FitQuiz';
 import Faq from '@web/site/components/Faq';
 import ProgramRow from '@web/site/components/ProgramRow.astro';
 import { checkoutEnabled, href } from '@web/site/config';
-import { programDisclaimer, programFaqs, programs } from '@web/site/data';
+import { programDisclaimer, programFaqs } from '@web/site/data';
+import { loadSitePrograms, setProgramCacheHeaders } from '@web/utils/programs';
 
-const strength = programs.filter((p) => p.series === 'strength');
+// Rendered on request so programs published in the admin appear without a rebuild.
+export const prerender = false;
+const { programs, ok: programsLoaded } = await loadSitePrograms();
+setProgramCacheHeaders(Astro.response.headers);
+
+const strength = programs.filter((p) => p.series === 'strength').sort((a, b) => (a.step ?? 0) - (b.step ?? 0));
 const focus = programs.filter((p) => p.series === 'focus');
+const names = programs.map((p) => p.name);
+const description = names.length > 1
+  ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}: once-off digital programs by Tilana van Tonder.`
+  : 'Once-off digital strength, pelvic-floor and nutrition programs by Tilana van Tonder.';
 ---
-<SiteLayout title="Programs & Pricing" current="program" description="Beginner, Intermediate, Advanced, Reconnect and Nourish: once-off digital programs by Tilana van Tonder.">
+<SiteLayout title="Programs & Pricing" current="program" description={description} programs={programs}>
   <PageHero
     eyebrow="Programs for real life"
     lines={['Find your', '*next step.*']}
     intro="Start where you are and choose the support that suits you - from foundational movement and nourishment to pelvic-floor connection and progressive strength."
   >
-    <nav class="hero-jump card" aria-label="Jump to a program" data-reveal data-reveal-delay="0.3">
-      <p>The strength series</p>
-      <ol class="jump-steps">
+    {programs.length > 0 && <nav class="hero-jump card" aria-label="Jump to a program" data-reveal data-reveal-delay="0.3">
+      {strength.length > 0 && <p>The strength series</p>}
+      {strength.length > 0 && <ol class="jump-steps">
         {strength.map((p) => (
           <li>
             <a href={`#${p.key}`}>
@@ -29,12 +39,12 @@ const focus = programs.filter((p) => p.series === 'focus');
             </a>
           </li>
         ))}
-      </ol>
-      <p>Focus programs</p>
-      <ul class="jump-focus">
+      </ol>}
+      {focus.length > 0 && <p>Focus programs</p>}
+      {focus.length > 0 && <ul class="jump-focus">
         {focus.map((p) => <li><a href={`#${p.key}`}><Icon name={p.icon} /><strong>{p.name}</strong><small>{p.marker}</small></a></li>)}
-      </ul>
-    </nav>
+      </ul>}
+    </nav>}
   </PageHero>
 
   <section class="section band" id="quiz">
@@ -44,11 +54,26 @@ const focus = programs.filter((p) => p.series === 'focus');
         <h2 class="h2">Not sure where <em>to start?</em></h2>
         <p class="lede">Three quick questions and you’ll have a recommendation{checkoutEnabled ? ', ready to add to your basket' : ''}. Still unsure? <a href={href('/contact')}>Ask me directly</a>.</p>
       </div>
-      <div data-reveal data-reveal-delay="0.1"><FitQuiz client:visible /></div>
+      <div data-reveal data-reveal-delay="0.1"><FitQuiz client:visible programs={programs} /></div>
     </div>
   </section>
 
-  <section class="section wrap" aria-labelledby="series-title">
+  {programs.length === 0 && (
+    <section class="section wrap">
+      <div class="cta-band card prog-unavailable" data-reveal>
+        <div>
+          <p class="eyebrow">Programs</p>
+          <h3>{programsLoaded ? 'New programs are on the way.' : 'The programs are taking a moment to load.'}</h3>
+          <p>{programsLoaded ? 'Get in touch and I’ll let you know as soon as they are ready.' : 'Please refresh the page in a minute, or get in touch and I’ll help you directly.'}</p>
+        </div>
+        <div class="private-actions">
+          <a class="btn btn-primary" href={href('/contact')}>Get in touch <Icon name="arrow" /></a>
+        </div>
+      </div>
+    </section>
+  )}
+
+  {strength.length > 0 && <section class="section wrap" id="strength-series" aria-labelledby="series-title">
     <div class="section-head split" data-reveal>
       <div>
         <p class="eyebrow">The strength series</p>
@@ -64,9 +89,9 @@ const focus = programs.filter((p) => p.series === 'focus');
         </li>
       ))}
     </ol>
-  </section>
+  </section>}
 
-  <section class="section band" aria-labelledby="focus-title">
+  {focus.length > 0 && <section class="section band" id="focus-programs" aria-labelledby="focus-title">
     <div class="wrap">
       <div class="section-head split" data-reveal>
         <div>
@@ -79,7 +104,7 @@ const focus = programs.filter((p) => p.series === 'focus');
         {focus.map((p, i) => <ProgramRow program={p} layout="stack" delay={i * 0.08} />)}
       </div>
     </div>
-  </section>
+  </section>}
 
 
   <section class="wrap">

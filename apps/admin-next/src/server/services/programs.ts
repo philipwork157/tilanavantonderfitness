@@ -1,19 +1,32 @@
 import 'server-only';
-import { and, asc, eq, inArray, like, ne, or } from 'drizzle-orm';
+import { and, asc, count, eq, isNotNull, like, max, ne, or } from 'drizzle-orm';
 import { slugify } from '@tilana/contracts/blog';
-import { programs, programVolumes, type Database, type Program, type ProgramVolume } from '@tilana/db';
+import { programs, volumes, type Database, type Program, type Volume } from '@tilana/db';
 
-export type ProgramWithVolumes = Program & { volumes: ProgramVolume[] };
+/*
+ * Volumes hold programs: Volume 1 → Beginner, Nourish, ...
+ * A program is on the website when its volume is active and it has a PDF.
+ */
 
-/** Volume slugs follow the program: "move" → "move-volume-1". */
-export const volumeSlug = (programSlug: string, volumeNumber: number) => `${programSlug}-volume-${volumeNumber}`;
+export type ProgramInVolume = Program & { volume: Volume };
 
-/** "Beginner · Volume 1". */
-export const volumeName = (programName: string, volumeNumber: number) => `${programName} · Volume ${volumeNumber}`;
+/** "Beginner · Volume 1": the name in the basket, emails and the PDF's file name. */
+export const programLabel = (programName: string, volume: Pick<Volume, 'name'>) => `${programName} · ${volume.name}`;
 
-/** A unique program slug based on the name: "nourish", then "nourish-2", ... */
-export async function uniqueProgramSlug(db: Database, base: string, exceptId?: number): Promise<string> {
-  const root = slugify(base).slice(0, 50).replace(/-+$/g, '') || 'program';
+/** Whether the website shows it right now. */
+export const isOnWebsite = (program: Pick<Program, 'filePath'>, volume: Pick<Volume, 'isActive'>) =>
+  volume.isActive && program.filePath !== null;
+
+/** Why a program is not on the website, or null when it is. */
+export function offWebsiteReason(program: Pick<Program, 'filePath'>, volume: Pick<Volume, 'isActive' | 'name'>): string | null {
+  if (!program.filePath) return 'Upload the PDF to show it on the website.';
+  if (!volume.isActive) return `${volume.name} is switched off.`;
+  return null;
+}
+
+/** A unique program slug: "beginner-volume-1", then "beginner-volume-1-2", ... */
+export async function uniqueProgramSlug(db: Database, name: string, volumeNumber: number, exceptId?: number): Promise<string> {
+  const root = `${slugify(name).slice(0, 44).replace(/-+$/g, '') || 'program'}-volume-${volumeNumber}`;
   const rows = await db.select({ slug: programs.slug }).from(programs).where(and(
     or(eq(programs.slug, root), like(programs.slug, `${root}-%`)),
     exceptId ? ne(programs.id, exceptId) : undefined,
@@ -26,51 +39,58 @@ export async function uniqueProgramSlug(db: Database, base: string, exceptId?: n
   }
 }
 
-async function attachVolumes(db: Database, rows: Program[]): Promise<ProgramWithVolumes[]> {
-  if (!rows.length) return [];
-  const volumes = await db.select().from(programVolumes)
-    .where(inArray(programVolumes.programId, rows.map(row => row.id)))
-    .orderBy(asc(programVolumes.volumeNumber));
-  return rows.map(row => ({ ...row, volumes: volumes.filter(volume => volume.programId === row.id) }));
+/* ── Volumes ── */
+
+/** Every volume with how many programs it holds and how many have a PDF. */
+export async function listVolumes(db: Database) {
+  const rows = await db.select().from(volumes).orderBy(asc(volumes.number));
+  const totals = await db.select({ volumeId: programs.volumeId, total: count() }).from(programs).groupBy(programs.volumeId);
+  const ready = await db.select({ volumeId: programs.volumeId, total: count() }).from(programs)
+    .where(isNotNull(programs.filePath)).groupBy(programs.volumeId);
+  const totalOf = (list: typeof totals, id: number) => list.find(row => row.volumeId === id)?.total ?? 0;
+  return rows.map(volume => ({ ...volume, programCount: totalOf(totals, volume.id), readyCount: totalOf(ready, volume.id) }));
 }
 
-/** Every program with its volumes, in website order. */
-export async function listPrograms(db: Database): Promise<ProgramWithVolumes[]> {
-  const rows = await db.select().from(programs).orderBy(asc(programs.sortOrder), asc(programs.name));
-  return attachVolumes(db, rows);
-}
-
-export async function findProgram(db: Database, id: number): Promise<ProgramWithVolumes | undefined> {
-  const [row] = await db.select().from(programs).where(eq(programs.id, id));
-  if (!row) return undefined;
-  return (await attachVolumes(db, [row]))[0];
-}
-
-export async function findVolume(db: Database, id: number): Promise<ProgramVolume | undefined> {
-  const [row] = await db.select().from(programVolumes).where(eq(programVolumes.id, id));
+export async function findVolume(db: Database, id: number): Promise<Volume | undefined> {
+  const [row] = await db.select().from(volumes).where(eq(volumes.id, id));
   return row;
 }
 
-/** Reasons a program cannot be on the website yet; empty when it is ready. */
-export function publishProblems(
-  program: Pick<Program, 'name' | 'title' | 'summary' | 'description'>,
-  volumes: Pick<ProgramVolume, 'isAvailable'>[],
-): string[] {
-  const problems: string[] = [];
-  if (!program.title.trim()) problems.push('Add a headline.');
-  if (program.summary.trim().length < 10) problems.push('Add a short summary for the cards.');
-  if (program.description.trim().length < 30) problems.push('Add a description.');
-  if (!volumes.some(volume => volume.isAvailable)) problems.push('Put at least one volume up for sale (it needs a PDF).');
-  return problems;
+/** The next free volume number: 1, 2, 3, ... */
+export async function nextVolumeNumber(db: Database): Promise<number> {
+  const [row] = await db.select({ highest: max(volumes.number) }).from(volumes);
+  return (row?.highest ?? 0) + 1;
 }
 
-/** The next free volume number for a program. */
-export function nextVolumeNumber(volumes: Pick<ProgramVolume, 'volumeNumber'>[]): number {
-  return volumes.reduce((max, volume) => Math.max(max, volume.volumeNumber), 0) + 1;
+export function toAdminVolume(volume: Volume & { programCount?: number; readyCount?: number }) {
+  return {
+    id: volume.id,
+    number: volume.number,
+    name: volume.name,
+    isActive: volume.isActive,
+    programCount: volume.programCount ?? 0,
+    readyCount: volume.readyCount ?? 0,
+    updatedAt: volume.updatedAt,
+  };
 }
 
-/** Admin view of a program and its volumes. File paths stay on the server. */
-export function toAdminProgram(program: ProgramWithVolumes) {
+/* ── Programs ── */
+
+/** The programs in one volume, in website order. */
+export async function listVolumePrograms(db: Database, volume: Volume): Promise<ProgramInVolume[]> {
+  const rows = await db.select().from(programs).where(eq(programs.volumeId, volume.id))
+    .orderBy(asc(programs.sortOrder), asc(programs.name));
+  return rows.map(program => ({ ...program, volume }));
+}
+
+export async function findProgram(db: Database, id: number): Promise<ProgramInVolume | undefined> {
+  const [row] = await db.select({ program: programs, volume: volumes }).from(programs)
+    .innerJoin(volumes, eq(volumes.id, programs.volumeId)).where(eq(programs.id, id));
+  return row && { ...row.program, volume: row.volume };
+}
+
+/** Admin view of a program. The PDF's storage key stays on the server. */
+export function toAdminProgram(program: ProgramInVolume) {
   return {
     id: program.id,
     slug: program.slug,
@@ -86,24 +106,58 @@ export function toAdminProgram(program: ProgramWithVolumes) {
     step: program.step,
     marker: program.marker,
     sortOrder: program.sortOrder,
-    status: program.status,
-    publishedAt: program.publishedAt,
+    priceCents: program.priceCents,
+    label: programLabel(program.name, program.volume),
+    volume: { id: program.volume.id, number: program.volume.number, name: program.volume.name, isActive: program.volume.isActive },
+    onWebsite: isOnWebsite(program, program.volume),
+    offWebsiteReason: offWebsiteReason(program, program.volume),
+    file: program.filePath
+      ? {
+          name: program.fileName,
+          sizeBytes: program.fileSizeBytes,
+          version: program.fileVersion,
+          uploadedAt: program.fileUploadedAt,
+        }
+      : null,
     updatedAt: program.updatedAt,
-    volumes: program.volumes.map(volume => ({
-      id: volume.id,
-      slug: volume.slug,
-      volumeNumber: volume.volumeNumber,
-      name: volume.name,
-      priceCents: volume.priceCents,
-      isAvailable: volume.isAvailable,
-      file: volume.filePath
-        ? {
-            name: volume.fileName,
-            sizeBytes: volume.fileSizeBytes,
-            version: volume.fileVersion,
-            uploadedAt: volume.fileUploadedAt,
-          }
-        : null,
-    })),
   };
+}
+
+/* ── Website ── */
+
+/** What the website shows: programs with a PDF in an active volume, oldest volume first. */
+export async function listWebsitePrograms(db: Database): Promise<ProgramInVolume[]> {
+  const rows = await db.select({ program: programs, volume: volumes }).from(programs)
+    .innerJoin(volumes, eq(volumes.id, programs.volumeId))
+    .where(and(eq(volumes.isActive, true), isNotNull(programs.filePath)))
+    .orderBy(asc(volumes.number), asc(programs.sortOrder), asc(programs.name));
+  return rows.map(row => ({ ...row.program, volume: row.volume }));
+}
+
+/** Public website view of a program. No file details or internal IDs. */
+export function toPublicProgram(program: ProgramInVolume) {
+  return {
+    slug: program.slug,
+    name: program.name,
+    title: program.title,
+    summary: program.summary,
+    description: program.description,
+    audience: program.audience,
+    tags: program.tags,
+    tone: program.tone,
+    illustration: program.illustration,
+    series: program.series,
+    step: program.step,
+    marker: program.marker,
+    volumeNumber: program.volume.number,
+    priceCents: program.priceCents,
+    currency: 'ZAR' as const,
+  };
+}
+
+/** A program by its public slug (for the basket and checkout). */
+export async function findProgramBySlug(db: Database, slug: string): Promise<ProgramInVolume | undefined> {
+  const [row] = await db.select({ program: programs, volume: volumes }).from(programs)
+    .innerJoin(volumes, eq(volumes.id, programs.volumeId)).where(eq(programs.slug, slug));
+  return row && { ...row.program, volume: row.volume };
 }

@@ -9,7 +9,7 @@ import { createCheckoutSelectionGuard, sameBasketSelection } from '@web/scripts/
 import { publicApiUrl } from '@web/utils/public-api';
 import Icon from '../Icon';
 import { useTurnstile } from '../turnstile';
-import { addToBasket, productBySlug, products, rand, removeFromBasket, useBasket } from './basket';
+import { addToBasket, productMap, rand, removeFromBasket, useBasket, useCatalogue } from './basket';
 
 type Fields = { firstName: string; lastName: string; email: string; phone: string; consent: boolean; website: string };
 type Errors = Partial<Record<keyof Fields | 'security', string>>;
@@ -36,6 +36,9 @@ function validate(f: Fields): Errors {
  */
 export default function Checkout({ programsHref, completeHref, refundHref, privacyHref }: { programsHref: string; completeHref: string; refundHref: string; privacyHref: string }) {
   const basket = useBasket();
+  // Programs for the "add another" picks; prices to pay come from `volumes` below.
+  const products = useCatalogue();
+  const productBySlug = productMap(products);
   const [volumes, setVolumes] = useState<PublicCatalogueVolumeDetail[]>([]);
   const [phase, setPhase] = useState<'loading' | 'ready' | 'empty' | 'problem'>('loading');
   const [problem, setProblem] = useState<Problem | null>(null);

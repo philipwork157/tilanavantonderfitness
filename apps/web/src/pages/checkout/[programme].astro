@@ -1,12 +1,7 @@
 ---
-export function getStaticPaths() {
-  return [
-    'strong-volume-1',
-    'move-volume-1',
-    'nourish-volume-1',
-    'reconnect-volume-1',
-  ].map(programme => ({ params: { programme } }));
-}
-
+// Old "buy this program" links: /checkout/move-volume-1 → the checkout with that volume added.
+// Rendered on request so links to volumes added later in the admin also work; the
+// checkout ignores anything that is not a valid volume slug.
+export const prerender = false;
 return Astro.redirect(`/checkout?programme=${encodeURIComponent(Astro.params.programme ?? '')}`, 308);
 ---

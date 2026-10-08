@@ -1,37 +1,39 @@
 ---
 /**
  * One illustration per program, drawn in SVG so it follows the light/dark theme.
- *  - Beginner / Intermediate / Advanced: the same barbell, loaded with 1, 2 or 3 plates.
+ * The admin chooses which one a program gets (`illustration`), and the step for the barbell.
+ *  - barbell (Beginner / Intermediate / Advanced): loaded with 1, 2 or 3 plates by `step`.
  *    Dashed "ghost" plates show the room still to grow into.
- *  - Reconnect: the breathing "canister". On the in-breath the diaphragm flattens and
+ *  - breath (Reconnect): the breathing "canister". On the in-breath the diaphragm flattens and
  *    lowers and the pelvic floor lowers with it; on the out-breath both lift together.
- *  - Nourish: a plate split into the three building blocks of food, each with a
+ *  - plate (Nourish): a plate split into the three building blocks of food, each with a
  *    small drawing: protein (drumstick), carbs (bread) and fats (avocado).
  * The parts animate in when the art scrolls into view, then idle gently.
  */
-import type { Program } from '../data';
+import type { Program } from '../programs';
 
 interface Props { program: Program; class?: string }
 const { program: p, class: className } = Astro.props;
 
 // Plate heights, from the collar outwards.
 const plates = [84, 70, 56];
-const level = p.step ?? 0;
+// The admin picks the drawing (`illustration`); a barbell outside the strength series shows fully loaded.
+const level = p.step ?? 3;
 const note = { 1: 'room to grow', 2: 'building up', 3: 'fully loaded' }[level as 1 | 2 | 3];
 ---
 <svg
-  class:list={['pa', `pa-${p.key}`, className]}
+  class:list={['pa', `pa-${p.illustration}`, className]}
   viewBox="0 0 240 150"
   role="img"
   aria-label={
-    p.series === 'strength'
+    p.illustration === 'barbell'
       ? `A barbell loaded with ${level} of 3 plates`
-      : p.key === 'reconnect'
+      : p.illustration === 'breath'
         ? 'The diaphragm and pelvic floor moving together with each breath'
         : 'A plate split into protein, carbs and fats'
   }
 >
-  {p.series === 'strength' && (
+  {p.illustration === 'barbell' && (
     <g class="pa-barbell">
       <line class="pa-floor" x1="14" y1="136" x2="226" y2="136" />
       <ellipse class="pa-shadow" cx="120" cy="136" rx="78" ry="5" />
@@ -75,7 +77,7 @@ const note = { 1: 'room to grow', 2: 'building up', 3: 'fully loaded' }[level as
     </g>
   )}
 
-  {p.key === 'reconnect' && (
+  {p.illustration === 'breath' && (
     <g class="pa-breath">
       <g class="pa-walls"><path class="pa-wall" d="M70 50c-12 24-11 52 8 72M170 50c12 24 11 52-8 72" /></g>
       <path class="pa-dia" d="M64 54Q120 12 176 54Q120 40 64 54Z" />
@@ -94,7 +96,7 @@ const note = { 1: 'room to grow', 2: 'building up', 3: 'fully loaded' }[level as
     </g>
   )}
 
-  {p.key === 'nourish' && (
+  {p.illustration === 'plate' && (
     <g class="pa-meal">
       <circle class="pa-plate-rim" cx="120" cy="78" r="58" />
       <circle class="pa-plate-in" cx="120" cy="78" r="47" />

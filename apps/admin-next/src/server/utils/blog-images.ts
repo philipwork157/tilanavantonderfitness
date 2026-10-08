@@ -4,6 +4,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { emailImageFromCover, type ProcessedImage } from './image-processing';
 import { serverConfig } from '../config';
 import { HttpError } from '../http';
+import { logger } from '../logger';
 
 const BUCKET = 'blog-images';
 export const MAX_COVER_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -75,7 +76,7 @@ export async function uploadBlogImage(postId: number, image: ProcessedImage): Pr
 export async function deleteBlogImage(path: string | null | undefined) {
   if (!path) return;
   const { error } = await storageClient().storage.from(BUCKET).remove([path]);
-  if (error) console.warn('Could not delete blog image', path, error.message);
+  if (error) logger.warn({ path, reason: error.message }, 'Could not delete blog image');
 }
 
 /**

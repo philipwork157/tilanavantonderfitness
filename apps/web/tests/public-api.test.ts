@@ -5,8 +5,8 @@ import { spawnSync } from 'node:child_process';
 describe('single public backend origin', () => {
   it('defaults to localhost when the local API origin is unset', () => {
     vi.stubEnv('PUBLIC_API_BASE_URL', '');
-    expect(publicApiUrl('/api/contact')).toBe('http://localhost:3001/api/contact');
-    expect(publicApiUrl('/account/sign-in')).toBe('http://localhost:3001/account/sign-in');
+    expect(publicApiUrl('/api/contact')).toBe('http://localhost:3002/api/contact');
+    expect(publicApiUrl('/account/sign-in')).toBe('http://localhost:3002/account/sign-in');
   });
   it.each(['/api/contact', '/api/newsletter/subscribe', '/api/newsletter/unsubscribe', '/api/public/programs', '/api/checkout/paystack', '/api/checkout/status', '/account/sign-in'])('derives endpoint %s', path => {
     expect(publicApiUrl(path, 'https://admin.example.test/')).toBe(`https://admin.example.test${path}`);

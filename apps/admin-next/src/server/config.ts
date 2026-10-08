@@ -13,6 +13,8 @@ export function serverConfig() {
     /** Server-only: blog image storage. Never expose to the browser. */
     supabaseServiceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY ?? '',
     databaseUrl: env.DATABASE_URL ?? '',
+    /** pino level (trace, debug, info, warn, error, silent); empty = default for the environment. */
+    logLevel: env.LOG_LEVEL ?? '',
     emailFromAddress: env.EMAIL_FROM_ADDRESS ?? '',
     emailFromName: env.EMAIL_FROM_NAME ?? '',
     /** Development only: every outgoing email goes here instead. */

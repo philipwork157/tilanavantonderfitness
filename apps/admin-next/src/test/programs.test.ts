@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MAX_PROGRAM_PDF_BYTES, programInputSchema } from '@tilana/contracts/admin-programs';
 import { formatRand, parseRand } from '@/lib/programs';
 import { programDeliveryEmail, type ProgramDeliveryContent } from '@/server/services/program-emails';
-import { nextVolumeNumber, publishProblems, volumeName, volumeSlug } from '@/server/services/programs';
+import { isOnWebsite, offWebsiteReason, programLabel } from '@/server/services/programs';
 import { routeEmail } from '@/server/utils/email-routing';
 import { inspectPdf, PdfRejectedError, programFileKey, programFileName, r2Endpoint } from '@/server/utils/program-files';
 
@@ -34,7 +34,7 @@ describe('program PDFs', () => {
   });
 
   it('stores each version under its own R2 key', () => {
-    expect(programFileKey(7, 2, 'abcdef0123456789')).toBe('volumes/7/v2-abcdef012345.pdf');
+    expect(programFileKey(7, 2, 'abcdef0123456789')).toBe('programs/7/v2-abcdef012345.pdf');
     expect(r2Endpoint('acc123')).toBe('https://acc123.r2.cloudflarestorage.com');
   });
 
@@ -73,26 +73,28 @@ describe('program delivery email', () => {
 });
 
 describe('program rules', () => {
-  it('names volumes after the program', () => {
-    expect(volumeSlug('move', 2)).toBe('move-volume-2');
-    expect(volumeName('Beginner', 2)).toBe('Beginner · Volume 2');
-    expect(nextVolumeNumber([])).toBe(1);
-    expect(nextVolumeNumber([{ volumeNumber: 1 }, { volumeNumber: 3 }])).toBe(4);
+  it('names programs after their volume', () => {
+    expect(programLabel('Beginner', { name: 'Volume 2' })).toBe('Beginner · Volume 2');
   });
 
-  it('only publishes complete programs with something for sale', () => {
-    const ready = { name: 'Beginner', title: 'Build a confident foundation.', summary: 'A welcoming introduction.', description: 'A welcoming introduction to strength for everyone.' };
-    expect(publishProblems(ready, [{ isAvailable: true }])).toEqual([]);
-    expect(publishProblems(ready, [{ isAvailable: false }])).toEqual(['Put at least one volume up for sale (it needs a PDF).']);
-    expect(publishProblems({ ...ready, title: ' ', summary: '' }, [{ isAvailable: true }])).toHaveLength(2);
+  it('shows a program on the website when its volume is on and it has a PDF', () => {
+    const on = { isActive: true, name: 'Volume 1' };
+    const off = { isActive: false, name: 'Volume 2' };
+    expect(isOnWebsite({ filePath: 'programs/1/v1.pdf' }, on)).toBe(true);
+    expect(isOnWebsite({ filePath: null }, on)).toBe(false);
+    expect(isOnWebsite({ filePath: 'programs/1/v1.pdf' }, off)).toBe(false);
+    expect(offWebsiteReason({ filePath: null }, on)).toBe('Upload the PDF to show it on the website.');
+    expect(offWebsiteReason({ filePath: 'programs/1/v1.pdf' }, off)).toBe('Volume 2 is switched off.');
+    expect(offWebsiteReason({ filePath: 'programs/1/v1.pdf' }, on)).toBeNull();
   });
 
   it('requires a step for the strength series only', () => {
-    const base = { name: 'Beginner', slug: 'move', title: '', summary: '', description: '', audience: '', tags: [], tone: 'sand', illustration: 'barbell', marker: '', sortOrder: 0 } as const;
+    const base = { name: 'Beginner', slug: 'beginner-volume-1', title: '', summary: '', description: '', audience: '', tags: [], tone: 'sand', illustration: 'barbell', marker: '', sortOrder: 0, priceCents: 39_900 } as const;
     expect(programInputSchema.safeParse({ ...base, series: 'strength', step: 2 }).success).toBe(true);
     expect(programInputSchema.safeParse({ ...base, series: 'strength', step: null }).success).toBe(false);
     expect(programInputSchema.safeParse({ ...base, series: 'focus', step: 1 }).success).toBe(false);
     expect(programInputSchema.safeParse({ ...base, series: 'focus', step: null, tags: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] }).success).toBe(false);
+    expect(programInputSchema.safeParse({ ...base, series: 'focus', step: null, priceCents: 50 }).success).toBe(false);
   });
 
   it('reads and shows prices in rand', () => {

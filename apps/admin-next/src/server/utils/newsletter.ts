@@ -9,6 +9,7 @@ import { serverConfig } from '../config';
 import { getDatabase } from '../db';
 import { HttpError } from '../http';
 import { sendEmail } from './email';
+import { logger } from '../logger';
 
 /** WEBSITE_URL without a trailing slash, e.g. https://tilanavantonder.co.za. */
 export function websiteUrl(): string {
@@ -98,7 +99,7 @@ export function startCampaignRunner(campaignId: number) {
       });
     }
     catch (error) {
-      console.error(`Newsletter campaign ${campaignId} stopped`, error);
+      logger.error({ err: error, campaignId }, 'Newsletter campaign stopped');
       await db.update(newsletterCampaigns).set({ status: 'paused', pauseReason: describeSendError(error) })
         .where(and(eq(newsletterCampaigns.id, campaignId), eq(newsletterCampaigns.status, 'sending')))
         .catch(() => undefined);

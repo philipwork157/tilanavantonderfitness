@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import Icon from './Icon';
 import type { Discipline } from '../data';
 
-export type PickerItem = Discipline & { href: string; programName?: string };
+export type PickerItem = Discipline & { href: string };
 
 const ease = [0.22, 1, 0.36, 1] as const;
 

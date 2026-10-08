@@ -38,7 +38,7 @@ describe('program files in Cloudflare R2', () => {
   it('uploads with the write token and downloads with the read token', async () => {
     const { uploadProgramFile, downloadProgramFile } = await import('@/server/utils/program-files');
     const key = await uploadProgramFile(3, 1, 'abcdef0123456789', Buffer.from('%PDF-1.7 %%EOF'));
-    expect(key).toBe('volumes/3/v1-abcdef012345.pdf');
+    expect(key).toBe('programs/3/v1-abcdef012345.pdf');
     expect(sent[0]).toMatchObject({ name: 'PutObjectCommand', input: { Bucket: settings.R2_PRIVATE_PROGRAM_BUCKET, Key: key, ContentType: 'application/pdf' } });
 
     expect([...await downloadProgramFile(key)]).toEqual([37, 80, 68, 70]);

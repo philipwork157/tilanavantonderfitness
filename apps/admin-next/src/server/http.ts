@@ -1,4 +1,5 @@
 import 'server-only';
+import { logger, withRequestLog } from './logger';
 
 /**
  * An error with an HTTP status and a message that is safe to show. Responses
@@ -20,16 +21,28 @@ export interface IdContext {
   params: Promise<{ id: string }>;
 }
 
-/** Wraps a route handler so thrown HttpErrors become JSON error responses. */
-export function handle<Args extends unknown[]>(fn: (...args: Args) => Promise<Response>) {
+/** Turns thrown HttpErrors into JSON error responses; anything else is logged and becomes a 500. */
+export function catchErrors<Args extends unknown[]>(fn: (...args: Args) => Promise<Response>) {
   return async (...args: Args): Promise<Response> => {
     try {
       return await fn(...args);
     } catch (error) {
       if (error instanceof HttpError) return errorResponse(error.statusCode, error.statusMessage);
-      console.error('Unexpected API error', error);
+      logger.error({ err: error }, 'Unexpected API error');
       return errorResponse(500, 'Something went wrong. Please try again.');
     }
+  };
+}
+
+/**
+ * Wraps a route handler: thrown HttpErrors become JSON error responses, and
+ * the request is logged with its own request ID (see logger.ts).
+ */
+export function handle<Args extends unknown[]>(fn: (...args: Args) => Promise<Response>) {
+  const run = catchErrors(fn);
+  return async (...args: Args): Promise<Response> => {
+    const request = args[0];
+    return request instanceof Request ? withRequestLog(request, () => run(...args)) : run(...args);
   };
 }
 

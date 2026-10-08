@@ -15,7 +15,8 @@
     "./customer-access": "./src/customer-access.ts",
     "./newsletter": "./src/newsletter.ts",
     "./newsletter.messages": "./src/newsletter.messages.ts",
-    "./programs": "./src/programs.ts"
+    "./programs": "./src/programs.ts",
+    "./public-programs": "./src/public-programs.ts"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",

@@ -8,10 +8,7 @@ import { toast } from 'sonner';
 import { MarkdownEditor } from '@/components/markdown-editor';
 import { NavLink } from '@/components/nav-link';
 import { StatusBadge } from '@/components/status-badge';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -85,6 +82,7 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
   const [form, setForm] = useState(() => toForm(initial));
   const [savedJson, setSavedJson] = useState(() => JSON.stringify(toForm(initial)));
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [removeCoverOpen, setRemoveCoverOpen] = useState(false);
   const dirty = JSON.stringify(form) !== savedJson;
   const isPublished = post.status === 'published';
   useUnsavedGuard(dirty);
@@ -138,6 +136,7 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
       queryClient.setQueryData(['blog-post', post.id], { post: result.post });
       void queryClient.invalidateQueries({ queryKey: ['blog-posts'] });
       if (file) toast.success('Cover photo updated');
+      else { setRemoveCoverOpen(false); toast.success('Cover photo removed'); }
     },
     onError: (error) => toast.error('Upload failed', { description: message(error, 'Please try another photo.') }),
   });
@@ -250,7 +249,7 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
               <Button variant="outline" className="bg-card" disabled={cover.isPending} onClick={() => fileInput.current?.click()}>
                 {cover.isPending ? <Loader2 className="animate-spin" /> : <Upload />} {post.coverImageUrl ? 'Replace photo' : 'Upload photo'}
               </Button>
-              {post.coverImageUrl && <Button variant="ghost" disabled={cover.isPending} onClick={() => cover.mutate(null)}>Remove</Button>}
+              {post.coverImageUrl && <Button variant="ghost" disabled={cover.isPending} onClick={() => setRemoveCoverOpen(true)}>Remove</Button>}
             </div>
             <p className="text-xs text-muted-foreground">JPG, PNG or WebP up to 10 MB. Portrait photos look best.</p>
             <Field id="alt" label="Photo description" hint="Describe the photo for people using screen readers.">
@@ -297,20 +296,27 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
         </aside>
       </div>
 
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete “{post.title}”?</AlertDialogTitle>
-            <AlertDialogDescription>The post and its cover photo will be removed. This can&apos;t be undone.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep post</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" disabled={remove.isPending} onClick={(e) => { e.preventDefault(); remove.mutate(); }}>
-              {remove.isPending ? 'Deleting…' : 'Delete post'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={removeCoverOpen}
+        onOpenChange={setRemoveCoverOpen}
+        title="Remove the cover photo?"
+        description="The photo is deleted from storage. The post shows no photo until you upload a new one."
+        confirmLabel="Remove photo"
+        pendingLabel="Removing…"
+        cancelLabel="Keep photo"
+        pending={cover.isPending}
+        onConfirm={() => cover.mutate(null)}
+      />
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={`Delete “${post.title}”?`}
+        description="The post and its cover photo will be removed. This can’t be undone."
+        confirmLabel="Delete post"
+        cancelLabel="Keep post"
+        pending={remove.isPending}
+        onConfirm={() => remove.mutate()}
+      />
     </div>
   );
 }

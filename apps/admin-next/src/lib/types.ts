@@ -103,14 +103,17 @@ export interface TestPreview {
   devRedirectTo: string | null;
 }
 
-export interface AdminProgramVolume {
+export interface AdminVolume {
   id: number;
-  slug: string;
-  volumeNumber: number;
+  number: number;
+  /** "Volume 1" */
   name: string;
-  priceCents: number;
-  isAvailable: boolean;
-  file: { name: string; sizeBytes: number; version: number; uploadedAt: string } | null;
+  /** Its programs are on the website while this is on. */
+  isActive: boolean;
+  programCount: number;
+  /** Programs with a PDF (the ones the website can show). */
+  readyCount: number;
+  updatedAt: string;
 }
 
 export interface AdminProgram {
@@ -128,8 +131,13 @@ export interface AdminProgram {
   step: number | null;
   marker: string;
   sortOrder: number;
-  status: 'draft' | 'published' | 'archived';
-  publishedAt: string | null;
+  priceCents: number;
+  /** "Beginner · Volume 1": the name in the basket and emails. */
+  label: string;
+  volume: Pick<AdminVolume, 'id' | 'number' | 'name' | 'isActive'>;
+  onWebsite: boolean;
+  /** Why it is not on the website, when it is not. */
+  offWebsiteReason: string | null;
+  file: { name: string; sizeBytes: number; version: number; uploadedAt: string } | null;
   updatedAt: string;
-  volumes: AdminProgramVolume[];
 }

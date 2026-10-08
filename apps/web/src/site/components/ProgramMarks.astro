@@ -6,7 +6,7 @@
  * animation when the card scrolls into view (see SiteLayout).
  */
 import Icon from './Icon';
-import type { Program } from '../data';
+import type { Program } from '../programs';
 
 interface Props { program: Program }
 const { program: p } = Astro.props;
@@ -18,7 +18,7 @@ const uid = `vs-${p.key}-${Math.random().toString(36).slice(2, 8)}`;
 const ring = `VOLUME ${volumeWord}`;
 ---
 <div class="pm">
-  {p.series === 'strength' ? (
+  {p.series === 'strength' && p.step ? (
     <span class="pm-level" aria-label={`Level ${p.step} of 3: ${p.marker}`}>
       <span class="pm-bars" aria-hidden="true">{[1, 2, 3].map((n) => <i class={n <= (p.step ?? 0) ? 'on' : undefined} />)}</span>
       <span aria-hidden="true">{p.marker}</span>

@@ -4,9 +4,14 @@ import Img from '@web/site/components/Img.astro';
 import Icon from '@web/site/components/Icon';
 import ProgramCard from '@web/site/components/ProgramCard.astro';
 import { checkoutEnabled, href } from '@web/site/config';
-import { programs } from '@web/site/data';
+import { loadSitePrograms, setProgramCacheHeaders } from '@web/utils/programs';
+
+// Rendered on request so programs published in the admin appear without a rebuild.
+export const prerender = false;
+const { programs, ok: programsLoaded } = await loadSitePrograms();
+setProgramCacheHeaders(Astro.response.headers);
 ---
-<SiteLayout title="Strength, Movement & Healthy Habits" current="home">
+<SiteLayout title="Strength, Movement & Healthy Habits" current="home" programs={programs}>
   <section class="hero">
     <div class="wrap hero-grid">
       <div class="hero-copy">
@@ -54,6 +59,16 @@ import { programs } from '@web/site/data';
       </div>
       <div class="prog-grid">
         {programs.map((p, i) => <ProgramCard program={p} index={i} />)}
+        {programs.length === 0 && (
+          <article class="prog-card card prog-unavailable" data-reveal>
+            <p class="eyebrow">Programs</p>
+            <h3>{programsLoaded ? 'New programs are on the way.' : 'The programs are taking a moment to load.'}</h3>
+            <p>{programsLoaded ? 'Get in touch and I’ll let you know as soon as they are ready.' : 'Please refresh the page in a minute, or get in touch and I’ll help you directly.'}</p>
+            <div class="private-actions">
+              <a class="btn btn-primary" href={href('/contact')}>Get in touch <Icon name="arrow" /></a>
+            </div>
+          </article>
+        )}
         <article class="prog-card card private-card" data-reveal data-reveal-delay="0.16">
           <p class="eyebrow">Private training</p>
           <h3>Want to train <em>one-on-one?</em></h3>

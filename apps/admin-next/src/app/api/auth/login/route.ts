@@ -6,6 +6,7 @@ import { resolveAdminUser } from '@/server/auth/admin-users';
 import { getDatabase } from '@/server/db';
 import { clientIp, handle, HttpError, sameOriginOnly } from '@/server/http';
 import { clearSupabaseCookies, createSupabaseServerClient } from '@/server/auth/supabase';
+import { logger, setRequestUser } from '@/server/logger';
 
 const FAILURE_WINDOW_MS = 15 * 60 * 1000;
 const failedLogins = createAttemptLimiter({ maxAttempts: 5, windowMs: FAILURE_WINDOW_MS });
@@ -42,7 +43,7 @@ export const POST = handle(async (request: Request) => {
     // Never leave a Supabase session behind if the access check itself failed.
     await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
     await clearSupabaseCookies();
-    console.error('Admin access lookup failed', lookupError);
+    logger.error({ err: lookupError }, 'Admin access lookup failed');
     throw new HttpError(503, 'Sign-in is temporarily unavailable. Please try again shortly.');
   }
   if (!admin) {
@@ -53,5 +54,7 @@ export const POST = handle(async (request: Request) => {
   }
 
   failedLogins.clear(limitKey);
+  setRequestUser(admin);
+  logger.info('Admin signed in');
   return NextResponse.json({ user: admin });
 });

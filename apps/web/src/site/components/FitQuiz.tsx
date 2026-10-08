@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { checkoutEnabled, programContactHref } from '../config';
-import { programs } from '../data';
-import { addAndOpen, productBySlug, rand } from './shop/basket';
+import { checkoutEnabled, href, programContactHref } from '../config';
+import type { Program } from '../programs';
+import { addAndOpen, rand } from './shop/basket';
 
 type Answers = { stage?: string; goal?: string; place?: string };
 
@@ -38,22 +38,42 @@ const questions = [
   },
 ];
 
-function recommend(a: Answers): { slugs: string[]; why: string } {
-  if (a.stage === 'pregnancy') return { slugs: ['reconnect-volume-1'], why: 'Breathing, pelvic-floor awareness and gradual strengthening: the right foundation for this season. Always get your healthcare provider’s go-ahead first.' };
-  if (a.goal === 'food') return { slugs: ['nourish-volume-1'], why: 'Learn what protein, carbs, fats and micronutrients do, and build balanced meals around your life, without guilt.' };
-  if (a.stage === 'experienced') return { slugs: ['strong-volume-1'], why: 'Purposeful sessions, progressive overload and clear performance goals for people with an established base.' };
-  if (a.stage === 'basics') return { slugs: ['intermediate-volume-1'], why: 'More training volume, thoughtful progressions and new challenges, with technique still at the centre.' };
-  if (a.goal === 'lose') return { slugs: ['move-volume-1', 'nourish-volume-1'], why: 'Strength to keep your muscle while you lose fat, plus eating you can actually maintain. A strong pair.' };
-  return { slugs: ['move-volume-1'], why: `A welcoming, technique-first introduction to strength${a.place === 'home' ? ', and bodyweight or dumbbells at home works perfectly' : a.place === 'gym' ? ', at home or in the gym' : ''}.` };
+/**
+ * What a recommendation points at: a strength-series step, or a focus program
+ * by its drawing. Matching on these (not on slugs or names) keeps the quiz
+ * working when Tilana renames a program or changes its web address.
+ */
+type Pick = { step: 1 | 2 | 3 } | { illustration: 'breath' | 'plate' };
+const START: Pick = { step: 1 };
+const NEXT: Pick = { step: 2 };
+const ADVANCED: Pick = { step: 3 };
+const PELVIC_FLOOR: Pick = { illustration: 'breath' };
+const NUTRITION: Pick = { illustration: 'plate' };
+
+function matches(p: Program, pick: Pick): boolean {
+  return 'step' in pick ? p.series === 'strength' && p.step === pick.step : p.series === 'focus' && p.illustration === pick.illustration;
 }
 
-/** "Not sure where to start?": three taps to a recommendation (into the basket, or to the contact form while checkout is off). */
-export default function FitQuiz() {
+function recommend(a: Answers): { keys: Pick[]; why: string } {
+  if (a.stage === 'pregnancy') return { keys: [PELVIC_FLOOR], why: 'Breathing, pelvic-floor awareness and gradual strengthening: the right foundation for this season. Always get your healthcare provider’s go-ahead first.' };
+  if (a.goal === 'food') return { keys: [NUTRITION], why: 'Learn what protein, carbs, fats and micronutrients do, and build balanced meals around your life, without guilt.' };
+  if (a.stage === 'experienced') return { keys: [ADVANCED], why: 'Purposeful sessions, progressive overload and clear performance goals for people with an established base.' };
+  if (a.stage === 'basics') return { keys: [NEXT], why: 'More training volume, thoughtful progressions and new challenges, with technique still at the centre.' };
+  if (a.goal === 'lose') return { keys: [START, NUTRITION], why: 'Strength to keep your muscle while you lose fat, plus eating you can actually maintain. A strong pair.' };
+  return { keys: [START], why: `A welcoming, technique-first introduction to strength${a.place === 'home' ? ', and bodyweight or dumbbells at home works perfectly' : a.place === 'gym' ? ', at home or in the gym' : ''}.` };
+}
+
+/**
+ * "Not sure where to start?": three taps to a recommendation (into the basket,
+ * or to the contact form while checkout is off). Programs that are not for
+ * sale right now are left out of the recommendation.
+ */
+export default function FitQuiz({ programs }: { programs: Program[] }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Answers>({});
   const done = step >= questions.length;
   const result = done ? recommend(answers) : null;
-  const picks = result ? result.slugs.map((s) => productBySlug.get(s)!).filter(Boolean) : [];
+  const picks = result ? result.keys.map((pick) => programs.find((p) => matches(p, pick))).filter((p): p is Program => Boolean(p)) : [];
   const total = picks.reduce((sum, p) => sum + p.priceCents, 0);
 
   const choose = (key: keyof Answers, v: string) => {
@@ -89,15 +109,26 @@ export default function FitQuiz() {
         ) : (
           <motion.div key="result" className="quiz-result" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}>
             <p className="quiz-count">Your best starting point</p>
-            <h3>{picks.map((p) => p.name).join(' + ')}</h3>
-            <p>{result!.why}</p>
+            {picks.length > 0 ? (
+              <>
+                <h3>{picks.map((p) => p.name).join(' + ')}</h3>
+                <p>{result!.why}</p>
+              </>
+            ) : (
+              <>
+                <h3>Let’s find it together</h3>
+                <p>The program I’d suggest isn’t available right now. Have a look at the others, or ask me what would suit you.</p>
+              </>
+            )}
             <div className="quiz-actions">
-              {checkoutEnabled ? (
-                <button type="button" className="btn btn-primary" onClick={() => addAndOpen(result!.slugs)}>
+              {picks.length === 0 ? (
+                <a className="btn btn-primary" href={href('/contact')}>Ask Tilana</a>
+              ) : checkoutEnabled ? (
+                <button type="button" className="btn btn-primary" onClick={() => addAndOpen(picks.map((p) => p.slug))}>
                   {picks.length > 1 ? `Add both · ${rand(total)}` : `Add ${picks[0]!.name} · ${rand(total)}`}
                 </button>
               ) : (
-                <a className="btn btn-primary" href={programContactHref(programs.find((p) => p.slug === result!.slugs[0])!)}>
+                <a className="btn btn-primary" href={programContactHref(picks[0]!)}>
                   {picks.length > 1 ? `Ask about ${picks.map((p) => p.name).join(' + ')}` : `Get ${picks[0]!.name} · ${rand(total)}`}
                 </a>
               )}

@@ -1,13 +1,12 @@
 import { z } from 'zod';
 
-/** Admin program editing. Public website contracts live in catalogue.ts. */
+/** Admin editing of volumes and their programs. Website contracts live in public-programs.ts. */
 
-export const PROGRAM_STATUSES = ['draft', 'published', 'archived'] as const;
 export const PROGRAM_TONES = ['terracotta', 'sage', 'sand', 'white', 'caramel'] as const;
 export const PROGRAM_ILLUSTRATIONS = ['barbell', 'breath', 'plate'] as const;
 export const PROGRAM_SERIES = ['strength', 'focus'] as const;
 
-/** Largest PDF accepted for a program volume. Emails must stay under inbox size limits. */
+/** Largest PDF accepted for a program. Emails must stay under inbox size limits. */
 export const MAX_PROGRAM_PDF_BYTES = 15 * 1024 * 1024;
 
 export const programSlugSchema = z.string().trim().toLowerCase().min(2).max(60)
@@ -15,7 +14,9 @@ export const programSlugSchema = z.string().trim().toLowerCase().min(2).max(60)
 
 const line = (max: number) => z.string().trim().max(max);
 
-/** Everything Tilana edits on a program (not its volumes). */
+const priceCentsSchema = z.number().int().min(100, 'The price must be at least R1.').max(10_000_000, 'The price must be at most R100 000.');
+
+/** Everything Tilana edits on a program. Its PDF is uploaded separately. */
 export const programInputSchema = z.object({
   name: z.string().trim().min(2, 'Add a name.').max(60),
   slug: programSlugSchema,
@@ -30,6 +31,7 @@ export const programInputSchema = z.object({
   step: z.number().int().min(1).max(3).nullable(),
   marker: line(40),
   sortOrder: z.number().int().min(0).max(10_000),
+  priceCents: priceCentsSchema,
 }).superRefine((value, context) => {
   if (value.series === 'strength' && value.step === null) {
     context.addIssue({ code: 'custom', path: ['step'], message: 'Choose a step for the strength series.' });
@@ -39,24 +41,21 @@ export const programInputSchema = z.object({
   }
 });
 
+/** A new program in a volume: a name and a price to start with. */
 export const createProgramRequestSchema = z.object({
+  volumeId: z.number().int().positive(),
   name: z.string().trim().min(2, 'Add a name.').max(60),
+  priceCents: priceCentsSchema,
 });
 
-export const setProgramStatusRequestSchema = z.object({
-  status: z.enum(PROGRAM_STATUSES),
+/** Rename a volume or switch it on or off for the website. */
+export const updateVolumeRequestSchema = z.object({
+  name: z.string().trim().min(2, 'Add a name.').max(60),
+  isActive: z.boolean(),
 });
 
-/** Price in rand as typed (e.g. 399 or 399.50), stored as cents. */
-export const volumeInputSchema = z.object({
-  name: z.string().trim().min(2, 'Add a name.').max(120),
-  priceCents: z.number().int().min(100, 'The price must be at least R1.').max(10_000_000),
-  isAvailable: z.boolean(),
-});
-
-export type ProgramStatus = (typeof PROGRAM_STATUSES)[number];
 export type ProgramTone = (typeof PROGRAM_TONES)[number];
 export type ProgramIllustration = (typeof PROGRAM_ILLUSTRATIONS)[number];
 export type ProgramSeries = (typeof PROGRAM_SERIES)[number];
 export type ProgramInput = z.infer<typeof programInputSchema>;
-export type VolumeInput = z.infer<typeof volumeInputSchema>;
+export type UpdateVolumeRequest = z.infer<typeof updateVolumeRequestSchema>;

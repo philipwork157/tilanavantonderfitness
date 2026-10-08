@@ -1,127 +1,8 @@
 import { checkoutEnabled } from './config';
 
-// content. Program copy and prices match the production website.
+// Website copy that lives in code. Programs and prices come from the admin (see programs.ts).
 
 export type Tone = 'terracotta' | 'sage' | 'sand' | 'white' | 'caramel';
-
-export type Program = {
-  key: string;
-  /** Checkout identity, like the live site's program-volume slugs. */
-  slug: string;
-  name: string;
-  label: string;
-  volume: string;
-  title: string;
-  short: string;
-  description: string;
-  priceCents: number;
-  tone: Tone;
-  level: string;
-  tags: string[];
-  icon: 'dumbbell' | 'stairs' | 'bolt' | 'breath' | 'bowl';
-  /** The strength series is a three-step path; the focus programs stand on their own. */
-  series: 'strength' | 'focus';
-  /** Strength series only: 1, 2 or 3. */
-  step?: 1 | 2 | 3;
-  /** A short label on the art panel: "Start here", "Pelvic floor", ... */
-  marker: string;
-};
-
-export const programs: Program[] = [
-  {
-    key: 'beginner',
-    slug: 'move-volume-1',
-    name: 'Beginner',
-    label: 'Beginner · Volume 1',
-    volume: 'Volume 1',
-    title: 'Build a confident foundation.',
-    short: 'A welcoming introduction to strength for anyone new to training or returning after time away.',
-    description:
-      'A welcoming introduction to strength for women and men who are new to training or returning after time away. Learn healthy movement patterns, practise good form, and build the confidence to use bodyweight or dumbbells safely at home or in the gym.',
-    priceCents: 39900,
-    tone: 'terracotta',
-    level: 'New or returning',
-    tags: ['Strength', 'Home or gym', 'Bodyweight & dumbbells'],
-    icon: 'dumbbell',
-    series: 'strength',
-    step: 1,
-    marker: 'Start here',
-  },
-  {
-    key: 'intermediate',
-    slug: 'intermediate-volume-1',
-    name: 'Intermediate',
-    label: 'Intermediate · Volume 1',
-    volume: 'Volume 1',
-    title: 'Turn your foundation into progress.',
-    short: 'A structured next step: more volume, thoughtful progressions and new challenges.',
-    description:
-      'Designed for people who feel comfortable with the basics and want a structured next step. The program introduces more training volume, thoughtful exercise progressions, and new challenges while keeping technique and sustainable progress at the centre.',
-    priceCents: 79900,
-    tone: 'sand',
-    level: 'Comfortable with the basics',
-    tags: ['More volume', 'Progressions', 'Technique first'],
-    icon: 'stairs',
-    series: 'strength',
-    step: 2,
-    marker: 'Next step',
-  },
-  {
-    key: 'advanced',
-    slug: 'strong-volume-1',
-    name: 'Advanced',
-    label: 'Advanced · Volume 1',
-    volume: 'Volume 1',
-    title: 'Train with greater purpose.',
-    short: 'Purposeful sessions, progressive overload and clear performance goals.',
-    description:
-      'A focused strength program for experienced women and men who already have an established training base. Advanced uses purposeful sessions, progressive overload, and clear performance goals to help you continue building strength with confidence.',
-    priceCents: 79900,
-    tone: 'caramel',
-    level: 'Established training base',
-    tags: ['Progressive overload', 'Performance', 'Experienced'],
-    icon: 'bolt',
-    series: 'strength',
-    step: 3,
-    marker: 'Level up',
-  },
-  {
-    key: 'reconnect',
-    slug: 'reconnect-volume-1',
-    name: 'Reconnect',
-    label: 'Reconnect · Volume 1',
-    volume: 'Volume 1',
-    title: 'Reconnect with your pelvic floor.',
-    short: 'Pelvic-floor awareness, breathing and gradual strengthening, before, during and after pregnancy.',
-    description:
-      'Gentle education and movement for building pelvic-floor awareness before, during, and after pregnancy. Learn how breathing, coordination, and gradual strengthening can support daily movement, while understanding when help from a pelvic-health professional is needed.',
-    priceCents: 39900,
-    tone: 'sage',
-    level: 'Before, during & after pregnancy',
-    tags: ['Pelvic floor', 'Breathing', 'Pregnancy & postpartum'],
-    icon: 'breath',
-    series: 'focus',
-    marker: 'Pelvic floor',
-  },
-  {
-    key: 'nourish',
-    slug: 'nourish-volume-1',
-    name: 'Nourish',
-    label: 'Nourish · Volume 1',
-    volume: 'Volume 1',
-    title: 'Understand how to fuel your body.',
-    short: 'Macro- and micronutrients made practical: balanced, satisfying meals without guilt.',
-    description:
-      'A practical guide to macro- and micronutrients and the roles they play in energy, recovery, and everyday wellbeing. Learn to build balanced, satisfying meals around your needs without rigid restriction, guilt, or treating food as a reward.',
-    priceCents: 39900,
-    tone: 'white',
-    level: 'Everyone',
-    tags: ['Nutrition', 'Macros & micros', 'No rigid rules'],
-    icon: 'bowl',
-    series: 'focus',
-    marker: 'Nutrition',
-  },
-];
 
 export const programDisclaimer =
   'All programs provide general education based on personal experience and are not a substitute for medical, physiotherapy, dietetic, or other qualified professional care. Seek appropriate clearance before beginning, particularly during pregnancy, after birth, or when managing an injury or health condition. Stop and consult an appropriately qualified healthcare professional if movement causes pain, dizziness, unusual shortness of breath, pelvic-floor symptoms, or other concerns.';
@@ -135,7 +16,6 @@ export type Discipline = {
   line: string;
   copy: string;
   points: string[];
-  program?: string;
   link: { label: string; path: string };
 };
 
@@ -149,8 +29,7 @@ export const disciplines: Discipline[] = [
     line: 'Strong is a skill. Learn it properly.',
     copy: 'Squat, hinge, push, pull and carry, with good form, sensible loads and progress you can actually keep. Bodyweight or dumbbells at home, or a full gym.',
     points: ['Technique-first sessions', 'Home or gym options', 'Beginner to Advanced'],
-    program: 'beginner',
-    link: { label: 'See the strength programs', path: '/program#beginner' },
+    link: { label: 'See the strength programs', path: '/program#strength-series' },
   },
   {
     key: 'run',
@@ -183,7 +62,6 @@ export const disciplines: Discipline[] = [
     line: 'Before birth, during, and after.',
     copy: 'Breathing, coordination and gradual strength for your pelvic floor and deep core, and honest guidance on when a pelvic-health professional is the right next step.',
     points: ['Breath and coordination', 'Gentle, gradual progress', 'No “bounce back” pressure'],
-    program: 'reconnect',
     link: { label: 'See Reconnect', path: '/program#reconnect' },
   },
   {
@@ -195,7 +73,6 @@ export const disciplines: Discipline[] = [
     line: 'Food is fuel, not a reward.',
     copy: 'Understand protein, carbs, fats and micronutrients, then build meals around your family, your training and your goals. Nothing is banned.',
     points: ['Macros made simple', 'Balanced, satisfying meals', 'No guilt, no rigid rules'],
-    program: 'nourish',
     link: { label: 'See Nourish', path: '/program#nourish' },
   },
 ];

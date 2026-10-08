@@ -4,6 +4,7 @@ import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3
 import { MAX_PROGRAM_PDF_BYTES } from '@tilana/contracts/admin-programs';
 import { serverConfig } from '../config';
 import { HttpError } from '../http';
+import { logger } from '../logger';
 
 /**
  * Private storage for program PDFs in Cloudflare R2 (S3 API). The bucket is
@@ -49,13 +50,16 @@ export function inspectPdf(data: Buffer): { sha256: string } {
   return { sha256: createHash('sha256').update(data).digest('hex') };
 }
 
-/** Object key for one version of a volume's PDF; older versions stay for past orders. */
-export const programFileKey = (volumeId: number, version: number, sha256: string) =>
-  `volumes/${volumeId}/v${version}-${sha256.slice(0, 12)}.pdf`;
+/**
+ * Object key for one version of a program's PDF; older versions stay for past
+ * orders. (PDFs uploaded before volumes held programs live under volumes/<id>/.)
+ */
+export const programFileKey = (programId: number, version: number, sha256: string) =>
+  `programs/${programId}/v${version}-${sha256.slice(0, 12)}.pdf`;
 
-export async function uploadProgramFile(volumeId: number, version: number, sha256: string, data: Buffer): Promise<string> {
+export async function uploadProgramFile(programId: number, version: number, sha256: string, data: Buffer): Promise<string> {
   const { client, bucket } = r2('upload');
-  const key = programFileKey(volumeId, version, sha256);
+  const key = programFileKey(programId, version, sha256);
   try {
     await client.send(new PutObjectCommand({
       Bucket: bucket,
@@ -65,7 +69,7 @@ export async function uploadProgramFile(volumeId: number, version: number, sha25
       ContentLength: data.length,
     }));
   } catch (error) {
-    console.error('R2 upload failed', error);
+    logger.error({ err: error, key }, 'R2 upload failed');
     throw new HttpError(502, 'The PDF could not be stored. Please try again.');
   }
   return key;
@@ -79,7 +83,7 @@ export async function downloadProgramFile(key: string): Promise<Buffer> {
 }
 
 /** "Tilana van Tonder - Beginner Volume 1.pdf" from "Beginner · Volume 1". */
-export function programFileName(volumeName: string): string {
-  const clean = volumeName.replace(/[·|/\\:*?"<>]+/g, ' ').replace(/\s+/g, ' ').trim();
+export function programFileName(label: string): string {
+  const clean = label.replace(/[·|/\\:*?"<>]+/g, ' ').replace(/\s+/g, ' ').trim();
   return `Tilana van Tonder - ${clean}.pdf`;
 }

@@ -25,18 +25,10 @@ export const site = {
  */
 export const checkoutEnabled = true;
 
-/** Contact form keys for each program (the keys the admin stores). */
-const contactInterestByProgram: Record<string, string> = {
-  beginner: 'move',
-  intermediate: 'intermediate',
-  advanced: 'strong',
-  reconnect: 'reconnect',
-  nourish: 'nourish',
-};
-
 /** Contact link for a program, with the program chosen and a first line of the message. */
 export function programContactHref(program: { key: string; label: string }): string {
-  const interest = contactInterestByProgram[program.key] ?? 'general';
+  // The program's slug is its contact-form interest (move, strong, nourish, ...).
+  const interest = program.key;
   const message = `I'd like to buy ${program.label}.`;
   return href(`/contact?interest=${encodeURIComponent(interest)}&message=${encodeURIComponent(message)}`);
 }

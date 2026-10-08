@@ -1,17 +1,15 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { addAndOpen, openBasket, productBySlug, useBasket } from './basket';
+import { addAndOpen, openBasket, useBasket } from './basket';
 
 /** "Add to basket" that turns into "In basket" (which opens the basket) once added. */
-export default function AddToBasket({ slug, label = 'Add to basket', className = 'btn btn-primary' }: { slug: string; label?: string; className?: string }) {
+export default function AddToBasket({ slug, name, label = 'Add to basket', className = 'btn btn-primary' }: { slug: string; name: string; label?: string; className?: string }) {
   const basket = useBasket();
-  const product = productBySlug.get(slug);
-  if (!product) return null;
   const inBasket = basket.includes(slug);
   return (
     <button
       type="button"
       className={`${className} add-btn${inBasket ? ' is-in' : ''}`}
-      aria-label={inBasket ? `${product.name} is in your basket. View basket` : `Add ${product.name} to basket`}
+      aria-label={inBasket ? `${name} is in your basket. View basket` : `Add ${name} to basket`}
       onClick={() => (inBasket ? openBasket() : addAndOpen([slug]))}
     >
       <AnimatePresence mode="wait" initial={false}>

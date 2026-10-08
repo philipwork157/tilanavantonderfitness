@@ -43,8 +43,8 @@ website. Do not delete creative work when clearing caches.
   (programs, prices, quiz, FAQ), `layouts/SiteLayout.astro` (SEO, theme,
   header/footer, basket drawer, WhatsApp), `components/` (Astro + React
   islands with Motion), `styles/` (its own light and "espresso" dark tokens)
-  and `content/kitchen/` (one Markdown file per recipe). Program slugs are the
-  catalogue slugs (`move-volume-1` = Beginner, `strong-volume-1` = Advanced).
+  and `content/kitchen/` (one Markdown file per recipe). Program slugs come
+  from the admin (`beginner-volume-1`); see Programs below.
   Preserve its appearance, content, assets and public environment setup unless
   the user requests changes.
 - `apps/admin`: Nuxt admin (port 3001). It extends `@tilana/ui-nuxt`. The
@@ -191,23 +191,38 @@ Keep public deployment functional. An ignored archive is not a remote backup.
 
 ## Programs
 
-- `programs` holds what the website shows (name, headline, summary, description,
-  tags, tone, illustration, strength series step or focus program).
-  `program_volumes` is what people buy: price, "for sale" switch and the current PDF.
-  Public slugs: program `move`, volume `move-volume-1`; volume slugs follow the
-  program slug and are fixed once a program has been published.
+- Volumes hold programs: `volumes` (Volume 1, Volume 2, ...) → `programs`.
+  Each program has its own website text, drawing, price and PDF. In the admin:
+  Programs → a table of volumes (each with an on/off switch) → open a volume
+  to add its programs → open a program to edit it.
+- A program is on the website when its volume is switched on and it has a
+  PDF. There is no separate publish step. New volumes start switched off.
+  A volume with programs cannot be deleted.
+- A program's slug is its public identity (`beginner-volume-1`): basket,
+  checkout (`/api/public/program-volumes/<slug>`, the old catalogue URL and
+  shape) and its anchor on `/program`. It is fixed while the program is on
+  the website. Price changes and adding volumes or programs need the `admin` role.
 - PDFs live in a private Cloudflare R2 bucket (`R2_PRIVATE_PROGRAM_BUCKET`, one per
   environment), reached through the S3 API with two scoped tokens: upload
-  (read & write) and download (read only). Server only, never a public URL. Uploads must start with `%PDF-` and end
-  with `%%EOF`, max 15 MB; the SHA-256 is stored. Replacing a PDF bumps
-  `file_version` and keeps the old file.
-- A volume can only be for sale with a PDF; a program can only be published
-  with a headline, summary, description and a volume for sale. Price changes
-  need the `admin` role.
+  (read & write) and download (read only). Server only, never a public URL.
+  Uploads must start with `%PDF-` and end with `%%EOF`, max 15 MB; the SHA-256
+  is stored. Keys are `programs/<id>/v<version>-<sha>.pdf` (older uploads
+  `volumes/<id>/...`). Replacing a PDF bumps `file_version` and keeps the old file.
 - "Send me a test email" sends the real delivery email with the PDF attached to
   `NEWSLETTER_TEST_TO` (in development only `EMAIL_DEV_REDIRECT_TO`).
-- Not built yet: the website reading programs from the API, checkout/Paystack,
-  orders, the delivery runner and the resend form.
+- The website reads the programs from `GET /api/public/programs`
+  (`@tilana/contracts/public-programs`; no file details). `/` and `/program`
+  are rendered on request with the same five-minute cached loader as the blog
+  (`apps/web/src/utils/live-api.ts`) and show a "please try again" card if the
+  API is down with no saved copy. The website looks the same whichever volume
+  is on; each card's stamp shows its volume. Other pages load the programs in
+  the browser only when the basket opens. The drawings and their animations
+  stay in code (`ProgramArt.astro`); the admin picks one with `illustration`
+  (barbell / breath / plate), `step` sets the barbell's plates and `tone` the
+  colour. A new kind of drawing needs a new illustration value plus SVG in
+  `ProgramArt.astro`. The quiz matches programs by step and drawing, not by name.
+- Not built yet: checkout/Paystack for these programs, orders, the delivery
+  runner and the resend form.
 
 ## Admin UI
 
@@ -247,6 +262,15 @@ The Nuxt admin is being ported here; new admin work goes in `apps/admin-next`.
   `requireAdmin()`/`requireRole()` first; state-changing routes also call
   `sameOriginOnly()`. Public website routes use the CORS helper and keep their
   URLs and response shapes unchanged.
+- **Logging**: use `logger` from `src/server/logger.ts` (pino), never
+  `console`. `handle()` and the CORS wrappers log one line per request with a
+  request ID (also sent back as `x-request-id`; the website sends its own
+  `web-…` ID so both logs match), the masked IP and the signed-in admin. Never
+  log request bodies, PDFs, tokens or full email addresses; pass errors as
+  `{ err }`. Secret and personal field names are redacted automatically.
+- **Destructive actions**: anything that deletes or removes data asks first
+  with `ConfirmDialog` (`src/components/confirm-dialog.tsx`), naming the item
+  and what happens to it.
 - **Config**: read settings only through `src/server/config.ts` (plain names
   such as `DATABASE_URL`, no `NUXT_` prefix); document every variable in
   `.env.example`.

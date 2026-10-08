@@ -3,15 +3,12 @@
 import { PROGRAM_ILLUSTRATIONS, PROGRAM_TONES } from '@tilana/contracts/admin-programs';
 import { slugify } from '@tilana/contracts/blog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Archive, ArrowLeft, EyeOff, Globe, Loader2, Plus, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, Globe, Loader2, Save, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { NavLink } from '@/components/nav-link';
 import { StatusBadge } from '@/components/status-badge';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,13 +16,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { api, ApiError } from '@/lib/api';
 import { useNavigate } from '@/lib/navigation-progress';
-import { formatRand, illustrationLabels, toneClass, toneLabels } from '@/lib/programs';
-import { programStatus, statusStyle } from '@/lib/status';
+import { formatRand, illustrationLabels, parseRand, toneClass, toneLabels } from '@/lib/programs';
 import type { AdminProgram } from '@/lib/types';
 import { useUnsavedGuard } from '@/lib/use-unsaved-guard';
 import { cn } from '@/lib/utils';
 import { Field, Panel } from './editor-parts';
-import { VolumeCard } from './volume-card';
+import { PdfPanel } from './pdf-panel';
 
 const message = (error: unknown, fallback: string) => (error instanceof ApiError ? error.message : fallback);
 
@@ -44,13 +40,15 @@ function toForm(program: AdminProgram) {
     step: program.step,
     marker: program.marker,
     sortOrder: String(program.sortOrder),
+    price: formatRand(program.priceCents).replace(/^R/, '').replace(/\s/g, ''),
   };
 }
 type ProgramForm = ReturnType<typeof toForm>;
 
-function toPayload(form: ProgramForm) {
+function toPayload({ price, ...form }: ProgramForm) {
   return {
     ...form,
+    priceCents: parseRand(price),
     tags: form.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
     step: form.series === 'strength' ? form.step ?? 1 : null,
     sortOrder: Math.max(0, Math.round(Number(form.sortOrder) || 0)),
@@ -75,7 +73,7 @@ export function ProgramEditor({ id }: { id: number }) {
     return (
       <div className="mx-auto grid w-full max-w-6xl justify-items-start gap-4">
         <p role="alert" className="text-destructive">{message(error, 'Program not found.')}</p>
-        <Button asChild variant="outline"><NavLink href="/programs"><ArrowLeft /> All programs</NavLink></Button>
+        <Button asChild variant="outline"><NavLink href="/programs"><ArrowLeft /> All volumes</NavLink></Button>
       </div>
     );
   }
@@ -90,21 +88,22 @@ function EditorForm({ initial }: { initial: AdminProgram }) {
   const [savedJson, setSavedJson] = useState(() => JSON.stringify(toForm(initial)));
   const [deleteOpen, setDeleteOpen] = useState(false);
   const dirty = JSON.stringify(form) !== savedJson;
-  const status = statusStyle(programStatus, program.status);
-  const slugLocked = program.publishedAt !== null;
+  const slugLocked = program.onWebsite;
+  const priceCents = parseRand(form.price);
   useUnsavedGuard(dirty);
 
   const set = <K extends keyof ProgramForm>(key: K, value: ProgramForm[K]) => setForm((current) => ({ ...current, [key]: value }));
 
-  /** Keeps unsaved text edits when only volumes changed on the server. */
-  function applyVolumes(next: AdminProgram) {
+  /** Keeps unsaved text edits when only the PDF changed on the server. */
+  function applyFile(next: AdminProgram) {
     setProgram(next);
     queryClient.setQueryData(['program', next.id], { program: next });
-    void queryClient.invalidateQueries({ queryKey: ['programs'] });
+    void queryClient.invalidateQueries({ queryKey: ['volume', next.volume.id] });
+    void queryClient.invalidateQueries({ queryKey: ['volumes'] });
   }
 
   function applyServerProgram(next: AdminProgram) {
-    applyVolumes(next);
+    applyFile(next);
     const nextForm = toForm(next);
     setForm(nextForm);
     setSavedJson(JSON.stringify(nextForm));
@@ -121,73 +120,45 @@ function EditorForm({ initial }: { initial: AdminProgram }) {
     onError: (error) => toast.error('Not saved', { description: message(error, 'Please try again.') }),
   });
 
-  const changeStatus = useMutation({
-    mutationFn: async (next: AdminProgram['status']) => {
-      if (dirty) await saveNow();
-      return api<{ program: AdminProgram }>(`/api/programs/${program.id}/status`, { method: 'POST', body: JSON.stringify({ status: next }) });
-    },
-    onSuccess: (result, next) => {
-      applyServerProgram(result.program);
-      const notes = {
-        published: ['Published', 'It appears on the website within about 5 minutes.'],
-        draft: ['Moved to drafts', 'It disappears from the website within about 5 minutes.'],
-        archived: ['Archived', 'Hidden from the website. Past orders keep it.'],
-      } as const;
-      toast.success(notes[next][0], { description: notes[next][1] });
-    },
-    onError: (error) => toast.error('Not changed', { description: message(error, 'Please try again.') }),
-  });
-
-  const addVolume = useMutation({
-    mutationFn: () => api<{ program: AdminProgram }>(`/api/programs/${program.id}/volumes`, { method: 'POST' }),
-    onSuccess: ({ program: next }) => { applyVolumes(next); toast.success('Volume added', { description: 'Upload its PDF, then put it up for sale.' }); },
-    onError: (error) => toast.error('Not added', { description: message(error, 'Please try again.') }),
-  });
-
   const remove = useMutation({
     mutationFn: () => api(`/api/programs/${program.id}`, { method: 'DELETE' }),
     onSuccess: () => {
       setSavedJson(JSON.stringify(form));
-      void queryClient.invalidateQueries({ queryKey: ['programs'] });
+      void queryClient.invalidateQueries({ queryKey: ['volume', program.volume.id] });
+      void queryClient.invalidateQueries({ queryKey: ['volumes'] });
       toast.success('Program deleted');
-      router.push('/programs');
+      router.push(`/programs/volumes/${program.volume.id}`);
     },
     onError: (error) => toast.error('Not deleted', { description: message(error, 'Please try again.') }),
   });
 
-  const busy = save.isPending || changeStatus.isPending;
-  const cheapest = program.volumes.filter((volume) => volume.isAvailable).map((volume) => volume.priceCents).sort((a, b) => a - b)[0];
 
   return (
     <div className="mx-auto w-full max-w-6xl">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Button asChild variant="link" className="px-0 text-muted-foreground">
-          <NavLink href="/programs"><ArrowLeft /> All programs</NavLink>
+          <NavLink href={`/programs/volumes/${program.volume.id}`}><ArrowLeft /> {program.volume.name}</NavLink>
         </Button>
         {dirty && <span className="text-sm font-semibold text-status-warning">Unsaved changes</span>}
       </div>
 
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="mb-2 text-xs font-extrabold tracking-[0.2em] text-brand-text uppercase">Program</p>
+          <p className="mb-2 text-xs font-extrabold tracking-[0.2em] text-brand-text uppercase">{program.volume.name} · Program</p>
           <h1 className="font-heading text-3xl font-bold tracking-tight break-words md:text-4xl">{form.name || 'Untitled program'}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <StatusBadge label={status.label} tone={status.tone} className="max-sm:hidden" />
-          <Button variant="outline" className="rounded-full bg-card" disabled={!dirty || busy} onClick={() => save.mutate()}>
+          {program.onWebsite
+            ? <StatusBadge label="On the website" tone="success" icon={Globe} />
+            : <StatusBadge label="Not on the website" tone="neutral" />}
+          <Button className="rounded-full" disabled={!dirty || priceCents === null || save.isPending} onClick={() => save.mutate()}>
             {save.isPending ? <Loader2 className="animate-spin" /> : <Save />} Save
           </Button>
-          {program.status === 'published' ? (
-            <Button variant="ghost" className="rounded-full" disabled={busy} onClick={() => changeStatus.mutate('draft')}>
-              <EyeOff /> Unpublish
-            </Button>
-          ) : (
-            <Button className="rounded-full" disabled={busy} onClick={() => changeStatus.mutate('published')}>
-              {changeStatus.isPending ? <Loader2 className="animate-spin" /> : <Globe />} Publish
-            </Button>
-          )}
         </div>
       </div>
+      {program.offWebsiteReason && (
+        <p className="-mt-3 mb-5 text-sm text-muted-foreground">Not on the website yet: {program.offWebsiteReason}</p>
+      )}
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="grid gap-5">
@@ -214,18 +185,15 @@ function EditorForm({ initial }: { initial: AdminProgram }) {
             </Field>
           </Panel>
 
-          <Panel title="Volumes" titleId="volumes-heading" hint="What people buy. Each volume has its own price and the PDF that is emailed after payment.">
-            {program.volumes.map((volume) => (
-              <VolumeCard
-                key={volume.id}
-                volume={volume}
-                onProgram={applyVolumes}
-                canDelete={program.volumes.length > 1 || program.status !== 'published'}
-              />
-            ))}
-            <Button type="button" variant="outline" className="justify-self-start bg-card" disabled={addVolume.isPending} onClick={() => addVolume.mutate()}>
-              {addVolume.isPending ? <Loader2 className="animate-spin" /> : <Plus />} Add volume {program.volumes.length + 1}
-            </Button>
+          <Panel title="Price and PDF" titleId="sale-heading" hint="What people pay, and the PDF they receive by email after paying.">
+            <Field id="price" label="Price" hint={`Shown on the website. In the basket and emails it is called “${program.label}”.`}>
+              <div className="flex max-w-48 items-center rounded-md border bg-card focus-within:ring-2 focus-within:ring-ring/40">
+                <span className="pl-3 text-sm text-muted-foreground" aria-hidden>R</span>
+                <Input id="price" inputMode="decimal" value={form.price} onChange={(e) => set('price', e.target.value)} aria-invalid={priceCents === null} className="border-0 pl-1 shadow-none focus-visible:ring-0" />
+              </div>
+            </Field>
+            {priceCents === null && <p role="alert" className="-mt-2 text-xs text-destructive">Type the price in rand, for example 399 or 399.50.</p>}
+            <PdfPanel program={program} onProgram={applyFile} />
           </Panel>
         </div>
 
@@ -240,7 +208,7 @@ function EditorForm({ initial }: { initial: AdminProgram }) {
               <div className="grid gap-2 bg-card p-4 text-sm">
                 <span className="font-bold">{form.title || 'Headline'}</span>
                 <span className="text-muted-foreground">{form.summary || 'Summary'}</span>
-                <span className="font-extrabold">{cheapest ? formatRand(cheapest) : 'Not for sale yet'}</span>
+                <span className="font-extrabold">{priceCents !== null ? formatRand(priceCents) : 'R?'}</span>
               </div>
             </div>
           </Panel>
@@ -295,7 +263,7 @@ function EditorForm({ initial }: { initial: AdminProgram }) {
             </Field>
           </Panel>
 
-          <Panel title="Web address" titleId="slug-heading" hint={slugLocked ? 'Fixed once a program has been published, so links and baskets keep working.' : 'Used in links and in each volume’s address.'}>
+          <Panel title="Web address" titleId="slug-heading" hint={slugLocked ? 'Fixed while the program is on the website, so links and baskets keep working.' : 'Used in links, the basket and checkout.'}>
             <Field id="slug" label="Address">
               <Input id="slug" value={form.slug} onChange={(e) => set('slug', e.target.value)} maxLength={60} disabled={slugLocked} />
             </Field>
@@ -304,36 +272,24 @@ function EditorForm({ initial }: { initial: AdminProgram }) {
             )}
           </Panel>
 
-          {program.status === 'published' ? (
-            <Panel title="Archive" titleId="archive-heading" hint="Takes the program off the website but keeps it for past orders.">
-              <Button variant="outline" className="bg-card" disabled={busy} onClick={() => changeStatus.mutate('archived')}>
-                <Archive /> Archive program
-              </Button>
-            </Panel>
-          ) : (
-            <Panel title="Delete" titleId="delete-heading" hint="Removes the program and its volumes. Uploaded PDFs stay in storage." danger>
-              <Button variant="outline" className="border-destructive/50 bg-card text-destructive hover:bg-destructive/10" onClick={() => setDeleteOpen(true)}>
-                <Trash2 /> Delete program
-              </Button>
-            </Panel>
-          )}
+          <Panel title="Delete" titleId="delete-heading" hint="Removes the program from this volume and the website. Uploaded PDFs stay in storage." danger>
+            <Button variant="outline" className="border-destructive/50 bg-card text-destructive hover:bg-destructive/10" onClick={() => setDeleteOpen(true)}>
+              <Trash2 /> Delete program
+            </Button>
+          </Panel>
         </aside>
       </div>
 
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete “{program.name}”?</AlertDialogTitle>
-            <AlertDialogDescription>The program and its volumes will be removed. This can&apos;t be undone.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep program</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" disabled={remove.isPending} onClick={(e) => { e.preventDefault(); remove.mutate(); }}>
-              {remove.isPending ? 'Deleting…' : 'Delete program'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={`Delete “${program.name}”?`}
+        description={program.onWebsite ? 'It disappears from the website straight away and can no longer be bought. This can’t be undone.' : 'The program is removed from this volume. This can’t be undone.'}
+        confirmLabel="Delete program"
+        cancelLabel="Keep program"
+        pending={remove.isPending}
+        onConfirm={() => remove.mutate()}
+      />
     </div>
   );
 }

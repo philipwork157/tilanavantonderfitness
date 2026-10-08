@@ -9,6 +9,7 @@ import { startSubscription } from '@/server/services/newsletter-subscribers';
 import { sendEmail } from '@/server/utils/email';
 import { confirmUrl, websiteUrl } from '@/server/utils/newsletter';
 import { verifyTurnstileToken } from '@/server/utils/turnstile';
+import { logger } from '@/server/logger';
 
 const attempts = createAttemptLimiter({ maxAttempts: 5, windowMs: 10 * 60 * 1000 });
 
@@ -40,7 +41,7 @@ export const POST = websiteRoute(async (request) => {
     try {
       await sendEmail(confirmationEmail(result.email, confirmUrl(result.token), websiteUrl()));
     } catch (error) {
-      console.error('Newsletter confirmation email failed', error);
+      logger.error({ err: error }, 'Newsletter confirmation email failed');
       throw new HttpError(502, 'We could not send the confirmation email. Please try again shortly.');
     }
   }

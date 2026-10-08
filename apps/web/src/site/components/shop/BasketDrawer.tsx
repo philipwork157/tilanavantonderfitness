@@ -1,17 +1,23 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import Icon from '../Icon';
-import { addToBasket, basketItems, onOpenBasket, productBySlug, products, rand, removeFromBasket, totalCents, useBasket, type OpenDetail } from './basket';
+import { addToBasket, basketItems, loadCatalogue, onOpenBasket, productMap, rand, removeFromBasket, totalCents, useBasket, useCatalogue, type OpenDetail, type Product } from './basket';
 
 function joinNames(names: string[]) {
   if (names.length <= 1) return names.join('');
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
-/** Slide-in basket. Opens from the header icon or straight after "Add to basket". */
-export default function BasketDrawer({ checkoutHref, programsHref }: { checkoutHref: string; programsHref: string }) {
+/**
+ * Slide-in basket. Opens from the header icon or straight after "Add to basket".
+ * Pages that loaded the programs pass them in; other pages fetch them the
+ * first time the basket opens.
+ */
+export default function BasketDrawer({ checkoutHref, programsHref, products: initial }: { checkoutHref: string; programsHref: string; products?: Product[] }) {
   const basket = useBasket();
   const [open, setOpen] = useState(false);
+  const products = useCatalogue(initial, false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [note, setNote] = useState<OpenDetail>({});
   const panelRef = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -29,6 +35,7 @@ export default function BasketDrawer({ checkoutHref, programsHref }: { checkoutH
 
   useEffect(() => {
     if (!open) return;
+    void loadCatalogue().then((ok) => setLoadFailed(!ok));
     const previous = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const onKey = (event: globalThis.KeyboardEvent) => {
@@ -56,9 +63,12 @@ export default function BasketDrawer({ checkoutHref, programsHref }: { checkoutH
   };
 
   const close = () => setOpen(false);
-  const items = basketItems(basket);
+  const items = basketItems(basket, products);
   const others = products.filter((p) => !basket.includes(p.slug));
-  const added = (note.added ?? []).map((slug) => productBySlug.get(slug)?.name).filter((n): n is string => Boolean(n));
+  const bySlug = productMap(products);
+  // Basket slugs whose programs have not loaded yet (or could not be loaded).
+  const waiting = items.length === 0 && basket.length > 0;
+  const added = (note.added ?? []).map((slug) => bySlug.get(slug)?.name).filter((n): n is string => Boolean(n));
 
   return (
     <AnimatePresence>
@@ -80,7 +90,7 @@ export default function BasketDrawer({ checkoutHref, programsHref }: { checkoutH
             <header className="basket-head">
               <div>
                 <p className="basket-eyebrow">Your basket</p>
-                <h2 id="basket-title">{items.length ? `${items.length} program${items.length === 1 ? '' : 's'}` : 'Nothing here yet'}</h2>
+                <h2 id="basket-title">{items.length ? `${items.length} program${items.length === 1 ? '' : 's'}` : waiting ? 'Your basket' : 'Nothing here yet'}</h2>
               </div>
               <button ref={closeRef} type="button" className="basket-close" onClick={close} aria-label="Close basket">
                 <Icon name="close" />
@@ -95,7 +105,11 @@ export default function BasketDrawer({ checkoutHref, programsHref }: { checkoutH
               )}
               {note.full && <p className="basket-note warn" role="status">Your basket can hold up to ten programs.</p>}
 
-              {items.length === 0 ? (
+              {waiting ? (
+                <div className="basket-empty">
+                  <p role="status">{loadFailed ? 'Your programs could not be loaded right now. Your selection is saved; continue to checkout or try again shortly.' : 'Loading your programs…'}</p>
+                </div>
+              ) : items.length === 0 ? (
                 <div className="basket-empty">
                   <p>Pick one or more programs and pay once, securely with Paystack.</p>
                 </div>
@@ -139,7 +153,7 @@ export default function BasketDrawer({ checkoutHref, programsHref }: { checkoutH
             <footer className="basket-foot">
               {items.length > 0 ? (
                 <>
-                  <div className="basket-total"><span>Total once-off payment</span><strong>{rand(totalCents(basket))}</strong></div>
+                  <div className="basket-total"><span>Total once-off payment</span><strong>{rand(totalCents(basket, products))}</strong></div>
                   <a href={checkoutHref} className="btn btn-primary basket-checkout">Checkout securely</a>
                   <button type="button" className="btn btn-quiet" onClick={close}>Keep browsing</button>
                   <p className="basket-secure">
@@ -147,6 +161,8 @@ export default function BasketDrawer({ checkoutHref, programsHref }: { checkoutH
                     One secure Paystack payment · No account needed
                   </p>
                 </>
+              ) : waiting ? (
+                <a href={checkoutHref} className="btn btn-primary basket-checkout">Go to checkout</a>
               ) : (
                 <a href={programsHref} className="btn btn-primary basket-checkout" onClick={close}>Browse programs</a>
               )}
