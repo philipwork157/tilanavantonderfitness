@@ -8,7 +8,7 @@ import { eq, sql } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createDatabase, roles, userRoles, users, type Database } from '@tilana/db';
-import { resolveAdminUser } from '@/server/auth/admin-users';
+import { findLinkedAdmin, resolveAdminUser } from '@/server/auth/admin-users';
 
 const url = process.env.TEST_DATABASE_URL;
 const confirmed = '2026-01-01T00:00:00Z';
@@ -84,6 +84,19 @@ describe.skipIf(!url)('resolveAdminUser (database)', () => {
     await addUser('staff@example.com', ['staff']);
     const staff = await resolveAdminUser(db, { id: authId(6), email: 'staff@example.com', email_confirmed_at: confirmed });
     expect(staff?.roles).toEqual(['staff']);
+  });
+
+  it('finds a linked admin in one lookup, and says when nobody is linked yet', async () => {
+    await addUser('tilana@example.com', ['customer', 'admin'], { authUserId: authId(1), firstName: 'Tilana' });
+    await addUser('buyer@example.com', ['customer'], { authUserId: authId(2) });
+    await addUser('nobody-roles@example.com', [], { authUserId: authId(3) });
+    await addUser('off@example.com', ['admin'], { authUserId: authId(4), isActive: false });
+
+    expect(await findLinkedAdmin(db, authId(1))).toMatchObject({ email: 'tilana@example.com', firstName: 'Tilana', roles: ['admin', 'customer'] });
+    expect(await findLinkedAdmin(db, authId(2))).toBeNull();
+    expect(await findLinkedAdmin(db, authId(3))).toBeNull();
+    expect(await findLinkedAdmin(db, authId(4))).toBeNull();
+    expect(await findLinkedAdmin(db, authId(9))).toBeUndefined();
   });
 
   it('stores emails lowercase only', async () => {

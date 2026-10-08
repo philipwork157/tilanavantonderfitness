@@ -37,18 +37,11 @@ export function groupAttachments<T extends { attachment: EmailAttachment }>(file
   return groups;
 }
 
-/**
- * Emails a paid order's PDFs to the buyer, records the outcome on the order,
- * then tells Tilana about the sale. Call it once, from whoever marked the
- * order paid. Never throws.
- */
-export async function deliverOrder(db: Database, orderId: number, deps: DeliveryDependencies = defaults): Promise<void> {
-  const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
-  if (!order || order.status !== 'paid') return;
-  const items = await orderItemsFor(db, order.id);
-  let delivered = false;
-  let failure: string | null = null;
+type PaidOrder = typeof orders.$inferSelect;
 
+/** Downloads the order's PDFs and emails them to `to`. Never throws. */
+async function emailPrograms(db: Database, order: PaidOrder, to: string, deps: DeliveryDependencies) {
+  const items = await orderItemsFor(db, order.id);
   try {
     const site = websiteUrl();
     const ids = items.map(item => item.programId).filter((id): id is number => id !== null);
@@ -62,7 +55,7 @@ export async function deliverOrder(db: Database, orderId: number, deps: Delivery
     }
     const replyTo = serverConfig().contactNotifyTo || undefined;
     for (const group of groupAttachments(attachments)) {
-      await deps.send(programDeliveryEmail(order.email, {
+      await deps.send(programDeliveryEmail(to, {
         firstName: order.firstName,
         orderNumber: order.orderNumber,
         programs: group.map(file => file.label),
@@ -70,15 +63,30 @@ export async function deliverOrder(db: Database, orderId: number, deps: Delivery
         refundPolicyUrl: `${site}/refund-policy`,
       }, group.map(file => file.attachment), { replyTo }));
     }
-    delivered = true;
+    return { items, delivered: true, failure: null };
   } catch (error) {
-    failure = error instanceof Error ? error.message.slice(0, 500) : 'Unknown error';
     logger.error({ err: error, orderNumber: order.orderNumber }, 'Program email could not be sent');
+    return { items, delivered: false, failure: error instanceof Error ? error.message.slice(0, 500) : 'Unknown error' };
   }
+}
 
+/** Records the latest delivery attempt on the order. */
+async function recordDelivery(db: Database, orderId: number, delivered: boolean, failure: string | null) {
   await db.update(orders).set(delivered
     ? { deliveryStatus: 'sent', deliveredAt: new Date(), deliveryError: null }
-    : { deliveryStatus: 'failed', deliveryError: failure }).where(eq(orders.id, order.id));
+    : { deliveryStatus: 'failed', deliveryError: failure }).where(eq(orders.id, orderId));
+}
+
+/**
+ * Emails a paid order's PDFs to the buyer, records the outcome on the order,
+ * then tells Tilana about the sale. Call it once, from whoever marked the
+ * order paid. Never throws.
+ */
+export async function deliverOrder(db: Database, orderId: number, deps: DeliveryDependencies = defaults): Promise<void> {
+  const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+  if (!order || order.status !== 'paid') return;
+  const { items, delivered, failure } = await emailPrograms(db, order, order.email, deps);
+  await recordDelivery(db, order.id, delivered, failure);
   logger.info({ orderNumber: order.orderNumber, delivered }, delivered ? 'Order paid and programs emailed' : 'Order paid but programs not emailed');
 
   const notifyTo = serverConfig().contactNotifyTo;
@@ -97,4 +105,24 @@ export async function deliverOrder(db: Database, orderId: number, deps: Delivery
   } catch (error) {
     logger.error({ err: error, orderNumber: order.orderNumber }, 'Sale notification could not be sent');
   }
+}
+
+/**
+ * Emails a paid order's PDFs again (lost email, typo in the address, failed
+ * first attempt). Sends to the buyer's address unless the admin gives another
+ * one; the order keeps the buyer's original address. No sale notification.
+ */
+export async function resendOrder(
+  db: Database,
+  orderNumber: string,
+  options: { to?: string } = {},
+  deps: DeliveryDependencies = defaults,
+): Promise<{ delivered: boolean; failure: string | null; sentTo: string } | null> {
+  const [order] = await db.select().from(orders).where(eq(orders.orderNumber, orderNumber));
+  if (!order || order.status !== 'paid') return null;
+  const sentTo = options.to?.trim().toLowerCase() || order.email;
+  const { delivered, failure } = await emailPrograms(db, order, sentTo, deps);
+  await recordDelivery(db, order.id, delivered, failure);
+  logger.info({ orderNumber, delivered, otherAddress: sentTo !== order.email }, delivered ? 'Programs emailed again' : 'Programs could not be emailed again');
+  return { delivered, failure, sentTo };
 }

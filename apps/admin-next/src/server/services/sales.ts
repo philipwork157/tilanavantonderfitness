@@ -1,6 +1,6 @@
 import 'server-only';
 import { orderItems, orders, type Database } from '@tilana/db';
-import { and, count, desc, eq, gte, inArray, sql, sum } from 'drizzle-orm';
+import { and, count, desc, eq, gte, ilike, inArray, or, sql, sum } from 'drizzle-orm';
 
 /** Days are counted in South African time. */
 const ZONE = 'Africa/Johannesburg';
@@ -43,9 +43,6 @@ export async function salesSummary(db: Database, days: number, now = new Date())
     .groupBy(orderItems.label).orderBy(desc(count()));
 
   const recentOrders = await db.select().from(orders).where(gte(orders.createdAt, since)).orderBy(desc(orders.createdAt)).limit(25);
-  const recentItems = recentOrders.length
-    ? await db.select({ orderId: orderItems.orderId, label: orderItems.label }).from(orderItems).where(inArray(orderItems.orderId, recentOrders.map(order => order.id)))
-    : [];
 
   return {
     days,
@@ -58,18 +55,53 @@ export async function salesSummary(db: Database, days: number, now = new Date())
     },
     daily,
     byProgram: perProgram.map(row => ({ label: row.label, sold: row.sold, revenueCents: Number(row.revenueCents ?? 0) })),
-    recent: recentOrders.map(order => ({
-      orderNumber: order.orderNumber,
-      createdAt: order.createdAt,
-      paidAt: order.paidAt,
-      buyer: `${order.firstName} ${order.lastName}`.trim(),
-      email: order.email,
-      totalCents: order.totalCents,
-      status: order.status,
-      deliveryStatus: order.deliveryStatus,
-      deliveryError: order.deliveryError,
-      testPayment: order.paymentMode === 'test',
-      programs: recentItems.filter(item => item.orderId === order.id).map(item => item.label),
-    })),
+    recent: await withPrograms(db, recentOrders),
   };
+}
+
+type OrderRow = typeof orders.$inferSelect;
+
+/** Orders as the Sales page lists them, with their program names. */
+async function withPrograms(db: Database, rows: OrderRow[]) {
+  const items = rows.length
+    ? await db.select({ orderId: orderItems.orderId, label: orderItems.label }).from(orderItems).where(inArray(orderItems.orderId, rows.map(order => order.id)))
+    : [];
+  return rows.map(order => ({
+    orderNumber: order.orderNumber,
+    createdAt: order.createdAt,
+    paidAt: order.paidAt,
+    buyer: `${order.firstName} ${order.lastName}`.trim(),
+    email: order.email,
+    totalCents: order.totalCents,
+    status: order.status,
+    deliveryStatus: order.deliveryStatus,
+    deliveryError: order.deliveryError,
+    deliveredAt: order.deliveredAt,
+    testPayment: order.paymentMode === 'test',
+    programs: items.filter(item => item.orderId === order.id).map(item => item.label),
+  }));
+}
+
+/** Finds orders of any age by order number, email or name (newest first, at most 25). */
+export async function findOrders(db: Database, query: string) {
+  const text = query.trim().slice(0, 100);
+  if (text.length < 2) return [];
+  const like = `%${text.replace(/[\\%_]/g, char => `\\${char}`)}%`;
+  const rows = await db.select().from(orders)
+    .where(or(
+      ilike(orders.orderNumber, like),
+      ilike(orders.email, like),
+      ilike(sql`${orders.firstName} || ' ' || ${orders.lastName}`, like),
+    ))
+    .orderBy(desc(orders.createdAt)).limit(25);
+  return withPrograms(db, rows);
+}
+
+/** Today's paid sales (South African day) and paid orders whose PDFs did not go out, for the Overview. */
+export async function salesToday(db: Database, now = new Date()) {
+  const since = new Date(`${saDate(now)}T00:00:00+02:00`);
+  const [today] = await db.select({ orders: count(), revenueCents: sum(orders.totalCents) }).from(orders)
+    .where(and(eq(orders.status, 'paid'), gte(orders.paidAt, since)));
+  const [unsent] = await db.select({ orders: count() }).from(orders).where(and(eq(orders.status, 'paid'), eq(orders.deliveryStatus, 'failed')));
+  return { ordersToday: today?.orders ?? 0, revenueTodayCents: Number(today?.revenueCents ?? 0), emailsNotSent: unsent?.orders ?? 0 };
 }

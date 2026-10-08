@@ -33,14 +33,20 @@ export function useTurnstile(action: string) {
         if (attempt < 100) timer = window.setTimeout(() => draw(attempt + 1), 150);
         return;
       }
-      widget.current = api.render(ref.current, {
-        sitekey: siteKey,
-        action,
-        theme: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
-        callback: (value: string) => setToken(value),
-        'expired-callback': () => setToken(''),
-        'error-callback': () => setToken(''),
-      });
+      try {
+        widget.current = api.render(ref.current, {
+          sitekey: siteKey,
+          action,
+          theme: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
+          callback: (value: string) => setToken(value),
+          'expired-callback': () => setToken(''),
+          'error-callback': () => setToken(''),
+        });
+      }
+      catch (error) {
+        // A Turnstile problem must never take the whole form down with it.
+        console.error('Security check could not be shown.', error);
+      }
     };
     draw();
     return () => {

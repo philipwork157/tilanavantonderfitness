@@ -9,9 +9,9 @@ import type { BasketCheckoutRequest } from '@tilana/contracts/checkout';
 import { POST as startBasket } from '@/app/api/checkout/paystack/basket/route';
 import { GET as checkoutStatus } from '@/app/api/checkout/status/route';
 import { POST as webhook } from '@/app/api/webhooks/paystack/route';
-import { deliverOrder } from '@/server/services/order-delivery';
+import { deliverOrder, resendOrder } from '@/server/services/order-delivery';
 import { applyVerifiedPayment, CheckoutAlreadyStartedError, findOrderBy, startCheckout } from '@/server/services/orders';
-import { dayRange, salesSummary } from '@/server/services/sales';
+import { dayRange, findOrders, salesSummary, salesToday } from '@/server/services/sales';
 import type { OutgoingEmail } from '@/server/utils/email-routing';
 import type { VerifiedPayment } from '@/server/utils/paystack';
 
@@ -185,6 +185,42 @@ describe.skipIf(!url)('orders (database)', () => {
     expect(unknown.status).toBe(404);
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
+  });
+
+  it('emails a paid order again, to the buyer or a corrected address, without a new sale email', async () => {
+    vi.stubEnv('WEBSITE_URL', 'https://site.test');
+    vi.stubEnv('CONTACT_NOTIFY_TO', 'tilana@example.com');
+    const { reference } = await startCheckout(db, request(), deps());
+    const order = (await findOrderBy(db, 'reference', reference))!;
+    expect(await resendOrder(db, order.orderNumber, {}, { send: async () => {}, download: async () => Buffer.from('x') })).toBeNull();
+
+    await applyVerifiedPayment(db, order, success(order));
+    await deliverOrder(db, order.id, { send: async () => { throw new Error('SES down'); }, download: async () => Buffer.from('x') });
+    const sent: OutgoingEmail[] = [];
+    const ok = { send: async (email: OutgoingEmail) => void sent.push(email), download: async () => Buffer.from('%PDF-1.7 %%EOF') };
+
+    expect(await resendOrder(db, order.orderNumber, {}, ok)).toMatchObject({ delivered: true, sentTo: 'anna@example.com' });
+    expect(await resendOrder(db, order.orderNumber, { to: ' Anna.New@Example.com ' }, ok)).toMatchObject({ delivered: true, sentTo: 'anna.new@example.com' });
+    expect(sent.map(email => email.to[0])).toEqual(['anna@example.com', 'anna.new@example.com']);
+    expect(sent.every(email => email.attachments?.length === 2 && !email.subject.includes('New sale'))).toBe(true);
+    // The failed first attempt is cleared, and the order keeps the buyer's own address.
+    expect(await findOrderBy(db, 'reference', reference)).toMatchObject({ deliveryStatus: 'sent', deliveryError: null, email: 'anna@example.com' });
+    vi.unstubAllEnvs();
+  });
+
+  it('finds orders by number, email or name, and counts today\'s sales', async () => {
+    const { reference } = await startCheckout(db, request({ email: 'findme@example.com', firstName: 'Zelda', lastName: 'Find' }), deps());
+    const order = (await findOrderBy(db, 'reference', reference))!;
+    await applyVerifiedPayment(db, order, success(order));
+    const before = await salesToday(db);
+
+    expect((await findOrders(db, order.orderNumber.toLowerCase())).map(row => row.orderNumber)).toEqual([order.orderNumber]);
+    expect((await findOrders(db, 'FINDME@')).map(row => row.orderNumber)).toEqual([order.orderNumber]);
+    expect((await findOrders(db, 'zelda find')).map(row => row.orderNumber)).toEqual([order.orderNumber]);
+    expect(await findOrders(db, 'x')).toEqual([]);
+    expect(await findOrders(db, '100%_')).toEqual([]);
+    expect(before.ordersToday).toBeGreaterThan(0);
+    expect(before.revenueTodayCents).toBeGreaterThanOrEqual(order.totalCents);
   });
 
   it('sums paid sales per day and per program for the Sales page', async () => {

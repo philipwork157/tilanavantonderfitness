@@ -221,13 +221,14 @@ Keep public deployment functional. An ignored archive is not a remote backup.
   (barbell / breath / plate), `step` sets the barbell's plates and `tone` the
   colour. A new kind of drawing needs a new illustration value plus SVG in
   `ProgramArt.astro`. The quiz matches programs by step and drawing, not by name.
-- Not built yet: refunds, a "resend my PDFs" form and automatic retries of
-  failed delivery emails.
+- Not built yet: refunds, a "resend my PDFs" form for buyers on the website
+  and automatic retries of failed delivery emails (Tilana resends from Sales).
 
 ## Payments (Paystack)
 
 - Flow: the website posts the basket to `POST /api/checkout/paystack/basket`
-  (Turnstile, honeypot, rate limit). The admin re-checks every program is on
+  (honeypot and per-IP rate limit; no Turnstile, so buyers are never stopped
+  before paying. Turnstile is only on the contact and newsletter forms). The admin re-checks every program is on
   the website and every price against the database (409 if changed), saves a
   `pending` order (`orders` + `order_items`, prices and names as sold) and
   returns Paystack's hosted payment page. A retry with the same
@@ -249,7 +250,13 @@ Keep public deployment functional. An ignored archive is not a remote backup.
   webhook URL in Paystack once the admin is online.
 - Admin: Sales (`/sales`) shows paid sales per day and per program (Recharts
   via `components/ui/chart.tsx`), totals and the latest orders with their
-  email status. Test-mode orders are marked "Test".
+  email status. Test-mode orders are marked "Test". Search finds any order by
+  number, email or name (`GET /api/orders?q=`). "Email PDFs again" on a paid
+  order (`POST /api/orders/<orderNumber>/resend`, max 5 per order per hour)
+  sends the delivery email again to the buyer or to a corrected address (the
+  order keeps the original address; no new sale email) and records the result.
+- Overview shows today's paid sales and orders (South African day) and paid
+  orders whose PDFs were not emailed.
 
 ## Admin UI
 

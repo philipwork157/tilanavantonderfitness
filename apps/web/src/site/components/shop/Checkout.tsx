@@ -8,11 +8,10 @@ import { getCheckoutIntentKey, readCheckoutRecoveryReference, rememberCheckoutIn
 import { createCheckoutSelectionGuard, sameBasketSelection } from '@web/scripts/checkout-selection';
 import { publicApiUrl } from '@web/utils/public-api';
 import Icon from '../Icon';
-import { useTurnstile } from '../turnstile';
 import { addToBasket, productMap, rand, removeFromBasket, useBasket, useCatalogue } from './basket';
 
 type Fields = { firstName: string; lastName: string; email: string; phone: string; consent: boolean; website: string };
-type Errors = Partial<Record<keyof Fields | 'security', string>>;
+type Errors = Partial<Record<keyof Fields, string>>;
 type Problem = { title: string; copy: string; retry: boolean };
 type ApiMessage = { authorizationUrl?: string; reference?: string; statusMessage?: string; message?: string };
 
@@ -50,7 +49,6 @@ export default function Checkout({ programsHref, completeHref, refundHref, priva
   const guard = useRef(createCheckoutSelectionGuard());
   const loadVersion = useRef(0);
   const queryAdded = useRef(false);
-  const turnstile = useTurnstile('checkout');
 
   const load = useCallback(async () => {
     const version = ++loadVersion.current;
@@ -113,7 +111,6 @@ export default function Checkout({ programsHref, completeHref, refundHref, priva
     event.preventDefault();
     if (submitting || !volumes.length) return;
     const found = validate(fields);
-    if (turnstile.enabled && !turnstile.token) found.security = 'Please complete the security check.';
     setErrors(found);
     const firstInvalid = Object.keys(found)[0];
     if (firstInvalid) {
@@ -130,7 +127,6 @@ export default function Checkout({ programsHref, completeHref, refundHref, priva
       phone: fields.phone,
       consent: fields.consent,
       website: fields.website,
-      turnstileToken: turnstile.token,
     });
     if (!parsed.success) {
       setStatus('Please complete all required details and accept the policy agreement.');
@@ -177,7 +173,6 @@ export default function Checkout({ programsHref, completeHref, refundHref, priva
       guard.current.finish();
       setSubmitting(false);
       setStatus(checkoutError instanceof Error ? checkoutError.message : 'Checkout could not be started.');
-      turnstile.reset();
       if (!sameBasketSelection(volumes.map((volume) => volume.slug), readBasket())) await load();
     }
   };
@@ -269,12 +264,6 @@ export default function Checkout({ programsHref, completeHref, refundHref, priva
           <div className="honeypot" aria-hidden="true">
             <label>Leave this field empty <input name="website" tabIndex={-1} autoComplete="off" value={fields.website} onChange={(e) => set('website', e.target.value)} /></label>
           </div>
-          {turnstile.enabled && (
-            <div className="security-check">
-              <div ref={turnstile.ref} />
-              {errors.security && <small className="co-consent-error">{errors.security}</small>}
-            </div>
-          )}
           <button type="submit" className="btn btn-primary co-pay" disabled={submitting}>
             {submitting ? <span className="spinner" aria-hidden="true" /> : <Icon name="lock" />}
             {submitting ? 'Opening Paystack…' : `Pay ${rand(total)} securely`}

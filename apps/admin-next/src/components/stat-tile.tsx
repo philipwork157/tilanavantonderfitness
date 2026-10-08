@@ -17,36 +17,38 @@ const toneClass: Record<TileTone, string> = {
 };
 
 /** Counts up to the value once it loads (skipped for reduced motion). */
-function CountUp({ value }: { value: number }) {
+function CountUp({ value, format = (n: number) => n.toLocaleString('en-ZA') }: { value: number; format?: (value: number) => string }) {
   const ref = useRef<HTMLSpanElement>(null);
   const reduce = useReducedMotion();
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
     if (reduce) {
-      node.textContent = value.toLocaleString('en-ZA');
+      node.textContent = format(value);
       return;
     }
     const controls = animate(0, value, {
       duration: 0.9,
       ease: [0.22, 1, 0.36, 1],
-      onUpdate: (latest) => { node.textContent = Math.round(latest).toLocaleString('en-ZA'); },
+      onUpdate: (latest) => { node.textContent = format(Math.round(latest)); },
     });
     return () => controls.stop();
-  }, [value, reduce]);
-  return <span ref={ref}>0</span>;
+  }, [value, reduce, format]);
+  return <span ref={ref}>{format(0)}</span>;
 }
 
 const MotionLink = motion.create(NavLink);
 
 /** A big number with a label, linking to the list it counts. */
-export function StatTile({ href, icon: Icon, tone, label, hint, value, index = 0, compact }: {
+export function StatTile({ href, icon: Icon, tone, label, hint, value, format, index = 0, compact }: {
   href: string;
   icon: LucideIcon;
   tone: TileTone;
   label: string;
   hint: string;
   value: number | undefined;
+  /** How the number is written, e.g. as rand. Keep it stable (module level). */
+  format?: (value: number) => string;
   index?: number;
   compact?: boolean;
 }) {
@@ -72,7 +74,7 @@ export function StatTile({ href, icon: Icon, tone, label, hint, value, index = 0
       </div>
       <div>
         <div className={cn('font-heading leading-none font-bold tracking-tight', compact ? 'text-4xl' : 'text-5xl')}>
-          {value === undefined ? <Skeleton className="h-10 w-16" /> : <CountUp value={value} />}
+          {value === undefined ? <Skeleton className="h-10 w-16" /> : <CountUp value={value} format={format} />}
         </div>
         <p className="mt-3 text-sm font-bold">{label}</p>
         <p className="text-xs text-muted-foreground">{hint}</p>

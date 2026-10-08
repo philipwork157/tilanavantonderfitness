@@ -28,8 +28,10 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const { data } = await supabase.auth.getUser();
-  if (!data.user && !isLogin) {
+  // getClaims() checks the token locally (no call to Supabase unless the
+  // token needs refreshing) and refreshes the session cookies when needed.
+  const { data } = await supabase.auth.getClaims();
+  if (!data?.claims?.sub && !isLogin) {
     const login = new URL('/login', request.url);
     const next = request.nextUrl.pathname + request.nextUrl.search;
     if (next !== '/') login.searchParams.set('next', next);

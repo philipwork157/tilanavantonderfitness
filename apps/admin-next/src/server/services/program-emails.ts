@@ -27,7 +27,9 @@ export function programDeliveryHtml(content: ProgramDeliveryContent, options: { 
   const text = `margin:0 0 18px;font-family:${fonts.body};font-size:16px;line-height:1.7;color:${colors.chocolate}`;
   const many = content.programs.length > 1;
   const list = content.programs
-    .map(name => `<tr><td style="padding:12px 16px;border-top:1px solid ${colors.border};font-family:${fonts.body};font-size:15px;font-weight:700;color:${colors.ink}">${escapeHtml(name)}</td></tr>`)
+    // Lines between programs only; a line above the first one would cut across
+    // the box's rounded top corners.
+    .map((name, index) => `<tr><td style="padding:12px 16px;${index ? `border-top:1px solid ${colors.border};` : ''}font-family:${fonts.body};font-size:15px;font-weight:700;color:${colors.ink}">${escapeHtml(name)}</td></tr>`)
     .join('');
   const order = content.orderNumber
     ? `<p style="margin:0 0 6px;font-family:${fonts.body};font-size:13px;color:${colors.caramel}">Order number: <strong>${escapeHtml(content.orderNumber)}</strong></p>`

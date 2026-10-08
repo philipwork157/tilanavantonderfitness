@@ -21,7 +21,12 @@ export function saleNotificationEmail(to: string, sale: SaleNotice): OutgoingEma
   const subject = `${sale.testMode ? '[Test payment] ' : ''}New sale: ${rand(sale.totalCents)} · ${sale.orderNumber}`;
   const text = `margin:0 0 14px;font-family:${fonts.body};font-size:15px;line-height:1.6;color:${colors.chocolate}`;
   const rows = sale.items
-    .map(item => `<tr><td style="padding:10px 14px;border-top:1px solid ${colors.border};font-family:${fonts.body};font-size:15px;color:${colors.ink}">${escapeHtml(item.label)}</td><td align="right" style="padding:10px 14px;border-top:1px solid ${colors.border};font-family:${fonts.body};font-size:15px;color:${colors.ink}">${rand(item.priceCents)}</td></tr>`)
+    // Divider lines go between rows only: a top border on the first row draws a
+    // straight line across the box's rounded corners (seen in Gmail).
+    .map((item, index) => {
+      const divider = index ? `border-top:1px solid ${colors.border};` : '';
+      return `<tr><td style="padding:10px 14px;${divider}font-family:${fonts.body};font-size:15px;color:${colors.ink}">${escapeHtml(item.label)}</td><td align="right" style="padding:10px 14px;${divider}font-family:${fonts.body};font-size:15px;color:${colors.ink}">${rand(item.priceCents)}</td></tr>`;
+    })
     .join('');
   const delivery = sale.delivered
     ? 'The PDFs were emailed to the buyer.'

@@ -1,16 +1,18 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Inbox, Mail, MessageSquare, type LucideIcon } from 'lucide-react';
+import { Banknote, Inbox, Mail, MailWarning, MessageSquare, ShoppingBag, type LucideIcon } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { RefreshButton } from '@/components/refresh-button';
 import { StatTile, type TileTone } from '@/components/stat-tile';
 import { api } from '@/lib/api';
+import { formatRand } from '@/lib/programs';
 
 interface OverviewData {
   inquiries: { active: number; new: number };
   newsletter: { subscribers: number };
+  sales: { ordersToday: number; revenueTodayCents: number; emailsNotSent: number };
 }
 
 /** Greeting by the time of day in South Africa. The server renders "Hello"; the browser fills in the rest. */
@@ -23,7 +25,21 @@ function useGreeting() {
   return useSyncExternalStore(noSubscribe, greetingNow, () => 'Hello');
 }
 
-const tiles: { label: string; hint: string; icon: LucideIcon; tone: TileTone; href: string; value: (data: OverviewData) => number }[] = [
+const plural = (n: number, one: string, many: string) => `${n.toLocaleString('en-ZA')} ${n === 1 ? one : many}`;
+
+const tiles: {
+  label: string;
+  hint: string | ((data: OverviewData) => string);
+  icon: LucideIcon;
+  tone: TileTone;
+  href: string;
+  value: (data: OverviewData) => number;
+  format?: (value: number) => string;
+}[] = [
+  // Today = since midnight in South Africa. Paid orders only; test payments count too.
+  { label: 'Sales today', hint: (d) => plural(d.sales.ordersToday, 'paid order so far', 'paid orders so far'), icon: Banknote, tone: 'caramel', href: '/sales', value: (d) => d.sales.revenueTodayCents, format: formatRand },
+  { label: 'Orders today', hint: 'Paid since midnight', icon: ShoppingBag, tone: 'sage', href: '/sales', value: (d) => d.sales.ordersToday },
+  { label: 'PDF emails not sent', hint: (d) => (d.sales.emailsNotSent ? 'Paid, but the PDFs did not go out' : 'Every buyer has their PDFs'), icon: MailWarning, tone: 'terracotta', href: '/sales', value: (d) => d.sales.emailsNotSent },
   { label: 'New enquiries', hint: 'Waiting for a first reply', icon: Inbox, tone: 'terracotta', href: '/inquiries', value: (d) => d.inquiries.new },
   { label: 'Open enquiries', hint: 'Everything not archived', icon: MessageSquare, tone: 'sand', href: '/inquiries', value: (d) => d.inquiries.active },
   { label: 'Newsletter subscribers', hint: 'Confirmed and subscribed', icon: Mail, tone: 'sage', href: '/newsletter?tab=subscribers', value: (d) => d.newsletter.subscribers },
@@ -49,7 +65,7 @@ export function Overview({ firstName }: { firstName: string | null }) {
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {tiles.map((tile, index) => (
-            <StatTile key={tile.label} index={index} href={tile.href} icon={tile.icon} tone={tile.tone} label={tile.label} hint={tile.hint} value={data ? tile.value(data) : undefined} />
+            <StatTile key={tile.label} index={index} href={tile.href} icon={tile.icon} tone={tile.tone} label={tile.label} hint={typeof tile.hint === 'function' ? (data ? tile.hint(data) : ' ') : tile.hint} value={data ? tile.value(data) : undefined} format={tile.format} />
           ))}
         </div>
       )}

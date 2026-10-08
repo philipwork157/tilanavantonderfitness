@@ -1,22 +1,18 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { MailWarning, ShoppingBag } from 'lucide-react';
+import { MailWarning } from 'lucide-react';
 import { useState } from 'react';
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
-import { EmptyState } from '@/components/empty-state';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { PageHeader } from '@/components/page-header';
 import { RefreshButton } from '@/components/refresh-button';
-import { StatusBadge } from '@/components/status-badge';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { api } from '@/lib/api';
-import { formatDateTime } from '@/lib/format';
 import { formatRand } from '@/lib/programs';
-import { orderDeliveryStatus, orderStatus, statusStyle } from '@/lib/status';
 import type { AdminSales } from '@/lib/types';
+import { OrdersSection } from './orders-section';
 
 const PERIODS = [
   { days: 7, label: '7 days' },
@@ -26,7 +22,6 @@ const PERIODS = [
 ];
 
 const revenueChart = { revenue: { label: 'Sales', color: 'var(--tone-terracotta)' } } satisfies ChartConfig;
-const programChart = { sold: { label: 'Sold', color: 'var(--tone-sage)' } } satisfies ChartConfig;
 
 const shortDay = (date: string) => new Intl.DateTimeFormat('en-ZA', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`));
 
@@ -76,7 +71,7 @@ export function SalesView() {
           {data && data.totals.emailsNotSent > 0 && (
             <div role="alert" className="mb-6 flex items-start gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm">
               <MailWarning className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
-              <p><strong>{data.totals.emailsNotSent} paid order{data.totals.emailsNotSent === 1 ? '' : 's'}</strong> could not be emailed. Look for “Email failed” below and send those PDFs by hand.</p>
+              <p><strong>{data.totals.emailsNotSent} paid order{data.totals.emailsNotSent === 1 ? '' : 's'}</strong> could not be emailed. Look for “Email failed” below and use “Email PDFs again”.</p>
             </div>
           )}
 
@@ -102,70 +97,14 @@ export function SalesView() {
             <section aria-labelledby="sales-program" className="min-w-0 rounded-2xl border bg-card p-5">
               <h2 id="sales-program" className="mb-4 text-sm font-extrabold tracking-[0.14em] uppercase">Programs sold</h2>
               {isPending ? <Skeleton className="h-64 w-full" /> : data && data.byProgram.length ? (
-                <ChartContainer config={programChart} className="h-64 w-full">
-                  <BarChart data={data.byProgram} layout="vertical" margin={{ left: 0, right: 12 }} accessibilityLayer>
-                    <CartesianGrid horizontal={false} />
-                    <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
-                    <YAxis type="category" dataKey="label" tickLine={false} axisLine={false} width={120} tickFormatter={(label: string) => label.replace(/ · /, ' ')} />
-                    <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                    <Bar dataKey="sold" fill="var(--color-sold)" radius={6} />
-                  </BarChart>
-                </ChartContainer>
+                <ProgramRanking rows={data.byProgram} />
               ) : (
                 <p className="grid h-64 place-items-center text-sm text-muted-foreground">No programs sold in this period yet.</p>
               )}
             </section>
           </div>
 
-          <section aria-labelledby="sales-orders">
-            <h2 id="sales-orders" className="mb-3 text-sm font-extrabold tracking-[0.14em] uppercase">Latest orders</h2>
-            {!isPending && data?.recent.length === 0 ? (
-              <EmptyState icon={ShoppingBag} title="No orders yet" description={`Nobody has checked out in the last ${period}.`} />
-            ) : (
-              <div className="overflow-hidden rounded-2xl border bg-card">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/40 hover:bg-muted/40">
-                      <TableHead className="px-5">Order</TableHead>
-                      <TableHead className="hidden px-5 md:table-cell">Programs</TableHead>
-                      <TableHead className="hidden px-5 text-right sm:table-cell">Amount</TableHead>
-                      <TableHead className="px-5">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isPending && Array.from({ length: 3 }, (_, i) => (
-                      <TableRow key={i}><TableCell colSpan={4} className="px-5 py-4"><Skeleton className="h-10 w-full" /></TableCell></TableRow>
-                    ))}
-                    {data?.recent.map((order) => {
-                      const status = statusStyle(orderStatus, order.status);
-                      const delivery = statusStyle(orderDeliveryStatus, order.deliveryStatus);
-                      return (
-                        <TableRow key={order.orderNumber}>
-                          <TableCell className="px-5 py-3 whitespace-normal">
-                            <span className="grid">
-                              <span className="font-semibold">{order.buyer} <span className="font-normal text-muted-foreground">· {order.orderNumber}</span></span>
-                              <span className="text-xs break-words text-muted-foreground">{order.email} · {formatDateTime(order.paidAt ?? order.createdAt)}</span>
-                              <span className="text-xs text-muted-foreground md:hidden">{order.programs.join(', ')}<span className="font-semibold text-foreground sm:hidden"> · {formatRand(order.totalCents)}</span></span>
-                            </span>
-                          </TableCell>
-                          <TableCell className="hidden px-5 text-sm whitespace-normal md:table-cell">{order.programs.join(', ')}</TableCell>
-                          <TableCell className="hidden px-5 text-right font-semibold tabular-nums sm:table-cell">{formatRand(order.totalCents)}</TableCell>
-                          <TableCell className="px-5 whitespace-normal">
-                            <span className="flex flex-wrap gap-1.5">
-                              <StatusBadge label={status.label} tone={status.tone} />
-                              {order.status === 'paid' && <StatusBadge label={delivery.label} tone={delivery.tone} />}
-                              {order.testPayment && <StatusBadge label="Test" tone="warning" />}
-                            </span>
-                            {order.deliveryError && <span className="mt-1 block text-xs text-destructive">{order.deliveryError}</span>}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </section>
+          <OrdersSection recent={data?.recent} loading={isPending} period={period} />
         </>
       )}
     </div>
@@ -181,5 +120,39 @@ function Kpi({ label, hint, value }: { label: string; hint: string; value: strin
       </div>
       <p className="mt-2 text-xs text-muted-foreground">{hint}</p>
     </div>
+  );
+}
+
+/**
+ * Programs sold, best seller first. A few programs read better as a ranked
+ * list than as a chart with a number axis: the counts and takings are written
+ * out, and the thin bar only shows each program's share of the best seller.
+ */
+function ProgramRanking({ rows }: { rows: AdminSales['byProgram'] }) {
+  const ranked = [...rows].sort((a, b) => b.sold - a.sold || b.revenueCents - a.revenueCents);
+  const most = Math.max(...ranked.map(row => row.sold), 1);
+  return (
+    <ol className="grid max-h-64 gap-4 overflow-y-auto pr-1">
+      {ranked.map((row) => {
+        const [name, volume] = row.label.split(' · ');
+        return (
+          <li key={row.label} className="grid gap-1.5">
+            <div className="flex items-baseline justify-between gap-3 text-sm">
+              <span className="min-w-0 truncate">
+                <span className="font-semibold">{name}</span>
+                {volume && <span className="text-muted-foreground"> · {volume}</span>}
+              </span>
+              <span className="shrink-0 tabular-nums">
+                <span className="font-semibold">{row.sold.toLocaleString('en-ZA')} sold</span>
+                <span className="text-muted-foreground"> · {formatRand(row.revenueCents)}</span>
+              </span>
+            </div>
+            <div className="h-2 rounded-full bg-muted" aria-hidden>
+              <div className="h-full rounded-full bg-tone-sage" style={{ width: `${Math.max((row.sold / most) * 100, 2)}%` }} />
+            </div>
+          </li>
+        );
+      })}
+    </ol>
   );
 }

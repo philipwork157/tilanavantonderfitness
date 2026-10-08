@@ -7,6 +7,8 @@ export function createDatabase(connectionString: string, options: { max?: number
     // Supabase's transaction pooler does not support prepared statements.
     prepare: false,
     max: options.max ?? 5,
+    // Close connections idle for 20 s, so unused ones go back to the pooler.
+    idle_timeout: 20,
   });
   return { db: drizzle(client, { schema }), close: () => client.end() };
 }
