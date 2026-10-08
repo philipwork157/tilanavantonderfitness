@@ -5,7 +5,7 @@ import { readCheckoutStatus } from './checkout-status';
 export function checkoutStatusMessage(result: CheckoutStatusResponse) {
   const messages = {
     pending: ['Payment is still processing', 'We have not yet confirmed the payment. Please check again shortly. Do not start another payment until this one is confirmed. Contact Tilana with the payment reference below if you need help.'],
-    succeeded: ['Payment received', `Thank you. Your order${result.orderNumber ? ` ${result.orderNumber}` : ''} is confirmed. Use your purchase email address to access your programs.`],
+    succeeded: ['Payment received', `Thank you. Your order${result.orderNumber ? ` ${result.orderNumber}` : ''} is confirmed. Your programs are on their way to your inbox.`],
     partially_refunded: ['Payment partially refunded', 'Your payment was received and a partial refund has been recorded. Access to the programs from this order remains active. Use your purchase email address to sign in. Contact Tilana with the payment reference below for refund questions.'],
     refunded: ['Payment refunded', 'Your payment was received and a full refund has been recorded. Access granted by this order has been removed. Any access from other valid purchases is unaffected. Contact Tilana with the payment reference below for refund questions.'],
     reversed: ['Payment reversed', 'The payment has been reversed and access granted by this order has been removed. Any access from other valid purchases is unaffected. Contact Tilana with the payment reference below before starting another checkout.'],
@@ -15,9 +15,9 @@ export function checkoutStatusMessage(result: CheckoutStatusResponse) {
   const [heading, message] = messages[result.status];
   const access = result.status === 'succeeded' || result.status === 'partially_refunded';
   const delivery = result.deliveryStatus === 'sent' ? ' Your program email has been sent. Please check your inbox and spam folder.'
-    : result.deliveryStatus === 'retrying' ? ' Your payment is confirmed, but the program email is delayed. We will retry automatically. You can also use Access my programs below.'
-    : result.deliveryStatus === 'pending' ? ' We are preparing your program email. You can also use Access my programs below.'
-    : result.deliveryStatus === 'canceled' || result.deliveryStatus === 'unavailable' ? ' Program email delivery is unavailable. Please contact Tilana with your payment reference.' : '';
+    : result.deliveryStatus === 'retrying' ? ' Your payment is confirmed, but the program email is delayed. We will retry automatically.'
+    : result.deliveryStatus === 'pending' ? ' We are preparing your program email now; it should arrive within a few minutes.'
+    : result.deliveryStatus === 'canceled' || result.deliveryStatus === 'unavailable' ? ' We could not email your programs automatically. Tilana has been told and will send them to you; you can also contact her with your order number.' : '';
   return { heading, message: message + (access ? delivery : ''), access,
     retry: result.status === 'failed' || result.status === 'abandoned', recheck: result.status === 'pending' };
 }

@@ -285,6 +285,68 @@ export const programs = pgTable('programs', {
   index('programs_volume_order_idx').on(table.volumeId, table.sortOrder),
 ]).enableRLS();
 
+export const ORDER_STATUSES = ['pending', 'paid', 'failed', 'abandoned'] as const;
+export const ORDER_DELIVERY_STATUSES = ['pending', 'sent', 'failed'] as const;
+
+/**
+ * A checkout. Created as `pending` before the buyer goes to Paystack; becomes
+ * `paid` only after the server has verified the payment with Paystack
+ * (status, amount, currency and test/live mode). The PDFs are emailed once.
+ */
+export const orders = pgTable('orders', {
+  id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  // Shown to the buyer and in emails, e.g. "TV-7K4Q9P".
+  orderNumber: text('order_number').notNull().unique(),
+  // The Paystack transaction reference we generate.
+  reference: text('reference').notNull().unique(),
+  // The browser's checkout attempt: a retry with the same key reuses this order.
+  idempotencyKey: text('idempotency_key').notNull().unique(),
+  status: text('status', { enum: ORDER_STATUSES }).notNull().default('pending'),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  // Stored lowercase.
+  email: text('email').notNull(),
+  phone: text('phone').notNull().default(''),
+  totalCents: integer('total_cents').notNull(),
+  currency: text('currency').notNull().default('ZAR'),
+  // Paystack test or live mode at the time of checkout.
+  paymentMode: text('payment_mode', { enum: ['test', 'live'] }).notNull(),
+  authorizationUrl: text('authorization_url'),
+  paystackTransactionId: text('paystack_transaction_id'),
+  paymentChannel: text('payment_channel'),
+  paidAt: timestamp('paid_at', { withTimezone: true }),
+  deliveryStatus: text('delivery_status', { enum: ORDER_DELIVERY_STATUSES }).notNull().default('pending'),
+  deliveryError: text('delivery_error'),
+  deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+  ...timestamps,
+}, table => [
+  check('orders_status_valid', sql`${table.status} in ('pending', 'paid', 'failed', 'abandoned')`),
+  check('orders_delivery_status_valid', sql`${table.deliveryStatus} in ('pending', 'sent', 'failed')`),
+  check('orders_payment_mode_valid', sql`${table.paymentMode} in ('test', 'live')`),
+  check('orders_total_valid', sql`${table.totalCents} > 0`),
+  check('orders_currency_valid', sql`${table.currency} = 'ZAR'`),
+  check('orders_paid_has_date', sql`${table.status} <> 'paid' or ${table.paidAt} is not null`),
+  index('orders_status_created_idx').on(table.status, table.createdAt),
+  index('orders_paid_at_idx').on(table.paidAt),
+]).enableRLS();
+
+/** What was bought, with the name and price at the time of sale. */
+export const orderItems = pgTable('order_items', {
+  id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  orderId: bigint('order_id', { mode: 'number' }).notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  // Kept even if the program is deleted later (then null).
+  programId: bigint('program_id', { mode: 'number' }).references(() => programs.id, { onDelete: 'set null' }),
+  slug: text('slug').notNull(),
+  // "Beginner · Volume 1"
+  label: text('label').notNull(),
+  priceCents: integer('price_cents').notNull(),
+  ...timestamps,
+}, table => [
+  check('order_items_price_valid', sql`${table.priceCents} > 0`),
+  index('order_items_order_idx').on(table.orderId),
+  index('order_items_program_idx').on(table.programId),
+]).enableRLS();
+
 export type User = typeof users.$inferSelect;
 export type BlogPost = typeof blogPosts.$inferSelect;
 export type Inquiry = typeof inquiries.$inferSelect;
@@ -294,3 +356,5 @@ export type NewsletterCampaign = typeof newsletterCampaigns.$inferSelect;
 export type NewsletterDelivery = typeof newsletterDeliveries.$inferSelect;
 export type Program = typeof programs.$inferSelect;
 export type Volume = typeof volumes.$inferSelect;
+export type Order = typeof orders.$inferSelect;
+export type OrderItem = typeof orderItems.$inferSelect;

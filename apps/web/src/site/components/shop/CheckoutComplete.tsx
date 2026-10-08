@@ -18,7 +18,7 @@ const referencePattern = /^[A-Za-z0-9.=-]{10,160}$/;
  * The page Paystack returns customers to. The outcome always comes from the
  * server (verified payment status), never from the redirect itself.
  */
-export default function CheckoutComplete({ checkoutHref, programsHref, homeHref, accountHref }: { checkoutHref: string; programsHref: string; homeHref: string; accountHref: string }) {
+export default function CheckoutComplete({ checkoutHref, programsHref, homeHref, contactHref }: { checkoutHref: string; programsHref: string; homeHref: string; contactHref: string }) {
   const [view, setView] = useState<View>({ kind: 'checking' });
   const [reference, setReference] = useState('');
 
@@ -64,13 +64,13 @@ export default function CheckoutComplete({ checkoutHref, programsHref, homeHref,
             <h2>What happens next</h2>
             <ol className="done-next">
               <li><b>01</b><span><strong>Check your inbox</strong>Your programs are emailed to the address you used at checkout, with the PDFs attached.</span></li>
-              <li><b>02</b><span><strong>Access them any time</strong>Sign in with the same email and you’ll get a secure sign-in link. No password needed.</span></li>
+              <li><b>02</b><span><strong>Keep them safe</strong>Save the PDFs to your phone or computer. They are yours to keep. Lost the email? Just ask Tilana to send it again.</span></li>
               <li><b>03</b><span><strong>Start moving</strong>Open your program and start at the beginning. Questions? Just send Tilana a message.</span></li>
             </ol>
 
             <div className="done-actions">
-              <a className="btn btn-primary" href={accountHref}>Access my programs</a>
-              <a className="btn btn-ghost" href={homeHref}>Back to the homepage</a>
+              <a className="btn btn-primary" href={homeHref}>Back to the homepage</a>
+              <a className="btn btn-ghost" href={contactHref}>Contact Tilana</a>
             </div>
           </motion.div>
         )}

@@ -141,3 +141,23 @@ export interface AdminProgram {
   file: { name: string; sizeBytes: number; version: number; uploadedAt: string } | null;
   updatedAt: string;
 }
+
+export interface AdminSales {
+  days: number;
+  totals: { revenueCents: number; orders: number; programsSold: number; awaitingPayment: number; emailsNotSent: number };
+  daily: { date: string; orders: number; revenueCents: number }[];
+  byProgram: { label: string; sold: number; revenueCents: number }[];
+  recent: {
+    orderNumber: string;
+    createdAt: string;
+    paidAt: string | null;
+    buyer: string;
+    email: string;
+    totalCents: number;
+    status: 'pending' | 'paid' | 'failed' | 'abandoned';
+    deliveryStatus: 'pending' | 'sent' | 'failed';
+    deliveryError: string | null;
+    testPayment: boolean;
+    programs: string[];
+  }[];
+}

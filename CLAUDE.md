@@ -221,8 +221,35 @@ Keep public deployment functional. An ignored archive is not a remote backup.
   (barbell / breath / plate), `step` sets the barbell's plates and `tone` the
   colour. A new kind of drawing needs a new illustration value plus SVG in
   `ProgramArt.astro`. The quiz matches programs by step and drawing, not by name.
-- Not built yet: checkout/Paystack for these programs, orders, the delivery
-  runner and the resend form.
+- Not built yet: refunds, a "resend my PDFs" form and automatic retries of
+  failed delivery emails.
+
+## Payments (Paystack)
+
+- Flow: the website posts the basket to `POST /api/checkout/paystack/basket`
+  (Turnstile, honeypot, rate limit). The admin re-checks every program is on
+  the website and every price against the database (409 if changed), saves a
+  `pending` order (`orders` + `order_items`, prices and names as sold) and
+  returns Paystack's hosted payment page. A retry with the same
+  `idempotencyKey` reuses the order; a finished one answers 409 with
+  `data.reference` so the website shows its status instead of charging twice.
+  If Paystack cannot start the payment the order is deleted (no money moved).
+- An order becomes `paid` only after `transaction/verify` confirms status,
+  reference, amount, currency ZAR and test/live mode. Two paths check:
+  `GET /api/checkout/status?reference=` (the website's payment-complete page)
+  and `POST /api/webhooks/paystack` (HMAC-SHA512 signature of the raw body with
+  the secret key; then verified again). The conditional update to `paid`
+  returns a row to exactly one caller, which emails the PDFs after the
+  response (`afterResponse`) and records `delivery_status` sent/failed, then
+  emails Tilana ("New sale", to `CONTACT_NOTIFY_TO`). Never mark an order paid
+  from the browser redirect.
+- Settings: `PAYSTACK_SECRET_KEY` and `PAYSTACK_MODE` (test/live); checkout
+  refuses to start when the key prefix and mode disagree. Paystack cannot reach
+  localhost, so in development the status check confirms payments; set the
+  webhook URL in Paystack once the admin is online.
+- Admin: Sales (`/sales`) shows paid sales per day and per program (Recharts
+  via `components/ui/chart.tsx`), totals and the latest orders with their
+  email status. Test-mode orders are marked "Test".
 
 ## Admin UI
 

@@ -316,7 +316,7 @@ export default function Checkout({ programsHref, completeHref, refundHref, priva
           <ul className="co-promises">
             <li>One secure Paystack payment</li>
             <li>No account needed before payment</li>
-            <li>Your programs are emailed to you and linked to your email address</li>
+            <li>Your programs are emailed to you as PDFs, straight after payment</li>
           </ul>
         </aside>
       </div>

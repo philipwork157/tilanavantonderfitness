@@ -46,3 +46,16 @@ export const subscriberStatus: Record<string, StatusStyle> = {
 export function statusStyle(map: Record<string, StatusStyle>, value: string): StatusStyle {
   return map[value] ?? { label: value, tone: 'neutral' };
 }
+
+export const orderStatus: Record<string, StatusStyle> = {
+  paid: { label: 'Paid', tone: 'success' },
+  pending: { label: 'Awaiting payment', tone: 'info' },
+  failed: { label: 'Payment failed', tone: 'danger' },
+  abandoned: { label: 'Not completed', tone: 'neutral' },
+};
+
+export const orderDeliveryStatus: Record<string, StatusStyle> = {
+  sent: { label: 'PDFs emailed', tone: 'success' },
+  pending: { label: 'Sending PDFs', tone: 'info' },
+  failed: { label: 'Email failed', tone: 'danger' },
+};

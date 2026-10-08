@@ -31,6 +31,10 @@ export function serverConfig() {
     r2DownloadAccessKeyId: env.R2_DOWNLOAD_ACCESS_KEY_ID ?? '',
     r2DownloadSecretAccessKey: env.R2_DOWNLOAD_SECRET_ACCESS_KEY ?? '',
     turnstileSecretKey: env.TURNSTILE_SECRET_KEY ?? '',
+    /** Server-only Paystack secret key: sk_test_... in development, sk_live_... in production. */
+    paystackSecretKey: env.PAYSTACK_SECRET_KEY ?? '',
+    /** "test" or "live"; must match the key, so a live key is never used by accident. */
+    paystackMode: env.PAYSTACK_MODE ?? '',
     /** Website origins allowed to call the public endpoints (comma separated). */
     websiteOrigins: env.WEBSITE_ORIGINS ?? '',
     /** Public website address used in email links, e.g. https://tilanavantonder.co.za. */

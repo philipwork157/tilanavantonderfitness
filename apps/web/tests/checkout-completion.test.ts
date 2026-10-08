@@ -7,7 +7,7 @@ const response = (status: CheckoutStatusResponse['status']) => new Response(JSON
 const setup = () => ({ fetch: vi.fn<typeof fetch>(), pause: vi.fn(async () => {}), clearPaid: vi.fn(async () => {}), retireIntent: vi.fn(async () => {}) });
 
 describe('verified checkout completion', () => {
-  it.each([['pending', 'preparing'], ['retrying', 'retry automatically'], ['sent', 'has been sent'], ['canceled', 'contact Tilana'], ['unavailable', 'email delivery is unavailable']] as const)('shows %s email delivery without falsely failing a paid order', (deliveryStatus, copy) => {
+  it.each([['pending', 'preparing'], ['retrying', 'retry automatically'], ['sent', 'has been sent'], ['canceled', 'contact her'], ['unavailable', 'could not email your programs']] as const)('shows %s email delivery without falsely failing a paid order', (deliveryStatus, copy) => {
       const result = checkoutStatusMessage({ status: 'succeeded', orderNumber: 'WEB-123', deliveryStatus });
       expect(result).toMatchObject({ heading: 'Payment received', access: true }); expect(result.message).toContain(copy);
       expect(checkoutStatusMessage({ status: 'failed', orderNumber: 'WEB-123', deliveryStatus })).toEqual(
