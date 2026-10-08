@@ -36,9 +36,11 @@ export function VolumeSwitch({ volume }: { volume: Pick<AdminVolume, 'id' | 'nam
     onError: (error) => toast.error('Not changed', { description: message(error, 'Please try again.') }),
   });
 
+  // Only the switch and its label react to clicks; the wrapper also keeps clicks
+  // (including those in the portalled dialog) from reaching the table row.
   return (
-    <>
-      <label htmlFor={id} className="flex items-center gap-3 text-sm font-semibold">
+    <span className="inline-flex" onClick={(event) => event.stopPropagation()}>
+      <label htmlFor={id} className="inline-flex w-fit cursor-pointer items-center gap-3 text-sm font-semibold">
         <Switch
           id={id}
           checked={volume.isActive}
@@ -59,6 +61,6 @@ export function VolumeSwitch({ volume }: { volume: Pick<AdminVolume, 'id' | 'nam
         pending={change.isPending}
         onConfirm={() => change.mutate(false)}
       />
-    </>
+    </span>
   );
 }

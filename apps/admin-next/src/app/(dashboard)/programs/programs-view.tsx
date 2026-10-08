@@ -84,7 +84,7 @@ export function ProgramsView() {
                     </NavLink>
                   </TableCell>
                   <TableCell className="hidden px-5 text-sm sm:table-cell">{programSummary(volume)}</TableCell>
-                  <TableCell className="px-5" onClick={(e) => e.stopPropagation()}>
+                  <TableCell className="px-5">
                     <VolumeSwitch volume={volume} />
                   </TableCell>
                   <TableCell className="px-3 text-muted-foreground"><ChevronRight className="size-4" aria-hidden /></TableCell>
