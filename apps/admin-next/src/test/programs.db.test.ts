@@ -68,11 +68,12 @@ describe.skipIf(!url)('volumes and programs (database)', () => {
     expect((await listVolumePrograms(db, live)).every(program => program.volumeId === live.id)).toBe(true);
   });
 
-  it('shows the website only programs with a PDF in a volume that is on', async () => {
+  it('shows the website only switched-on programs with a PDF in a volume that is on', async () => {
     await db.insert(programs).values([
       { volumeId: live.id, slug: 'test-web-live', name: 'Live', priceCents: 39_900, sortOrder: 1, ...pdf },
       { volumeId: live.id, slug: 'test-web-no-pdf', name: 'No PDF', priceCents: 39_900, sortOrder: 2 },
       { volumeId: hidden.id, slug: 'test-web-hidden', name: 'Hidden', priceCents: 49_900, ...pdf },
+      { volumeId: live.id, slug: 'test-web-off', name: 'Off', priceCents: 39_900, isActive: false, ...pdf },
     ]);
 
     const website = (await listWebsitePrograms(db)).filter(program => program.slug.startsWith('test-web-'));
@@ -96,7 +97,7 @@ describe.skipIf(!url)('volumes and programs (database)', () => {
 
     const forSale = publicCatalogueVolumeResponseSchema.parse(await (await getPublicVolume(fromWebsite, params('test-web-live'))).json());
     expect(forSale.volume).toMatchObject({ slug: 'test-web-live', name: 'Live · Volume 90', priceCents: 39_900, isAvailable: true });
-    for (const slug of ['test-web-no-pdf', 'test-web-hidden']) {
+    for (const slug of ['test-web-no-pdf', 'test-web-hidden', 'test-web-off']) {
       const notSold = publicCatalogueVolumeResponseSchema.parse(await (await getPublicVolume(fromWebsite, params(slug))).json());
       expect(notSold.volume.isAvailable).toBe(false);
     }

@@ -254,6 +254,9 @@ export const programs = pgTable('programs', {
   // Short label on the colour panel, e.g. "Start here" or "Pelvic floor".
   marker: text('marker').notNull().default(''),
   sortOrder: integer('sort_order').notNull().default(0),
+  // Tilana's on/off switch for this program alone. It is on the website only
+  // when this is on, its volume is on and it has a PDF.
+  isActive: boolean('is_active').notNull().default(true),
   volumeId: bigint('volume_id', { mode: 'number' }).notNull().references(() => volumes.id, { onDelete: 'restrict' }),
   priceCents: integer('price_cents').notNull(),
   currency: text('currency').notNull().default('ZAR'),

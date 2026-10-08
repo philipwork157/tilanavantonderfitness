@@ -59,3 +59,6 @@ export type ProgramIllustration = (typeof PROGRAM_ILLUSTRATIONS)[number];
 export type ProgramSeries = (typeof PROGRAM_SERIES)[number];
 export type ProgramInput = z.infer<typeof programInputSchema>;
 export type UpdateVolumeRequest = z.infer<typeof updateVolumeRequestSchema>;
+
+/** A program's own website switch (its volume must be on and it needs a PDF too). */
+export const programWebsiteRequestSchema = z.object({ isActive: z.boolean() });

@@ -195,8 +195,10 @@ Keep public deployment functional. An ignored archive is not a remote backup.
   Each program has its own website text, drawing, price and PDF. In the admin:
   Programs → a table of volumes (each with an on/off switch) → open a volume
   to add its programs → open a program to edit it.
-- A program is on the website when its volume is switched on and it has a
-  PDF. There is no separate publish step. New volumes start switched off.
+- A program is on the website when its volume is switched on, its own
+  switch is on (`programs.is_active`, on each card in the volume and in the
+  editor; quick, with Undo) and it has a PDF. There is no separate publish
+  step. New volumes start switched off; new programs start switched on.
   A volume with programs cannot be deleted.
 - A program's slug is its public identity (`beginner-volume-1`): basket,
   checkout (`/api/public/program-volumes/<slug>`, the old catalogue URL and

@@ -6,6 +6,7 @@ import { useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
+import { BackLink } from '@/components/back-link';
 import { NavLink } from '@/components/nav-link';
 import { PageHeader } from '@/components/page-header';
 import { RefreshButton } from '@/components/refresh-button';
@@ -20,6 +21,7 @@ import { useNavigate } from '@/lib/navigation-progress';
 import { formatRand, parseRand, toneClass } from '@/lib/programs';
 import type { AdminProgram, AdminVolume } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { ProgramSwitch } from '../../program-switch';
 import { VolumeSwitch } from '../../volume-switch';
 
 const message = (error: unknown, fallback: string) => (error instanceof ApiError ? error.message : fallback);
@@ -88,9 +90,7 @@ export function VolumeView({ id }: { id: number }) {
 
   return (
     <div className="mx-auto w-full max-w-6xl">
-      <Button asChild variant="link" className="mb-4 px-0 text-muted-foreground">
-        <NavLink href="/programs"><ArrowLeft /> All volumes</NavLink>
-      </Button>
+      <BackLink href="/programs" className="mb-5">All volumes</BackLink>
 
       <PageHeader
         eyebrow="Programs"
@@ -105,7 +105,7 @@ export function VolumeView({ id }: { id: number }) {
             <h2 id="volume-website" className="flex items-center gap-2 font-semibold"><Globe className="size-4" aria-hidden /> Show {volume.name} on the website</h2>
             <p className="text-sm text-muted-foreground">
               {volume.isActive
-                ? `On: ${volume.readyCount} of ${volume.programCount} program${volume.programCount === 1 ? '' : 's'} on the website (the others still need a PDF).`
+                ? `On: ${volume.liveCount} of ${volume.programCount} program${volume.programCount === 1 ? '' : 's'} on the website${volume.liveCount < volume.programCount ? ' (the others need a PDF or are switched off)' : ''}.`
                 : 'Off: none of these programs are on the website. Switch it on when they are ready.'}
             </p>
           </div>
@@ -172,24 +172,26 @@ export function VolumeView({ id }: { id: number }) {
 }
 
 function ProgramCard({ program }: { program: AdminProgram }) {
+  // The card opens the program; the switch sits in its own footer (a switch
+  // inside a link would be invalid HTML and would open the page on click).
   return (
-    <li>
+    <li className="grid overflow-hidden rounded-2xl border bg-card transition-shadow has-[a:hover]:shadow-[4px_4px_0_var(--hard-shadow)] motion-reduce:transition-none">
       <NavLink
         href={`/programs/${program.id}`}
-        className="group grid h-full overflow-hidden rounded-2xl border bg-card transition-shadow hover:shadow-[4px_4px_0_var(--hard-shadow)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+        className="group grid focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset"
       >
-        <div className={cn('grid gap-1 border-b px-5 py-4', toneClass[program.tone])}>
+        <div className={cn('grid gap-1 border-b px-5 py-4', toneClass[program.tone], !program.isActive && 'opacity-60')}>
           <span className="text-[0.68rem] font-extrabold tracking-[0.16em] uppercase opacity-80">
             {program.series === 'strength' ? `Strength series · step ${program.step}` : 'Focus program'}
           </span>
           <span className="font-heading text-2xl font-bold italic">{program.name}</span>
           {program.audience && <span className="text-xs font-semibold opacity-80">{program.audience}</span>}
         </div>
-        <div className="grid content-start gap-3 p-5">
+        <div className="grid content-start gap-3 px-5 pt-4 pb-3">
           <div className="flex flex-wrap items-center gap-2">
             {program.onWebsite
               ? <StatusBadge label="On the website" tone="success" icon={Globe} />
-              : <StatusBadge label="Not on the website" tone="neutral" />}
+              : <StatusBadge label={program.isActive ? 'Not on the website' : 'Switched off'} tone="neutral" />}
             {program.file
               ? <StatusBadge label="PDF ready" tone="success" icon={FileCheck2} />
               : <StatusBadge label="PDF missing" tone="warning" icon={CircleAlert} />}
@@ -200,6 +202,10 @@ function ProgramCard({ program }: { program: AdminProgram }) {
           </p>
         </div>
       </NavLink>
+      <div className="flex items-center justify-between gap-3 border-t bg-muted/30 px-5 py-2.5">
+        <span className="text-sm text-muted-foreground">Show on the website</span>
+        <ProgramSwitch program={program} />
+      </div>
     </li>
   );
 }

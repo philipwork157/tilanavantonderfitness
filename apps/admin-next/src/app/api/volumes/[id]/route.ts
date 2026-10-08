@@ -15,7 +15,12 @@ export const GET = handle(async (_request: Request, context: IdContext) => {
   if (!volume) throw new HttpError(404, 'Volume not found.');
   const rows = await listVolumePrograms(db, volume);
   return Response.json({
-    volume: toAdminVolume({ ...volume, programCount: rows.length, readyCount: rows.filter(row => row.filePath).length }),
+    volume: toAdminVolume({
+      ...volume,
+      programCount: rows.length,
+      readyCount: rows.filter(row => row.filePath).length,
+      liveCount: rows.filter(row => row.filePath && row.isActive).length,
+    }),
     programs: rows.map(toAdminProgram),
   });
 });

@@ -19,7 +19,8 @@ export function Panel({ title, titleId, hint, danger, children }: {
 
 export function Field({ id, label, hint, children }: { id: string; label: string; hint?: string; children: ReactNode }) {
   return (
-    <div className="grid gap-2">
+    // content-start: a field without a hint must not stretch to its neighbour's height.
+    <div className="grid content-start gap-2">
       <Label htmlFor={id}>{label}</Label>
       {children}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}

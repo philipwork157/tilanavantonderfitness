@@ -6,6 +6,7 @@ import { ArrowLeft, EyeOff, Globe, ImageIcon, Loader2, Save, Send, Trash2, Uploa
 import { useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { MarkdownEditor } from '@/components/markdown-editor';
+import { BackLink } from '@/components/back-link';
 import { NavLink } from '@/components/nav-link';
 import { StatusBadge } from '@/components/status-badge';
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -177,9 +178,7 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
   return (
     <div className="mx-auto w-full max-w-6xl">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <Button asChild variant="link" className="px-0 text-muted-foreground">
-          <NavLink href="/blog"><ArrowLeft /> All posts</NavLink>
-        </Button>
+        <BackLink href="/blog">All posts</BackLink>
         {dirty && <span className="text-sm font-semibold text-status-warning">Unsaved changes</span>}
       </div>
 

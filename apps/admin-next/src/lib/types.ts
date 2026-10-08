@@ -113,6 +113,7 @@ export interface AdminVolume {
   programCount: number;
   /** Programs with a PDF (the ones the website can show). */
   readyCount: number;
+  liveCount: number;
   updatedAt: string;
 }
 
@@ -135,6 +136,7 @@ export interface AdminProgram {
   /** "Beginner · Volume 1": the name in the basket and emails. */
   label: string;
   volume: Pick<AdminVolume, 'id' | 'number' | 'name' | 'isActive'>;
+  isActive: boolean;
   onWebsite: boolean;
   /** Why it is not on the website, when it is not. */
   offWebsiteReason: string | null;

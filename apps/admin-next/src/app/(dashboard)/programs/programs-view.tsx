@@ -102,5 +102,10 @@ function programSummary(volume: AdminVolume): string {
   if (volume.programCount === 0) return 'No programs yet';
   const programs = `${volume.programCount} program${volume.programCount === 1 ? '' : 's'}`;
   const missing = volume.programCount - volume.readyCount;
-  return missing ? `${programs} · ${missing} without a PDF` : `${programs} · all with a PDF`;
+  const switchedOff = volume.readyCount - volume.liveCount;
+  return [
+    programs,
+    missing ? `${missing} without a PDF` : 'all with a PDF',
+    switchedOff ? `${switchedOff} switched off` : null,
+  ].filter(Boolean).join(' · ');
 }

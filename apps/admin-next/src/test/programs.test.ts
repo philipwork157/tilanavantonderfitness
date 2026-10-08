@@ -77,15 +77,18 @@ describe('program rules', () => {
     expect(programLabel('Beginner', { name: 'Volume 2' })).toBe('Beginner · Volume 2');
   });
 
-  it('shows a program on the website when its volume is on and it has a PDF', () => {
+  it('shows a program on the website when it and its volume are on and it has a PDF', () => {
     const on = { isActive: true, name: 'Volume 1' };
     const off = { isActive: false, name: 'Volume 2' };
-    expect(isOnWebsite({ filePath: 'programs/1/v1.pdf' }, on)).toBe(true);
-    expect(isOnWebsite({ filePath: null }, on)).toBe(false);
-    expect(isOnWebsite({ filePath: 'programs/1/v1.pdf' }, off)).toBe(false);
-    expect(offWebsiteReason({ filePath: null }, on)).toBe('Upload the PDF to show it on the website.');
-    expect(offWebsiteReason({ filePath: 'programs/1/v1.pdf' }, off)).toBe('Volume 2 is switched off.');
-    expect(offWebsiteReason({ filePath: 'programs/1/v1.pdf' }, on)).toBeNull();
+    const ready = { filePath: 'programs/1/v1.pdf', isActive: true };
+    expect(isOnWebsite(ready, on)).toBe(true);
+    expect(isOnWebsite({ ...ready, filePath: null }, on)).toBe(false);
+    expect(isOnWebsite(ready, off)).toBe(false);
+    expect(isOnWebsite({ ...ready, isActive: false }, on)).toBe(false);
+    expect(offWebsiteReason({ ...ready, filePath: null }, on)).toBe('Upload the PDF to show it on the website.');
+    expect(offWebsiteReason(ready, off)).toBe('Volume 2 is switched off.');
+    expect(offWebsiteReason({ ...ready, isActive: false }, on)).toBe('Switch it on to show it on the website.');
+    expect(offWebsiteReason(ready, on)).toBeNull();
   });
 
   it('requires a step for the strength series only', () => {

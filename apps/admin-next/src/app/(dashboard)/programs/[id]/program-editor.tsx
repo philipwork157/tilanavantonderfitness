@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Globe, Loader2, Save, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { BackLink } from '@/components/back-link';
 import { NavLink } from '@/components/nav-link';
 import { StatusBadge } from '@/components/status-badge';
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -22,6 +23,7 @@ import { useUnsavedGuard } from '@/lib/use-unsaved-guard';
 import { cn } from '@/lib/utils';
 import { Field, Panel } from './editor-parts';
 import { PdfPanel } from './pdf-panel';
+import { ProgramSwitch } from '../program-switch';
 
 const message = (error: unknown, fallback: string) => (error instanceof ApiError ? error.message : fallback);
 
@@ -77,15 +79,16 @@ export function ProgramEditor({ id }: { id: number }) {
       </div>
     );
   }
-  return <EditorForm initial={data.program} />;
+  // The form keeps its own copy of the text; status and PDF details always
+  // come from the latest server data (another tab, the volume page's switch).
+  return <EditorForm key={id} program={data.program} />;
 }
 
-function EditorForm({ initial }: { initial: AdminProgram }) {
+function EditorForm({ program }: { program: AdminProgram }) {
   const router = useNavigate();
   const queryClient = useQueryClient();
-  const [program, setProgram] = useState(initial);
-  const [form, setForm] = useState(() => toForm(initial));
-  const [savedJson, setSavedJson] = useState(() => JSON.stringify(toForm(initial)));
+  const [form, setForm] = useState(() => toForm(program));
+  const [savedJson, setSavedJson] = useState(() => JSON.stringify(toForm(program)));
   const [deleteOpen, setDeleteOpen] = useState(false);
   const dirty = JSON.stringify(form) !== savedJson;
   const slugLocked = program.onWebsite;
@@ -96,7 +99,6 @@ function EditorForm({ initial }: { initial: AdminProgram }) {
 
   /** Keeps unsaved text edits when only the PDF changed on the server. */
   function applyFile(next: AdminProgram) {
-    setProgram(next);
     queryClient.setQueryData(['program', next.id], { program: next });
     void queryClient.invalidateQueries({ queryKey: ['volume', next.volume.id] });
     void queryClient.invalidateQueries({ queryKey: ['volumes'] });
@@ -135,37 +137,37 @@ function EditorForm({ initial }: { initial: AdminProgram }) {
 
   return (
     <div className="mx-auto w-full max-w-6xl">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <Button asChild variant="link" className="px-0 text-muted-foreground">
-          <NavLink href={`/programs/volumes/${program.volume.id}`}><ArrowLeft /> {program.volume.name}</NavLink>
-        </Button>
-        {dirty && <span className="text-sm font-semibold text-status-warning">Unsaved changes</span>}
-      </div>
+      <BackLink href={`/programs/volumes/${program.volume.id}`} className="mb-5">{program.volume.name}</BackLink>
 
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="mb-2 text-xs font-extrabold tracking-[0.2em] text-brand-text uppercase">{program.volume.name} · Program</p>
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+        <div className="grid min-w-0 gap-2">
+          <p className="text-xs font-extrabold tracking-[0.2em] text-brand-text uppercase">{program.volume.name} · Program</p>
           <h1 className="font-heading text-3xl font-bold tracking-tight break-words md:text-4xl">{form.name || 'Untitled program'}</h1>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+            {program.onWebsite
+              ? <StatusBadge label="On the website" tone="success" icon={Globe} />
+              : <StatusBadge label={program.isActive ? 'Not on the website' : 'Switched off'} tone="neutral" />}
+            {program.offWebsiteReason && <span>{program.offWebsiteReason}</span>}
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {program.onWebsite
-            ? <StatusBadge label="On the website" tone="success" icon={Globe} />
-            : <StatusBadge label="Not on the website" tone="neutral" />}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-3 rounded-full border bg-card py-1.5 pr-4 pl-4">
+            <span className="text-sm text-muted-foreground">Show on the website</span>
+            <ProgramSwitch program={program} />
+          </div>
+          {dirty && <span className="text-sm font-semibold text-status-warning">Unsaved changes</span>}
           <Button className="rounded-full" disabled={!dirty || priceCents === null || save.isPending} onClick={() => save.mutate()}>
             {save.isPending ? <Loader2 className="animate-spin" /> : <Save />} Save
           </Button>
         </div>
-      </div>
-      {program.offWebsiteReason && (
-        <p className="-mt-3 mb-5 text-sm text-muted-foreground">Not on the website yet: {program.offWebsiteReason}</p>
-      )}
+      </header>
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="grid gap-5">
           <Panel title="On the website" titleId="content-heading">
             <div className="grid gap-4 md:grid-cols-2">
               <Field id="name" label="Name">
-                <Input id="name" value={form.name} onChange={(e) => set('name', e.target.value)} maxLength={60} className="h-11 text-lg font-semibold" />
+                <Input id="name" value={form.name} onChange={(e) => set('name', e.target.value)} maxLength={60} />
               </Field>
               <Field id="audience" label="Who it is for" hint="Shown under the name, e.g. “New or returning”.">
                 <Input id="audience" value={form.audience} onChange={(e) => set('audience', e.target.value)} maxLength={80} />

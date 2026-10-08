@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
+import { BackLink } from '@/components/back-link';
 import { NavLink } from '@/components/nav-link';
 import { RefreshButton } from '@/components/refresh-button';
 import { StatusBadge } from '@/components/status-badge';
@@ -212,9 +213,7 @@ function Campaign({ data, refetch, refetching }: { data: CampaignDetail; refetch
   return (
     <div className="mx-auto w-full max-w-6xl">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <Button asChild variant="link" className="px-0 text-muted-foreground">
-          <NavLink href="/newsletter"><ArrowLeft /> All emails</NavLink>
-        </Button>
+        <BackLink href="/newsletter">All emails</BackLink>
         {dirty && <span className="text-sm font-semibold text-status-warning">Unsaved changes</span>}
       </div>
 

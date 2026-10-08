@@ -5,7 +5,7 @@ import { programs, volumes, type Database, type Program, type Volume } from '@ti
 
 /*
  * Volumes hold programs: Volume 1 → Beginner, Nourish, ...
- * A program is on the website when its volume is active and it has a PDF.
+ * A program is on the website when it and its volume are switched on and it has a PDF.
  */
 
 export type ProgramInVolume = Program & { volume: Volume };
@@ -14,11 +14,12 @@ export type ProgramInVolume = Program & { volume: Volume };
 export const programLabel = (programName: string, volume: Pick<Volume, 'name'>) => `${programName} · ${volume.name}`;
 
 /** Whether the website shows it right now. */
-export const isOnWebsite = (program: Pick<Program, 'filePath'>, volume: Pick<Volume, 'isActive'>) =>
-  volume.isActive && program.filePath !== null;
+export const isOnWebsite = (program: Pick<Program, 'filePath' | 'isActive'>, volume: Pick<Volume, 'isActive'>) =>
+  volume.isActive && program.isActive && program.filePath !== null;
 
 /** Why a program is not on the website, or null when it is. */
-export function offWebsiteReason(program: Pick<Program, 'filePath'>, volume: Pick<Volume, 'isActive' | 'name'>): string | null {
+export function offWebsiteReason(program: Pick<Program, 'filePath' | 'isActive'>, volume: Pick<Volume, 'isActive' | 'name'>): string | null {
+  if (!program.isActive) return 'Switch it on to show it on the website.';
   if (!program.filePath) return 'Upload the PDF to show it on the website.';
   if (!volume.isActive) return `${volume.name} is switched off.`;
   return null;
@@ -47,8 +48,15 @@ export async function listVolumes(db: Database) {
   const totals = await db.select({ volumeId: programs.volumeId, total: count() }).from(programs).groupBy(programs.volumeId);
   const ready = await db.select({ volumeId: programs.volumeId, total: count() }).from(programs)
     .where(isNotNull(programs.filePath)).groupBy(programs.volumeId);
+  const live = await db.select({ volumeId: programs.volumeId, total: count() }).from(programs)
+    .where(and(isNotNull(programs.filePath), eq(programs.isActive, true))).groupBy(programs.volumeId);
   const totalOf = (list: typeof totals, id: number) => list.find(row => row.volumeId === id)?.total ?? 0;
-  return rows.map(volume => ({ ...volume, programCount: totalOf(totals, volume.id), readyCount: totalOf(ready, volume.id) }));
+  return rows.map(volume => ({
+    ...volume,
+    programCount: totalOf(totals, volume.id),
+    readyCount: totalOf(ready, volume.id),
+    liveCount: totalOf(live, volume.id),
+  }));
 }
 
 export async function findVolume(db: Database, id: number): Promise<Volume | undefined> {
@@ -62,7 +70,7 @@ export async function nextVolumeNumber(db: Database): Promise<number> {
   return (row?.highest ?? 0) + 1;
 }
 
-export function toAdminVolume(volume: Volume & { programCount?: number; readyCount?: number }) {
+export function toAdminVolume(volume: Volume & { programCount?: number; readyCount?: number; liveCount?: number }) {
   return {
     id: volume.id,
     number: volume.number,
@@ -70,6 +78,8 @@ export function toAdminVolume(volume: Volume & { programCount?: number; readyCou
     isActive: volume.isActive,
     programCount: volume.programCount ?? 0,
     readyCount: volume.readyCount ?? 0,
+    // Programs that are on the website whenever the volume is switched on.
+    liveCount: volume.liveCount ?? 0,
     updatedAt: volume.updatedAt,
   };
 }
@@ -106,6 +116,7 @@ export function toAdminProgram(program: ProgramInVolume) {
     step: program.step,
     marker: program.marker,
     sortOrder: program.sortOrder,
+    isActive: program.isActive,
     priceCents: program.priceCents,
     label: programLabel(program.name, program.volume),
     volume: { id: program.volume.id, number: program.volume.number, name: program.volume.name, isActive: program.volume.isActive },
@@ -125,11 +136,11 @@ export function toAdminProgram(program: ProgramInVolume) {
 
 /* ── Website ── */
 
-/** What the website shows: programs with a PDF in an active volume, oldest volume first. */
+/** What the website shows: switched-on programs with a PDF in an active volume, oldest volume first. */
 export async function listWebsitePrograms(db: Database): Promise<ProgramInVolume[]> {
   const rows = await db.select({ program: programs, volume: volumes }).from(programs)
     .innerJoin(volumes, eq(volumes.id, programs.volumeId))
-    .where(and(eq(volumes.isActive, true), isNotNull(programs.filePath)))
+    .where(and(eq(volumes.isActive, true), eq(programs.isActive, true), isNotNull(programs.filePath)))
     .orderBy(asc(volumes.number), asc(programs.sortOrder), asc(programs.name));
   return rows.map(row => ({ ...row.program, volume: row.volume }));
 }
