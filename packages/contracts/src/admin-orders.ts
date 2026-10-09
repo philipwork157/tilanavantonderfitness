@@ -11,3 +11,10 @@ export const resendOrderRequestSchema = z.object({
 });
 
 export type ResendOrderRequest = z.infer<typeof resendOrderRequestSchema>;
+
+/** Refund a whole paid order. The reason is kept on the order and sent to Paystack as a note. */
+export const refundOrderRequestSchema = z.object({
+  reason: z.string().trim().min(3, 'Please give a short reason.').max(300),
+});
+
+export type RefundOrderRequest = z.infer<typeof refundOrderRequestSchema>;

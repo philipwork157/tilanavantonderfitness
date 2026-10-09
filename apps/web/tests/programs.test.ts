@@ -24,6 +24,24 @@ function program(overrides: Partial<PublicProgram> = {}): PublicProgram {
 }
 
 describe('programs from the admin, shaped for the website', () => {
+  it('passes on the sneak peek pictures, and copes with an older admin without them', () => {
+    const preview = {
+      pageCount: 16,
+      pages: [
+        { url: 'https://x.supabase.co/storage/v1/object/public/program-previews/p/page-1.webp', page: 1, width: 640, height: 905, blurred: false },
+        { url: 'https://x.supabase.co/storage/v1/object/public/program-previews/p/page-8-blurred.webp', page: 8, width: 640, height: 905, blurred: true },
+      ],
+    };
+    expect(toSiteProgram(program({ preview })).preview).toEqual(preview);
+    expect(toSiteProgram(program({ preview: null })).preview).toBeNull();
+    expect(toSiteProgram(program()).preview).toBeNull();
+  });
+
+  it('passes on "What\'s inside", and copes with an older admin without it', () => {
+    expect(toSiteProgram(program({ highlights: ['6 weeks', 'Dumbbells'] })).highlights).toEqual(['6 weeks', 'Dumbbells']);
+    expect(toSiteProgram(program()).highlights).toEqual([]);
+  });
+
   it('maps a program from the admin', () => {
     const p = toSiteProgram(program({ slug: 'beginner-volume-1' }));
     expect(p).toMatchObject({

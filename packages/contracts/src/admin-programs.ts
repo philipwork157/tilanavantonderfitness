@@ -12,6 +12,10 @@ export const MAX_PROGRAM_PDF_BYTES = 15 * 1024 * 1024;
 export const programSlugSchema = z.string().trim().toLowerCase().min(2).max(60)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Use lowercase letters, numbers and hyphens only.');
 
+/** "What's inside": how many lines, and how long each may be. */
+export const MAX_HIGHLIGHTS = 4;
+export const MAX_HIGHLIGHT_LENGTH = 90;
+
 const line = (max: number) => z.string().trim().max(max);
 
 const priceCentsSchema = z.number().int().min(100, 'The price must be at least R1.').max(10_000_000, 'The price must be at most R100 000.');
@@ -25,6 +29,8 @@ export const programInputSchema = z.object({
   description: line(1200),
   audience: line(80),
   tags: z.array(z.string().trim().min(1).max(40)).max(6, 'Use at most 6 tags.'),
+  /** "What's inside" on the website's sneak peek: up to 4 short lines. */
+  highlights: z.array(z.string().trim().min(1).max(MAX_HIGHLIGHT_LENGTH)).max(MAX_HIGHLIGHTS, `Use at most ${MAX_HIGHLIGHTS} lines.`),
   tone: z.enum(PROGRAM_TONES),
   illustration: z.enum(PROGRAM_ILLUSTRATIONS),
   series: z.enum(PROGRAM_SERIES),

@@ -1,0 +1,2 @@
+ALTER TABLE "programs" ADD COLUMN "highlights" text[] DEFAULT '{}'::text[] NOT NULL;--> statement-breakpoint
+ALTER TABLE "programs" ADD CONSTRAINT "programs_highlights_count" CHECK (coalesce(array_length("programs"."highlights", 1), 0) <= 4);

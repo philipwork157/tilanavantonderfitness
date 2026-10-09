@@ -4,7 +4,7 @@ const config: NextConfig = {
   // Workspace packages ship TypeScript source, so Next compiles them.
   transpilePackages: ['@tilana/contracts', '@tilana/db'],
   // Native or Node-only packages stay outside the server bundle.
-  serverExternalPackages: ['sharp', '@aws-sdk/client-sesv2'],
+  serverExternalPackages: ['sharp', '@aws-sdk/client-sesv2', 'pdfjs-dist', '@napi-rs/canvas'],
   poweredByHeader: false,
   reactStrictMode: true,
   // `next dev` would otherwise write AGENTS.md/CLAUDE.md here; the repo-level CLAUDE.md covers this app.

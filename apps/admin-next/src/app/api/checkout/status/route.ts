@@ -9,7 +9,7 @@ const referencePattern = /^[A-Za-z0-9.=-]{10,160}$/;
 // Each check may ask Paystack, so keep it to what the payment page needs.
 const checks = createAttemptLimiter({ maxAttempts: 120, windowMs: 10 * 60 * 1000 });
 
-const toPublicStatus = { paid: 'succeeded', pending: 'pending', failed: 'failed', abandoned: 'abandoned' } as const;
+const toPublicStatus = { paid: 'succeeded', pending: 'pending', failed: 'failed', abandoned: 'abandoned', refunded: 'refunded' } as const;
 const toDeliveryStatus = { pending: 'pending', sent: 'sent', failed: 'unavailable' } as const;
 
 /**
@@ -26,7 +26,7 @@ export const GET = publicReadRoute(async (request: Request) => {
   const db = getDatabase();
   const order = await findOrderBy(db, 'reference', reference);
   if (!order) throw new HttpError(404, 'Unknown payment reference.');
-  const status = await checkPayment(db, order);
+  const status = await checkPayment(db, order, 'payment page');
   const latest = status === 'paid' ? (await findOrderBy(db, 'reference', reference))! : order;
   return Response.json(
     {

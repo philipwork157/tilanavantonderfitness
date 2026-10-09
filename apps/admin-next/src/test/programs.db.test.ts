@@ -9,7 +9,7 @@ import { publicProgramsResponseSchema } from '@tilana/contracts/public-programs'
 import { GET as getPublicPrograms } from '@/app/api/public/programs/route';
 import { GET as getPublicVolume } from '@/app/api/public/program-volumes/[slug]/route';
 import {
-  findProgramBySlug, listVolumePrograms, listVolumes, listWebsitePrograms, nextVolumeNumber, toPublicProgram, uniqueProgramSlug,
+  findProgramBySlug, listVolumePrograms, listVolumes, listWebsitePrograms, nextVolumeNumber, toAdminProgram, toPublicProgram, uniqueProgramSlug,
 } from '@/server/services/programs';
 
 const url = process.env.TEST_DATABASE_URL;
@@ -106,6 +106,39 @@ describe.skipIf(!url)('volumes and programs (database)', () => {
     expect(await missing.json()).toEqual({ statusCode: 404, statusMessage: 'Program volume not found.' });
     const elsewhere = await getPublicPrograms(new Request('http://admin.test/api/public', { headers: { origin: 'https://evil.example' } }));
     expect(elsewhere.headers.get('access-control-allow-origin')).toBeNull();
+    vi.unstubAllEnvs();
+  });
+
+  it('sends the sneak peek (pictures and "What\'s inside") to the website; pictures only while they match the PDF', async () => {
+    vi.stubEnv('SUPABASE_URL', 'https://project.supabase.co');
+    const preview = {
+      fileVersion: 1,
+      pageCount: 16,
+      pages: [
+        { path: 'programs/9/v1-abc/page-1.webp', page: 1, width: 640, height: 905, blurred: false },
+        { path: 'programs/9/v1-abc/page-8-blurred.webp', page: 8, width: 640, height: 905, blurred: true },
+      ],
+    };
+    const highlights = ['6 weeks, 3 sessions a week', 'Dumbbells and a bench'];
+    await db.insert(programs).values({ volumeId: live.id, slug: 'test-preview-live', name: 'Preview', priceCents: 39_900, preview, highlights, ...pdf });
+    const saved = (await findProgramBySlug(db, 'test-preview-live'))!;
+    const shown = publicProgramsResponseSchema.parse({ programs: [toPublicProgram(saved)] }).programs[0];
+    expect(shown?.preview).toEqual({
+      pageCount: 16,
+      pages: [
+        { url: 'https://project.supabase.co/storage/v1/object/public/program-previews/programs/9/v1-abc/page-1.webp', page: 1, width: 640, height: 905, blurred: false },
+        { url: 'https://project.supabase.co/storage/v1/object/public/program-previews/programs/9/v1-abc/page-8-blurred.webp', page: 8, width: 640, height: 905, blurred: true },
+      ],
+    });
+    expect(toAdminProgram(saved).preview).toMatchObject({ pageCount: 16, upToDate: true });
+    expect(shown?.highlights).toEqual(highlights);
+    expect(toAdminProgram(saved).highlights).toEqual(highlights);
+
+    // A new PDF (version 2) hides the old pictures until new ones are made.
+    await db.update(programs).set({ fileVersion: 2 }).where(eq(programs.slug, 'test-preview-live'));
+    const replaced = (await findProgramBySlug(db, 'test-preview-live'))!;
+    expect(toPublicProgram(replaced).preview).toBeNull();
+    expect(toAdminProgram(replaced).preview).toMatchObject({ upToDate: false });
     vi.unstubAllEnvs();
   });
 });

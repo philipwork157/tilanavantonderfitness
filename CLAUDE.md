@@ -210,6 +210,23 @@ Keep public deployment functional. An ignored archive is not a remote backup.
   Uploads must start with `%PDF-` and end with `%%EOF`, max 15 MB; the SHA-256
   is stored. Keys are `programs/<id>/v<version>-<sha>.pdf` (older uploads
   `volumes/<id>/...`). Replacing a PDF bumps `file_version` and keeps the old file.
+- "Peek inside" on `/program` is made from the PDF, never typed in: on upload
+  (and by itself when the program page opens for an older PDF, or with "Make
+  again") the admin draws the cover sharp plus about three inside pages
+  blurred (`server/utils/pdf-preview.ts`: pdf.js + @napi-rs/canvas, sharp blur,
+  640 px WebP) and stores them in the public Supabase Storage bucket
+  `program-previews` (`server/services/program-previews.ts`). `programs.preview`
+  records which `file_version` they came from; the website only gets a peek
+  made from the current PDF (`preview` in the public programs contract). Only
+  these pictures are public; never upload unblurred inside pages. A failed peek
+  never fails the PDF upload. Next to the pictures Tilana writes "What's
+  inside" (`programs.highlights`, up to 4 lines of 90 characters, in the same
+  admin panel, saved with the program); without lines the peek shows the
+  summary and tags. On the website the peek is one component (`PeekView.tsx`)
+  used by the "Take a peek inside" section (`PdfPeek.tsx`, a tab per program)
+  and by the pop-up that "Peek inside the PDF" on each card opens
+  (`PeekDialog.tsx`, any `data-peek="<slug>"` link; without JavaScript the
+  link scrolls to the section). Add to basket in the pop-up closes it first.
 - "Send me a test email" sends the real delivery email with the PDF attached to
   `NEWSLETTER_TEST_TO` (in development only `EMAIL_DEV_REDIRECT_TO`).
 - The website reads the programs from `GET /api/public/programs`
@@ -223,8 +240,8 @@ Keep public deployment functional. An ignored archive is not a remote backup.
   (barbell / breath / plate), `step` sets the barbell's plates and `tone` the
   colour. A new kind of drawing needs a new illustration value plus SVG in
   `ProgramArt.astro`. The quiz matches programs by step and drawing, not by name.
-- Not built yet: refunds, a "resend my PDFs" form for buyers on the website
-  and automatic retries of failed delivery emails (Tilana resends from Sales).
+- Not built yet: a "resend my PDFs" form for buyers on the website (Tilana
+  resends from Sales) and partial refunds.
 
 ## Payments (Paystack)
 
@@ -246,6 +263,38 @@ Keep public deployment functional. An ignored archive is not a remote backup.
   response (`afterResponse`) and records `delivery_status` sent/failed, then
   emails Tilana ("New sale", to `CONTACT_NOTIFY_TO`). Never mark an order paid
   from the browser redirect.
+- Background order checks (`server/services/order-checks.ts`) every 5
+  minutes in the admin server (`startOrderChecks`, from instrumentation), or
+  via `GET /api/cron/order-checks` with `Authorization: Bearer $CRON_SECRET`
+  on hosts without a long-running server. They re-verify unpaid orders with
+  Paystack (a payment nobody confirmed becomes paid and is delivered; an order
+  is only closed as abandoned/failed after Paystack says so and it is over an
+  hour old, or Paystack has never heard of it after a day), retry PDF emails
+  (10 min, 30 min, 2 h, 12 h after payment, then email Tilana) and follow up
+  pending refunds. Tilana's "New sale" email is sent once (`sale_notified_at`).
+- Fees: Paystack reports its fee per payment (`fees` on transaction/verify);
+  it is saved as `orders.fee_cents` when the order is marked paid, and the
+  order checks fill it in for orders without one. Sales shows sales, Paystack
+  fees and "You receive" (sales minus fees), and the fee on each order. If the
+  buyer pays the fee, Paystack charges more than requested: an order matches
+  when Paystack's `requested_amount` equals the order total.
+- A Paystack success that does not match the order (amount, currency, mode)
+  is never marked paid: the order gets a `review_note` ("Needs review" on
+  Sales, Tilana is emailed) until someone clicks "Mark as checked".
+- Refunds: whole orders, admins only, from Sales ("Refund", with a reason) via
+  Paystack `POST /refund`. The order stays paid with `refund_status` pending
+  until Paystack confirms (`refund.processed` webhook or the order checks);
+  then it is `refunded`, stops counting as a sale and the buyer gets an email.
+  Refunds made in the Paystack dashboard are picked up from the webhook.
+  `refund.failed` and `charge.dispute.create` set a review note and email
+  Tilana. A refunded order can never become paid again.
+- Programs that were ever sold cannot be deleted (resends need them); switch
+  them off instead. Checkout refuses to start in production unless
+  `WEBSITE_URL` is the public https address (Paystack sends buyers back there).
+- Logs to follow one order: "Checkout started", "Paystack webhook received"
+  (every signed event), "Order paid" (with `source`: payment page, webhook or
+  order check), "Programs emailed", "Unpaid order closed", "Refund requested",
+  "Order refunded" / "Refund failed". All carry the order number.
 - Settings: `PAYSTACK_SECRET_KEY` and `PAYSTACK_MODE` (test/live); checkout
   refuses to start when the key prefix and mode disagree. Paystack cannot reach
   localhost, so in development the status check confirms payments; set the

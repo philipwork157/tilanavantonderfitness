@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { groupAttachments } from '@/server/services/order-delivery';
 import { newOrderNumber, newReference } from '@/server/services/orders';
 import { saleNotificationEmail } from '@/server/services/sale-emails';
-import { initializePayment, isValidPaystackSignature, paystackSettings, verifyPayment } from '@/server/utils/paystack';
+import { createRefund, fetchRefund, initializePayment, isValidPaystackSignature, PaystackError, paystackSettings, verifyPayment } from '@/server/utils/paystack';
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -40,12 +40,43 @@ describe('Paystack API', () => {
   it('reads the verified payment', async () => {
     vi.stubEnv('PAYSTACK_SECRET_KEY', 'sk_test_abc');
     vi.stubEnv('PAYSTACK_MODE', 'test');
-    const fetcher = vi.fn(async () => Response.json({ status: true, data: { status: 'success', reference: 'R-1234567890', amount: 39_900, currency: 'ZAR', domain: 'test', id: 42, channel: 'card', paid_at: '2026-10-08T10:00:00.000Z' } }));
+    const fetcher = vi.fn(async () => Response.json({ status: true, data: { status: 'success', reference: 'R-1234567890', amount: 41_200, requested_amount: 39_900, fees: 1_300, currency: 'ZAR', domain: 'test', id: 42, channel: 'card', paid_at: '2026-10-08T10:00:00.000Z' } }));
     expect(await verifyPayment('R-1234567890', fetcher as unknown as typeof fetch)).toMatchObject({
-      status: 'success', amountCents: 39_900, currency: 'ZAR', mode: 'test', transactionId: '42', channel: 'card',
+      status: 'success', amountCents: 41_200, requestedAmountCents: 39_900, feeCents: 1_300, currency: 'ZAR', mode: 'test', transactionId: '42', channel: 'card',
     });
     const failing = vi.fn(async () => Response.json({ status: false, message: 'Transaction reference not found' }, { status: 400 }));
     await expect(verifyPayment('R-1234567890', failing as unknown as typeof fetch)).rejects.toThrow('Transaction reference not found');
+  });
+
+  it('shows the order in the Paystack dashboard and tells "never paid" apart from "unreachable"', async () => {
+    vi.stubEnv('PAYSTACK_SECRET_KEY', 'sk_test_abc');
+    vi.stubEnv('PAYSTACK_MODE', 'test');
+    const fetcher = vi.fn(async () => Response.json({ status: true, data: { authorization_url: 'https://checkout.paystack.com/x', reference: 'TV-ABC123-0011' } }));
+    await initializePayment({
+      email: 'anna@example.com', amountCents: 39_900, reference: 'TV-ABC123-0011', callbackUrl: 'https://site.test/c', cancelUrl: 'https://site.test/checkout',
+      metadata: { order_number: 'TV-ABC123' }, details: [{ label: 'Order number', value: 'TV-ABC123' }],
+    }, fetcher as unknown as typeof fetch);
+    const [, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(init.body)).metadata.custom_fields).toEqual([{ display_name: 'Order number', variable_name: 'order_number', value: 'TV-ABC123' }]);
+
+    const missing = vi.fn(async () => Response.json({ status: false, message: 'Transaction reference not found' }, { status: 400 }));
+    await expect(verifyPayment('R-1234567890', missing as unknown as typeof fetch)).rejects.toMatchObject({ notFound: true });
+    const down = vi.fn(async () => { throw new Error('ECONNRESET'); });
+    const error = await verifyPayment('R-1234567890', down as unknown as typeof fetch).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(PaystackError);
+    expect((error as PaystackError).notFound).toBe(false);
+  });
+
+  it('starts and reads refunds', async () => {
+    vi.stubEnv('PAYSTACK_SECRET_KEY', 'sk_test_abc');
+    vi.stubEnv('PAYSTACK_MODE', 'test');
+    const fetcher = vi.fn(async () => Response.json({ status: true, data: { id: 31, status: 'pending', amount: 39_900 } }));
+    expect(await createRefund({ transactionId: '77', reason: 'Wrong program' }, fetcher as unknown as typeof fetch)).toEqual({ id: '31', status: 'pending', amountCents: 39_900 });
+    const [url, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('https://api.paystack.co/refund');
+    expect(JSON.parse(String(init.body))).toEqual({ transaction: '77', merchant_note: 'Wrong program' });
+    const processed = vi.fn(async () => Response.json({ status: true, data: { id: 31, status: 'processed', amount: 39_900 } }));
+    expect((await fetchRefund('31', processed as unknown as typeof fetch)).status).toBe('processed');
   });
 
   it('accepts only webhooks signed with the secret key', () => {

@@ -206,3 +206,77 @@
 .prog-unavailable h3 { margin: 0 0 0.8rem; font-family: var(--font-heading); font-size: clamp(1.7rem, 2.6vw, 2.2rem); font-weight: 800; line-height: 1.1; }
 .prog-unavailable p:not(.eyebrow) { margin: 0 0 1.4rem; color: var(--fg-soft); line-height: 1.6; }
 #strength-series, #focus-programs { scroll-margin-top: var(--header-h); }
+
+/* ── Peek inside the PDFs (components/PdfPeek.tsx) ──
+   Program tabs, a short summary, and a small stack of pages to flip through. */
+.row-peek { display: inline-flex; align-items: center; gap: 0.45rem; align-self: flex-start; margin: -0.6rem 0 1.5rem; padding: 0.45rem 0.85rem; border: 2px dashed var(--line); border-radius: 999px; color: var(--fg); font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em; text-decoration: none; text-transform: uppercase; transition: background 200ms ease, border-style 200ms ease; }
+.row-peek:hover { border-style: solid; background: var(--card-tone); color: var(--on-tone); }
+.row-peek svg { width: 1em; height: 1em; }
+#peek { scroll-margin-top: var(--header-h); }
+
+.peek-tabs { display: flex; gap: 0.7rem; margin-bottom: 1.6rem; padding: 0.3rem 0.3rem 0.6rem; overflow-x: auto; scrollbar-width: thin; }
+.peek-tab { display: flex; flex: none; align-items: center; gap: 0.75rem; padding: 0.55rem 1rem 0.55rem 0.6rem; border: 2px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--fg); text-align: left; scroll-margin-top: calc(var(--header-h) + 6rem); transition: transform 220ms var(--ease-out), box-shadow 220ms var(--ease-out), background 200ms ease; }
+.peek-tab .program-thumb { width: 2.6rem; height: 2.6rem; border-radius: 12px; box-shadow: 2px 2px 0 var(--line); }
+.peek-tab .program-thumb svg { width: 2.15rem; height: 2.15rem; }
+.peek-tab strong { display: block; font-size: 0.92rem; }
+.peek-tab small { display: block; font-size: 0.7rem; color: var(--fg-soft); }
+.peek-tab:hover { transform: translateY(-2px); }
+.peek-tab[aria-selected='true'] { background: var(--bg-2); box-shadow: 4px 4px 0 var(--line); transform: translateY(-2px); }
+
+.peek-body { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: clamp(1.6rem, 4vw, 4rem); align-items: center; }
+.peek-info h3 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.8rem; margin: 0 0 0.8rem; font-family: var(--font-heading); font-size: clamp(2.4rem, 4.4vw, 3.4rem); font-style: italic; font-weight: 800; line-height: 0.95; letter-spacing: -0.03em; }
+.peek-info h3 em { font-family: var(--font-body, inherit); font-size: 0.8rem; font-style: normal; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent-text); }
+.peek-format { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 1.2rem; color: var(--fg-soft); font-size: 0.92rem; }
+.peek-format svg { width: 1.1em; height: 1.1em; color: var(--accent-text); }
+.peek-info h4 { margin: 1.4rem 0 0.8rem; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; }
+.peek-inside { display: grid; gap: 0.7rem; margin: 0; padding: 0; list-style: none; }
+.peek-inside li { display: flex; gap: 0.6rem; line-height: 1.5; }
+.peek-inside svg { flex: none; width: 1.1rem; height: 1.1rem; margin-top: 0.2rem; color: var(--accent-text); }
+.peek-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.4rem; margin-top: 2rem; }
+
+/* The page stack: pictures of the real PDF, the cover first. */
+.peek-reader { display: grid; justify-items: center; gap: 1.4rem; }
+/* Room on the right for the pages fanned out behind the front one. The aspect ratio comes from the cover picture. */
+.peek-book { position: relative; width: min(100% - 2.4rem, 24rem); aspect-ratio: 1 / 1.414; margin-right: 2.4rem; }
+.peek-page { position: absolute; inset: 0; margin: 0; overflow: hidden; border: 2px solid var(--line); border-radius: 14px; background: #fff; box-shadow: 5px 5px 0 var(--line); }
+.peek-page img { display: block; width: 100%; height: 100%; object-fit: cover; user-select: none; -webkit-user-drag: none; }
+.peek-page::after { content: ''; position: absolute; inset: 0 auto 0 0; width: 10px; background: linear-gradient(90deg, rgb(0 0 0 / 7%), transparent); pointer-events: none; }
+.peek-lock { position: absolute; top: 50%; left: 50%; display: flex; align-items: center; gap: 0.45rem; margin: 0; padding: 0.55rem 1rem; border: 2px solid var(--line); border-radius: 999px; background: var(--surface); box-shadow: 3px 3px 0 var(--line); color: var(--fg); font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em; white-space: nowrap; translate: -50% -50%; }
+.peek-lock svg { width: 1rem; height: 1rem; }
+.peek-summary { margin: 0 0 1.2rem; color: var(--fg-soft); line-height: 1.6; }
+.peek-note { display: flex; gap: 0.6rem; margin: 1.6rem 0 0; color: var(--fg-soft); font-size: 0.9rem; line-height: 1.55; }
+.peek-note svg { flex: none; width: 1.05rem; height: 1.05rem; margin-top: 0.2rem; color: var(--accent-text); }
+
+/* Page turning */
+.peek-controls { display: flex; align-items: center; gap: 1rem; margin-right: 2.4rem; }
+.peek-controls p { display: grid; justify-items: center; gap: 0.4rem; min-width: 6.5rem; margin: 0; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; }
+.peek-dots { display: flex; gap: 0.35rem; }
+.peek-dots i { width: 0.45rem; height: 0.45rem; border-radius: 50%; background: color-mix(in srgb, var(--line) 25%, transparent); transition: width 250ms var(--ease-out), background 250ms ease; }
+.peek-dots i.on { width: 1.3rem; border-radius: 999px; background: var(--line); }
+.peek-turn { display: grid; place-items: center; width: 2.8rem; height: 2.8rem; border: 2px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--fg); box-shadow: 3px 3px 0 var(--line); transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out); }
+.peek-turn svg { width: 1.1rem; height: 1.1rem; rotate: 180deg; }
+.peek-turn.next svg { rotate: 0deg; }
+.peek-turn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--line); }
+.peek-turn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--line); }
+
+/* The peek as a pop-up from a program card (components/PeekDialog.tsx). */
+html.peek-open { overflow: hidden; }
+.peek-layer { position: fixed; inset: 0; z-index: 1150; display: grid; place-items: center; padding: clamp(0.75rem, 3vw, 2rem); }
+.peek-scrim { position: absolute; inset: 0; background: rgb(15 14 19 / 45%); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+.peek-dialog { position: relative; width: min(100%, 62rem); max-height: calc(100dvh - 1.5rem); overflow-y: auto; overscroll-behavior: contain; padding: clamp(1.1rem, 3vw, 2.2rem); }
+.peek-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.peek-dialog-head .eyebrow { margin: 0; }
+.peek-close { display: grid; flex: none; place-items: center; width: 2.75rem; height: 2.75rem; padding: 0; border: 2px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--fg); }
+.peek-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.peek-dialog .peek-info h3 { font-size: clamp(2rem, 3.6vw, 2.8rem); }
+.peek-dialog .peek-book { width: min(100% - 2.4rem, 21rem); }
+
+:root[data-theme='dark'] .peek-page::after { background: linear-gradient(90deg, rgb(0 0 0 / 25%), transparent); }
+
+@media (max-width: 56rem) {
+  .peek-body { grid-template-columns: minmax(0, 1fr); gap: 2.6rem; }
+  .peek-reader { order: -1; }
+  .peek-dialog .peek-body { gap: 1.8rem; }
+  .peek-dialog .peek-book { width: min(100% - 2.4rem, 17rem); }
+}
+

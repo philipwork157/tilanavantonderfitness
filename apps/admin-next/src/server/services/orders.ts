@@ -2,7 +2,7 @@ import 'server-only';
 import { randomBytes, randomInt } from 'node:crypto';
 import type { BasketCheckoutRequest } from '@tilana/contracts/checkout';
 import { orderItems, orders, programs, volumes, type Database, type Order, type OrderItem } from '@tilana/db';
-import { and, eq, inArray, ne } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { HttpError } from '../http';
 import { logger } from '../logger';
 import { isOnWebsite, programLabel } from './programs';
@@ -94,8 +94,14 @@ export async function startCheckout(db: Database, input: BasketCheckoutRequest, 
       callbackUrl: `${deps.websiteUrl}/checkout/complete?reference=${encodeURIComponent(order.reference)}`,
       cancelUrl: `${deps.websiteUrl}/checkout`,
       metadata: { order_number: order.orderNumber },
+      details: [
+        { label: 'Order number', value: order.orderNumber },
+        { label: 'Programs', value: items.map(item => item.label).join(', ') },
+        { label: 'Buyer', value: `${order.firstName} ${order.lastName}`.trim() },
+      ],
     });
     await db.update(orders).set({ authorizationUrl }).where(eq(orders.id, order.id));
+    logger.info({ orderNumber: order.orderNumber, programs: items.length, totalCents: order.totalCents, mode: order.paymentMode }, 'Checkout started');
     return { authorizationUrl, reference: order.reference };
   } catch (error) {
     // No money moved: remove the order so the buyer can simply try again.
@@ -125,34 +131,51 @@ export async function findOrderBy(db: Database, field: 'reference' | 'idempotenc
   return row;
 }
 
-export type PaymentCheck = 'paid' | 'failed' | 'abandoned' | 'pending';
+export type PaymentCheck = 'paid' | 'failed' | 'abandoned' | 'pending' | 'refunded';
+
+/** Who confirmed a payment, for the logs: the buyer's return page, Paystack's webhook or the background check. */
+export type PaymentSource = 'payment page' | 'webhook' | 'order check';
+
+/** Order states a Paystack answer may still change. Paid and refunded orders are settled. */
+const OPEN_STATUSES = ['pending', 'failed', 'abandoned'] as const;
 
 /**
  * Applies Paystack's verified answer to the order. Returns `justPaid: true`
- * only to the one caller that moved it to paid, who must then deliver.
+ * only to the one caller that moved it to paid, who must then deliver, and
+ * `flagged: true` to the one caller that marked it for review.
  */
-export async function applyVerifiedPayment(db: Database, order: Order, payment: VerifiedPayment): Promise<{ status: PaymentCheck; justPaid: boolean }> {
-  if (order.status === 'paid') return { status: 'paid', justPaid: false };
+export async function applyVerifiedPayment(db: Database, order: Order, payment: VerifiedPayment, source?: PaymentSource): Promise<{ status: PaymentCheck; justPaid: boolean; flagged?: boolean }> {
+  if (order.status === 'paid' || order.status === 'refunded') return { status: order.status, justPaid: false };
   if (payment.status === 'success') {
+    // We asked for the order total; the buyer may be charged more if they pay Paystack's fee.
     const matches = payment.reference === order.reference
-      && payment.amountCents === order.totalCents
+      && payment.requestedAmountCents === order.totalCents
+      && payment.amountCents >= order.totalCents
       && payment.currency === order.currency
       && payment.mode === order.paymentMode;
     if (!matches) {
-      logger.error({ orderNumber: order.orderNumber, paystack: { amountCents: payment.amountCents, currency: payment.currency, mode: payment.mode } }, 'Paystack payment does not match the order; left pending for review');
-      return { status: 'pending', justPaid: false };
+      // Money may have moved, so never call it failed: keep it open and ask a person to look.
+      logger.error({ orderNumber: order.orderNumber, paystack: { amountCents: payment.amountCents, currency: payment.currency, mode: payment.mode } }, 'Paystack payment does not match the order; flagged for review');
+      const note = `Paystack reports a successful payment of ${payment.amountCents / 100} ${payment.currency} (${payment.mode}) that does not match this order (${order.totalCents / 100} ${order.currency}, ${order.paymentMode}). Check it in Paystack.`;
+      const flagged = await db.update(orders).set({ reviewNote: note })
+        .where(and(eq(orders.id, order.id), isNull(orders.reviewNote))).returning({ id: orders.id });
+      return { status: 'pending', justPaid: false, flagged: flagged.length > 0 };
     }
     const updated = await db.update(orders).set({
       status: 'paid',
       paidAt: payment.paidAt ?? new Date(),
       paystackTransactionId: payment.transactionId,
       paymentChannel: payment.channel,
-    }).where(and(eq(orders.id, order.id), ne(orders.status, 'paid'))).returning({ id: orders.id });
+      feeCents: payment.feeCents,
+    }).where(and(eq(orders.id, order.id), inArray(orders.status, [...OPEN_STATUSES]))).returning({ id: orders.id });
+    if (updated.length) {
+      logger.info({ orderNumber: order.orderNumber, source, totalCents: order.totalCents, feeCents: payment.feeCents, channel: payment.channel, mode: payment.mode }, 'Order paid');
+    }
     return { status: 'paid', justPaid: updated.length > 0 };
   }
   if (payment.status === 'failed' || payment.status === 'abandoned') {
     await db.update(orders).set({ status: payment.status })
-      .where(and(eq(orders.id, order.id), inArray(orders.status, ['pending', 'failed', 'abandoned'])));
+      .where(and(eq(orders.id, order.id), inArray(orders.status, [...OPEN_STATUSES])));
     return { status: payment.status, justPaid: false };
   }
   return { status: 'pending', justPaid: false };

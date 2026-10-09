@@ -30,7 +30,7 @@ describe.skipIf(!url)('orders (database)', () => {
     ...overrides,
   });
   const success = (order: { reference: string; totalCents: number }, overrides: Partial<VerifiedPayment> = {}): VerifiedPayment => ({
-    status: 'success', reference: order.reference, amountCents: order.totalCents, currency: 'ZAR', mode: 'test',
+    status: 'success', reference: order.reference, amountCents: order.totalCents, requestedAmountCents: order.totalCents, feeCents: 1_257, currency: 'ZAR', mode: 'test',
     transactionId: '99', channel: 'card', paidAt: new Date(), ...overrides,
   });
 
@@ -88,8 +88,9 @@ describe.skipIf(!url)('orders (database)', () => {
   it('marks the order paid only for a matching payment, and only once', async () => {
     const { reference } = await startCheckout(db, request(), deps());
     const order = (await findOrderBy(db, 'reference', reference))!;
-    expect(await applyVerifiedPayment(db, order, success(order, { amountCents: 100 }))).toEqual({ status: 'pending', justPaid: false });
-    expect(await applyVerifiedPayment(db, order, success(order, { mode: 'live' }))).toEqual({ status: 'pending', justPaid: false });
+    // A mismatch is flagged for review once, never marked paid.
+    expect(await applyVerifiedPayment(db, order, success(order, { amountCents: 100 }))).toEqual({ status: 'pending', justPaid: false, flagged: true });
+    expect(await applyVerifiedPayment(db, order, success(order, { mode: 'live' }))).toEqual({ status: 'pending', justPaid: false, flagged: false });
     expect(await applyVerifiedPayment(db, order, { ...success(order), status: 'ongoing' })).toEqual({ status: 'pending', justPaid: false });
 
     const [first, second] = await Promise.all([applyVerifiedPayment(db, order, success(order)), applyVerifiedPayment(db, order, success(order))]);
@@ -231,5 +232,7 @@ describe.skipIf(!url)('orders (database)', () => {
     expect(paid.length).toBeGreaterThan(0);
     expect(summary.totals.revenueCents).toBe(summary.daily.reduce((total, day) => total + day.revenueCents, 0));
     expect(summary.byProgram.find(row => row.label === 'Shop A · Volume 92')?.sold).toBeGreaterThan(0);
+    expect(summary.totals.netCents).toBe(summary.totals.revenueCents - summary.totals.feesCents);
+    expect(summary.totals.feesCents).toBeGreaterThan(0);
   });
 });

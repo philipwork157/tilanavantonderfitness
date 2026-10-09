@@ -5,9 +5,12 @@ import Icon from '@web/site/components/Icon';
 import FitQuiz from '@web/site/components/FitQuiz';
 import Faq from '@web/site/components/Faq';
 import ProgramRow from '@web/site/components/ProgramRow.astro';
+import PdfPeek, { type PeekProgram } from '@web/site/components/PdfPeek';
+import PeekDialog from '@web/site/components/PeekDialog';
 import { checkoutEnabled, href } from '@web/site/config';
 import { programDisclaimer, programFaqs } from '@web/site/data';
 import { loadSitePrograms, setProgramCacheHeaders } from '@web/utils/programs';
+import { productName } from '@web/site/programs';
 
 // Rendered on request so programs published in the admin appear without a rebuild.
 export const prerender = false;
@@ -17,6 +20,11 @@ setProgramCacheHeaders(Astro.response.headers);
 const strength = programs.filter((p) => p.series === 'strength').sort((a, b) => (a.step ?? 0) - (b.step ?? 0));
 const focus = programs.filter((p) => p.series === 'focus');
 const names = programs.map((p) => p.name);
+// Programs whose PDF pictures the admin has made (from the uploaded PDF), in page order.
+const peekPrograms: PeekProgram[] = [...strength, ...focus].flatMap((p) => {
+  const { preview } = p;
+  return preview ? [{ slug: p.slug, name: p.name, tone: p.tone, illustration: p.illustration, step: p.step, volume: p.volume, summary: p.short, tags: p.tags, highlights: p.highlights, basketName: productName(p), preview }] : [];
+});
 const description = names.length > 1
   ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}: once-off digital programs by Tilana van Tonder.`
   : 'Once-off digital strength, pelvic-floor and nutrition programs by Tilana van Tonder.';
@@ -106,6 +114,18 @@ const description = names.length > 1
     </div>
   </section>}
 
+
+  {peekPrograms.length > 0 && <section class="section wrap" id="peek" aria-labelledby="peek-title">
+    <div class="section-head split" data-reveal>
+      <div>
+        <p class="eyebrow">Inside the PDFs</p>
+        <h2 class="h2" id="peek-title">Take a peek <em>inside.</em></h2>
+      </div>
+      <p class="lede">What each program covers, and real pages to flip through: the cover, then a few pages from inside. The details are blurred here and waiting in your PDF.</p>
+    </div>
+    <div data-reveal data-reveal-delay="0.1"><PdfPeek client:visible programs={peekPrograms} /></div>
+  </section>}
+  {peekPrograms.length > 0 && <PeekDialog client:idle programs={peekPrograms} />}
 
   <section class="wrap">
     <div class="cta-band card private-card" data-reveal>

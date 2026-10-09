@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { api, ApiError } from '@/lib/api';
 import type { AdminOrder } from '@/lib/types';
+import { OrderSummary } from './order-summary';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -56,10 +57,9 @@ function ResendForm({ order, onDone }: { order: AdminOrder; onDone: () => void }
     <form onSubmit={submit} className="grid gap-4">
       <DialogHeader>
         <DialogTitle className="font-heading text-2xl">Email the PDFs again</DialogTitle>
-        <DialogDescription>
-          Order {order.orderNumber} for {order.buyer}: {order.programs.join(', ')}. The buyer gets the same email as after paying, with the PDFs attached.
-        </DialogDescription>
+        <DialogDescription>The buyer gets the same email as after paying, with the PDFs attached.</DialogDescription>
       </DialogHeader>
+      <OrderSummary order={order} />
       <div className="grid gap-2">
         <Label htmlFor="resend-email">Send to</Label>
         <Input id="resend-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} aria-invalid={!valid} autoComplete="off" />

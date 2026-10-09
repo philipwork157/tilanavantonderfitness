@@ -1,6 +1,6 @@
 'use client';
 
-import { PROGRAM_ILLUSTRATIONS, PROGRAM_TONES } from '@tilana/contracts/admin-programs';
+import { MAX_HIGHLIGHTS, PROGRAM_ILLUSTRATIONS, PROGRAM_TONES } from '@tilana/contracts/admin-programs';
 import { slugify } from '@tilana/contracts/blog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Globe, Loader2, Save, Trash2 } from 'lucide-react';
@@ -23,6 +23,8 @@ import { useUnsavedGuard } from '@/lib/use-unsaved-guard';
 import { cn } from '@/lib/utils';
 import { Field, Panel } from './editor-parts';
 import { PdfPanel } from './pdf-panel';
+import { HighlightsField } from './highlights-field';
+import { PreviewPanel } from './preview-panel';
 import { ProgramSwitch } from '../program-switch';
 
 const message = (error: unknown, fallback: string) => (error instanceof ApiError ? error.message : fallback);
@@ -36,6 +38,7 @@ function toForm(program: AdminProgram) {
     description: program.description,
     audience: program.audience,
     tags: program.tags.join(', '),
+    highlights: Array.from({ length: MAX_HIGHLIGHTS }, (_, i) => program.highlights[i] ?? ''),
     tone: program.tone,
     illustration: program.illustration,
     series: program.series,
@@ -52,6 +55,7 @@ function toPayload({ price, ...form }: ProgramForm) {
     ...form,
     priceCents: parseRand(price),
     tags: form.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+    highlights: form.highlights.map((line) => line.trim()).filter(Boolean),
     step: form.series === 'strength' ? form.step ?? 1 : null,
     sortOrder: Math.max(0, Math.round(Number(form.sortOrder) || 0)),
   };
@@ -197,6 +201,10 @@ function EditorForm({ program }: { program: AdminProgram }) {
             {priceCents === null && <p role="alert" className="-mt-2 text-xs text-destructive">Type the price in rand, for example 399 or 399.50.</p>}
             <PdfPanel program={program} onProgram={applyFile} />
           </Panel>
+
+          <PreviewPanel program={program} onProgram={applyFile}>
+            <HighlightsField value={form.highlights} onChange={(next) => set('highlights', next)} />
+          </PreviewPanel>
         </div>
 
         <aside className="grid gap-5">
@@ -274,7 +282,7 @@ function EditorForm({ program }: { program: AdminProgram }) {
             )}
           </Panel>
 
-          <Panel title="Delete" titleId="delete-heading" hint="Removes the program from this volume and the website. Uploaded PDFs stay in storage." danger>
+          <Panel title="Delete" titleId="delete-heading" hint="Only for programs nobody has bought. Sold programs stay so past buyers can get their PDFs again: switch them off instead. Uploaded PDFs stay in storage." danger>
             <Button variant="outline" className="border-destructive/50 bg-card text-destructive hover:bg-destructive/10" onClick={() => setDeleteOpen(true)}>
               <Trash2 /> Delete program
             </Button>

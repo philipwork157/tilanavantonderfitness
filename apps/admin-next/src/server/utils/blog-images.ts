@@ -1,29 +1,15 @@
 import 'server-only';
 import { randomUUID } from 'node:crypto';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { emailImageFromCover, type ProcessedImage } from './image-processing';
-import { serverConfig } from '../config';
+import { publicStorageUrl, storageClient } from './storage';
 import { HttpError } from '../http';
 import { logger } from '../logger';
 
 const BUCKET = 'blog-images';
 export const MAX_COVER_UPLOAD_BYTES = 10 * 1024 * 1024;
 
-let client: SupabaseClient | undefined;
 let bucketReady = false;
-
-/** Server-only Supabase client with the service role key (never sent to browsers). */
-function storageClient(): SupabaseClient {
-  if (client) return client;
-  const { supabaseUrl, supabaseServiceRoleKey } = serverConfig();
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
-    throw new HttpError(503, 'Image uploads are not configured yet.');
-  }
-  client = createClient(supabaseUrl, supabaseServiceRoleKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-  return client;
-}
 
 const ALLOWED_TYPES = ['image/webp', 'image/jpeg'];
 
@@ -51,10 +37,7 @@ async function ensureBucket(storage: SupabaseClient) {
 }
 
 export function blogImagePublicUrl(path: string | null | undefined): string | null {
-  if (!path) return null;
-  const { supabaseUrl } = serverConfig();
-  const encoded = path.split('/').map(encodeURIComponent).join('/');
-  return `${supabaseUrl}/storage/v1/object/public/${BUCKET}/${encoded}`;
+  return path ? publicStorageUrl(BUCKET, path) : null;
 }
 
 export async function uploadBlogImage(postId: number, image: ProcessedImage): Promise<string> {

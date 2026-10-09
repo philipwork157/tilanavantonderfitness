@@ -41,6 +41,12 @@ export function serverConfig() {
     websiteUrl: env.WEBSITE_URL ?? '',
     /** Who receives newsletter test emails (comma separated). */
     newsletterTestTo: env.NEWSLETTER_TEST_TO ?? '',
+    /**
+     * Secret for GET /api/cron/order-checks (sent as "Authorization: Bearer ..."),
+     * for hosts that run scheduled jobs (e.g. Vercel Cron). Empty = that URL is off;
+     * a long-running server also runs the checks itself every 5 minutes.
+     */
+    cronSecret: env.CRON_SECRET ?? '',
     /** Amazon SNS topic that delivers SES bounces and complaints (webhook is off when empty). */
     sesEventsTopicArn: env.SES_EVENTS_TOPIC_ARN ?? '',
   };

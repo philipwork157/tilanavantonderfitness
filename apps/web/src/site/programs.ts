@@ -1,4 +1,4 @@
-import type { PublicProgram } from '@tilana/contracts/public-programs';
+import type { ProgramPreview, PublicProgram } from '@tilana/contracts/public-programs';
 import type { Tone } from './data';
 
 /**
@@ -36,6 +36,10 @@ export type Program = {
   step?: 1 | 2 | 3;
   /** A short label on the art panel: "Start here", "Pelvic floor", ... */
   marker: string;
+  /** "What's inside": Tilana's short lines for the peek (empty when she has not written any). */
+  highlights: string[];
+  /** Pictures of the PDF for "Peek inside" (cover, then blurred pages), made by the admin. */
+  preview: ProgramPreview | null;
 };
 
 /** What the basket and checkout need to show a program. */
@@ -83,6 +87,8 @@ export function toSiteProgram(p: PublicProgram): Program {
     series: p.series,
     ...(step ? { step } : {}),
     marker: p.marker,
+    highlights: p.highlights ?? [],
+    preview: p.preview ?? null,
   };
 }
 

@@ -5,6 +5,8 @@ import { requireAdmin } from '@/server/auth/admin';
 import { isSameOrigin } from '@/server/auth/admin-access';
 import { getDatabase } from '@/server/db';
 import { handle, HttpError, routeId, sameOriginOnly, type IdContext } from '@/server/http';
+import { logger } from '@/server/logger';
+import { makeProgramPreview } from '@/server/services/program-previews';
 import { findProgram, programLabel, toAdminProgram } from '@/server/services/programs';
 import { downloadProgramFile, inspectPdf, PdfRejectedError, programFileName, uploadProgramFile } from '@/server/utils/program-files';
 
@@ -44,6 +46,16 @@ export const POST = handle(async (request: Request, context: IdContext) => {
     fileUploadedBy: admin.id,
   }).where(and(eq(programs.id, id), eq(programs.fileVersion, program.fileVersion))).returning({ id: programs.id });
   if (!updated.length) throw new HttpError(409, 'The PDF was changed at the same time. Please reload and try again.');
+
+  // The website's sneak peek is made from the new PDF. The PDF is saved either
+  // way; if the pictures fail, the admin offers to make them again.
+  const stored = (await findProgram(db, id))!;
+  try {
+    await makeProgramPreview(db, stored, data);
+  }
+  catch (error) {
+    logger.error({ err: error, programId: id }, 'Program preview could not be made');
+  }
   return Response.json({ program: toAdminProgram((await findProgram(db, id))!) });
 });
 

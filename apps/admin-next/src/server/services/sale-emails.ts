@@ -53,3 +53,46 @@ ${sale.adminUrl ? button(sale.adminUrl, 'Open sales') : ''}
     html: layout({ title: subject, preheader: `${sale.buyerName} bought ${sale.items.length} program${sale.items.length === 1 ? '' : 's'}.`, body, footer: 'Sent by your website admin.' }),
   };
 }
+
+/** "Needs your attention" email to Tilana: something about an order needs a person. */
+export function orderAlertEmail(to: string, alert: { orderNumber: string; title: string; lines: string[]; testMode: boolean }): OutgoingEmail {
+  const subject = `${alert.testMode ? '[Test payment] ' : ''}Needs your attention: ${alert.title} · ${alert.orderNumber}`;
+  const text = `margin:0 0 14px;font-family:${fonts.body};font-size:15px;line-height:1.6;color:${colors.chocolate}`;
+  const body = `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td style="padding:32px">
+<h1 style="margin:0 0 16px;font-family:${fonts.heading};font-size:28px;font-weight:400;color:${colors.ink}">${escapeHtml(alert.title)}</h1>
+${alert.lines.map(line => `<p style="${text}">${escapeHtml(line)}</p>`).join('\n')}
+<p style="${text}">Order ${escapeHtml(alert.orderNumber)}. Find it on the Sales page in the admin.</p>
+</td></tr></table>`;
+  return {
+    to: [to],
+    fromName: FROM_NAME,
+    subject,
+    text: [alert.title, ...alert.lines, `Order ${alert.orderNumber}. Find it on the Sales page in the admin.`].join('\n\n'),
+    html: layout({ title: subject, preheader: alert.lines[0] ?? alert.title, body, footer: 'Sent by your website admin.' }),
+  };
+}
+
+/** Tells the buyer their refund went through. */
+export function refundEmail(to: string, refund: { firstName: string; orderNumber: string; programs: string[]; totalCents: number; replyTo?: string }): OutgoingEmail {
+  const subject = `Your refund for order ${refund.orderNumber}`;
+  const text = `margin:0 0 16px;font-family:${fonts.body};font-size:16px;line-height:1.7;color:${colors.chocolate}`;
+  const amount = rand(refund.totalCents);
+  const body = `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td style="padding:32px">
+<h1 style="margin:0 0 16px;font-family:${fonts.heading};font-size:28px;font-weight:400;color:${colors.ink}">Your refund is on its way</h1>
+<p style="${text}">Hi ${escapeHtml(refund.firstName)},</p>
+<p style="${text}">The ${amount} you paid for order ${escapeHtml(refund.orderNumber)} (${escapeHtml(refund.programs.join(', '))}) has been refunded to the card or account you paid with. Depending on your bank it can take a few working days to show.</p>
+<p style="${text}">If you have any questions, simply reply to this email.</p>
+</td></tr></table>`;
+  return {
+    to: [to],
+    fromName: FROM_NAME,
+    ...(refund.replyTo ? { replyTo: [refund.replyTo] } : {}),
+    subject,
+    text: [
+      `Hi ${refund.firstName},`,
+      `The ${amount} you paid for order ${refund.orderNumber} (${refund.programs.join(', ')}) has been refunded to the card or account you paid with. Depending on your bank it can take a few working days to show.`,
+      'If you have any questions, simply reply to this email.',
+    ].join('\n\n'),
+    html: layout({ title: subject, preheader: `${amount} refunded for order ${refund.orderNumber}.`, body, footer: 'You are receiving this because you asked for a refund.' }),
+  };
+}

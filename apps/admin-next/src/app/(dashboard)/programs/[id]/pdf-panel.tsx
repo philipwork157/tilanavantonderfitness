@@ -27,7 +27,7 @@ export function PdfPanel({ program, onProgram }: { program: AdminProgram; onProg
       onProgram(next);
       toast.success('PDF uploaded', {
         description: next.onWebsite
-          ? 'It is on the website. New orders and resends get this version.'
+          ? 'It is on the website with a new sneak peek. New orders and resends get this version.'
           : next.offWebsiteReason ?? undefined,
       });
     },

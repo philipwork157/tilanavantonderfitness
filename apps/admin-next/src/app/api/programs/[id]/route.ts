@@ -5,7 +5,8 @@ import { requireAdmin } from '@/server/auth/admin';
 import { isSameOrigin } from '@/server/auth/admin-access';
 import { getDatabase } from '@/server/db';
 import { handle, HttpError, readJson, routeId, sameOriginOnly, type IdContext } from '@/server/http';
-import { findProgram, isOnWebsite, toAdminProgram } from '@/server/services/programs';
+import { removePreviewImages } from '@/server/services/program-previews';
+import { findProgram, isOnWebsite, isProgramSold, toAdminProgram } from '@/server/services/programs';
 
 export const GET = handle(async (_request: Request, context: IdContext) => {
   await requireAdmin();
@@ -45,12 +46,20 @@ export const PUT = handle(async (request: Request, context: IdContext) => {
   return Response.json({ program: toAdminProgram((await findProgram(db, id))!) });
 });
 
-/** Delete a program. Its PDFs stay in storage. */
+/**
+ * Delete a program that was never sold. Its PDFs stay in storage; its
+ * sneak peek pictures are removed. Sold
+ * programs stay: "Email PDFs again" needs them for past buyers.
+ */
 export const DELETE = handle(async (request: Request, context: IdContext) => {
   sameOriginOnly(request, isSameOrigin);
   await requireAdmin();
   const id = await routeId(context);
-  const deleted = await getDatabase().delete(programs).where(eq(programs.id, id)).returning({ id: programs.id });
+  if (await isProgramSold(getDatabase(), id)) {
+    throw new HttpError(409, 'People have bought this program, so it stays: past buyers may need their PDFs again. Switch it off instead to take it off the website.');
+  }
+  const deleted = await getDatabase().delete(programs).where(eq(programs.id, id)).returning({ id: programs.id, preview: programs.preview });
   if (!deleted.length) throw new HttpError(404, 'Program not found.');
+  await removePreviewImages(deleted[0]!.preview);
   return Response.json({ ok: true });
 });

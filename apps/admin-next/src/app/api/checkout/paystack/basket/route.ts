@@ -1,8 +1,10 @@
 import { basketCheckoutRequestSchema } from '@tilana/contracts/checkout';
 import { createAttemptLimiter } from '@/server/auth/admin-access';
+import { isDevelopment } from '@/server/config';
 import { websitePreflight, websiteRoute } from '@/server/cors';
 import { getDatabase } from '@/server/db';
 import { clientIp, HttpError, readJson } from '@/server/http';
+import { logger } from '@/server/logger';
 import { CheckoutAlreadyStartedError, startCheckout } from '@/server/services/orders';
 import { websiteUrl } from '@/server/utils/newsletter';
 import { initializePayment, paystackSettings } from '@/server/utils/paystack';
@@ -32,10 +34,16 @@ export const POST = websiteRoute(async (request) => {
   attempts.record(ip);
 
   const { mode } = paystackSettings();
+  const site = websiteUrl();
+  // Paystack sends buyers back to this address after paying; a wrong one strands them.
+  if (!isDevelopment && (!site.startsWith('https://') || /localhost|127\.0\.0\.1/.test(site))) {
+    logger.error('WEBSITE_URL must be the public https website address for checkout');
+    throw new HttpError(503, 'Online payments are not available right now. Please try again later.');
+  }
   try {
     const result = await startCheckout(getDatabase(), input, {
       mode,
-      websiteUrl: websiteUrl(),
+      websiteUrl: site,
       initialize: (payment) => initializePayment(payment),
     });
     return Response.json(result);

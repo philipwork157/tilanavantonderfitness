@@ -1,6 +1,6 @@
 import 'server-only';
 import { orders, programs, type Database } from '@tilana/db';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { serverConfig } from '../config';
 import { logger } from '../logger';
 import { sendEmail } from '../utils/email';
@@ -9,7 +9,7 @@ import { websiteUrl } from '../utils/newsletter';
 import { downloadProgramFile } from '../utils/program-files';
 import { orderItemsFor } from './orders';
 import { programDeliveryEmail } from './program-emails';
-import { saleNotificationEmail } from './sale-emails';
+import { orderAlertEmail, saleNotificationEmail } from './sale-emails';
 
 /** Keeps each delivery email well under the SES size limit (attachments grow by a third when encoded). */
 const MAX_ATTACHMENT_BYTES_PER_EMAIL = 20 * 1024 * 1024;
@@ -79,18 +79,32 @@ async function recordDelivery(db: Database, orderId: number, delivered: boolean,
 
 /**
  * Emails a paid order's PDFs to the buyer, records the outcome on the order,
- * then tells Tilana about the sale. Call it once, from whoever marked the
- * order paid. Never throws.
+ * then tells Tilana about the sale (once per order, however many attempts).
+ * Called by whoever marked the order paid, and again by the background order
+ * checks for deliveries that failed or never ran. Never throws.
  */
 export async function deliverOrder(db: Database, orderId: number, deps: DeliveryDependencies = defaults): Promise<void> {
   const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
-  if (!order || order.status !== 'paid') return;
+  if (!order || order.status !== 'paid' || order.deliveryStatus === 'sent') return;
+  // Claim this attempt, so two runs never email the same attempt twice.
+  const claimed = await db.update(orders).set({ deliveryAttempts: order.deliveryAttempts + 1 })
+    .where(and(eq(orders.id, order.id), eq(orders.deliveryAttempts, order.deliveryAttempts), ne(orders.deliveryStatus, 'sent')))
+    .returning({ id: orders.id });
+  if (!claimed.length) return;
+
   const { items, delivered, failure } = await emailPrograms(db, order, order.email, deps);
   await recordDelivery(db, order.id, delivered, failure);
-  logger.info({ orderNumber: order.orderNumber, delivered }, delivered ? 'Order paid and programs emailed' : 'Order paid but programs not emailed');
+  logger.info({ orderNumber: order.orderNumber, delivered, attempt: order.deliveryAttempts + 1 }, delivered ? 'Programs emailed' : 'Programs not emailed');
+  await notifySale(db, order, items, delivered, deps);
+}
 
+/** Tilana's "New sale" email, sent once per order (claimed in the database first). */
+async function notifySale(db: Database, order: PaidOrder, items: Awaited<ReturnType<typeof orderItemsFor>>, delivered: boolean, deps: DeliveryDependencies) {
   const notifyTo = serverConfig().contactNotifyTo;
   if (!notifyTo) return;
+  const claimed = await db.update(orders).set({ saleNotifiedAt: new Date() })
+    .where(and(eq(orders.id, order.id), isNull(orders.saleNotifiedAt))).returning({ id: orders.id });
+  if (!claimed.length) return;
   try {
     await deps.send(saleNotificationEmail(notifyTo, {
       orderNumber: order.orderNumber,
@@ -103,7 +117,20 @@ export async function deliverOrder(db: Database, orderId: number, deps: Delivery
       adminUrl: null,
     }));
   } catch (error) {
+    // Let a later check try again.
+    await db.update(orders).set({ saleNotifiedAt: null }).where(eq(orders.id, order.id));
     logger.error({ err: error, orderNumber: order.orderNumber }, 'Sale notification could not be sent');
+  }
+}
+
+/** Emails Tilana that an order needs a person. Never throws. */
+export async function alertOrder(order: Pick<PaidOrder, 'orderNumber' | 'paymentMode'>, title: string, lines: string[], deps: Pick<DeliveryDependencies, 'send'> = defaults): Promise<void> {
+  const notifyTo = serverConfig().contactNotifyTo;
+  if (!notifyTo) return;
+  try {
+    await deps.send(orderAlertEmail(notifyTo, { orderNumber: order.orderNumber, title, lines, testMode: order.paymentMode === 'test' }));
+  } catch (error) {
+    logger.error({ err: error, orderNumber: order.orderNumber }, 'Order alert could not be sent');
   }
 }
 

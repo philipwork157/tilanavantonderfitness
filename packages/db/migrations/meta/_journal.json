@@ -85,6 +85,41 @@
       "when": 1791491930603,
       "tag": "0011_program_switch",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791493013473,
+      "tag": "0012_order_safety",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791494257317,
+      "tag": "0013_payment_fees",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791494897611,
+      "tag": "0014_program_peek",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1791557962556,
+      "tag": "0015_program_preview",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791562670069,
+      "tag": "0016_program_highlights",
+      "breakpoints": true
     }
   ]
 }

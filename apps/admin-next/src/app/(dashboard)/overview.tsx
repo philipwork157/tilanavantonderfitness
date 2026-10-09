@@ -12,7 +12,7 @@ import { formatRand } from '@/lib/programs';
 interface OverviewData {
   inquiries: { active: number; new: number };
   newsletter: { subscribers: number };
-  sales: { ordersToday: number; revenueTodayCents: number; emailsNotSent: number };
+  sales: { ordersToday: number; revenueTodayCents: number; emailsNotSent: number; needsAttention: number };
 }
 
 /** Greeting by the time of day in South Africa. The server renders "Hello"; the browser fills in the rest. */
@@ -39,7 +39,7 @@ const tiles: {
   // Today = since midnight in South Africa. Paid orders only; test payments count too.
   { label: 'Sales today', hint: (d) => plural(d.sales.ordersToday, 'paid order so far', 'paid orders so far'), icon: Banknote, tone: 'caramel', href: '/sales', value: (d) => d.sales.revenueTodayCents, format: formatRand },
   { label: 'Orders today', hint: 'Paid since midnight', icon: ShoppingBag, tone: 'sage', href: '/sales', value: (d) => d.sales.ordersToday },
-  { label: 'PDF emails not sent', hint: (d) => (d.sales.emailsNotSent ? 'Paid, but the PDFs did not go out' : 'Every buyer has their PDFs'), icon: MailWarning, tone: 'terracotta', href: '/sales', value: (d) => d.sales.emailsNotSent },
+  { label: 'Orders needing attention', hint: (d) => (d.sales.needsAttention ? 'PDFs not emailed or marked “Needs review”' : 'Every buyer has their PDFs'), icon: MailWarning, tone: 'terracotta', href: '/sales', value: (d) => d.sales.needsAttention },
   { label: 'New enquiries', hint: 'Waiting for a first reply', icon: Inbox, tone: 'terracotta', href: '/inquiries', value: (d) => d.inquiries.new },
   { label: 'Open enquiries', hint: 'Everything not archived', icon: MessageSquare, tone: 'sand', href: '/inquiries', value: (d) => d.inquiries.active },
   { label: 'Newsletter subscribers', hint: 'Confirmed and subscribed', icon: Mail, tone: 'sage', href: '/newsletter?tab=subscribers', value: (d) => d.newsletter.subscribers },

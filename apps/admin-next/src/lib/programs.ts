@@ -25,10 +25,13 @@ export const illustrationLabels: Record<AdminProgram['illustration'], string> = 
 
 const rand = new Intl.NumberFormat('en-ZA', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
-/** 39900 → "R399", 39950 → "R399.50". */
+/** 39900 → "R399", 39950 → "R399.50", 477543 → "R4 775.43" (thousands grouped either way). */
 export function formatRand(cents: number): string {
-  const value = cents / 100;
-  return `R${Number.isInteger(value) ? rand.format(value) : value.toFixed(2)}`.replace(/\u00a0/g, ' ');
+  const sign = cents < 0 ? '-' : '';
+  const whole = Math.floor(Math.abs(cents) / 100);
+  const rest = Math.abs(cents) % 100;
+  const grouped = rand.format(whole).replace(/\u00a0/g, ' ');
+  return `${sign}R${grouped}${rest ? `.${String(rest).padStart(2, '0')}` : ''}`;
 }
 
 /** "399" or "399,50" → 39900 / 39950; null when it is not a valid amount. */

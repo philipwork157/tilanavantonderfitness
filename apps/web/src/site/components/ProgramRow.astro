@@ -1,6 +1,7 @@
 ---
 /** Full program card for the program page. layout="row" puts the art beside the copy; "stack" puts it on top. */
 import AddToBasket from './shop/AddToBasket';
+import Icon from './Icon';
 import ProgramArt from './ProgramArt.astro';
 import ProgramMarks from './ProgramMarks.astro';
 import { rand } from './shop/basket';
@@ -22,6 +23,7 @@ const { program: p, layout = 'row', delay = 0 } = Astro.props;
     <p class="row-lead">{p.title}</p>
     <p>{p.description}</p>
     <ul class="tag-list">{p.tags.map((t) => <li>{t}</li>)}</ul>
+    {p.preview && <a class="row-peek" href={`#peek-${p.slug}`} data-peek={p.slug}><Icon name="spark" /> Peek inside the PDF</a>}
     <div class="row-buy">
       <div class="price"><strong>{rand(p.priceCents)}</strong><span>once-off</span></div>
       {checkoutEnabled

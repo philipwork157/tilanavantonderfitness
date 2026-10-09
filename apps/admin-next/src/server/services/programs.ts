@@ -1,7 +1,8 @@
 import 'server-only';
-import { and, asc, count, eq, isNotNull, like, max, ne, or } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNotNull, like, max, ne, or } from 'drizzle-orm';
 import { slugify } from '@tilana/contracts/blog';
-import { programs, volumes, type Database, type Program, type Volume } from '@tilana/db';
+import { orderItems, orders, programs, volumes, type Database, type Program, type Volume } from '@tilana/db';
+import { currentPreview, previewImageUrl } from './program-previews';
 
 /*
  * Volumes hold programs: Volume 1 → Beginner, Nourish, ...
@@ -110,12 +111,20 @@ export function toAdminProgram(program: ProgramInVolume) {
     description: program.description,
     audience: program.audience,
     tags: program.tags,
+    highlights: program.highlights,
     tone: program.tone,
     illustration: program.illustration,
     series: program.series,
     step: program.step,
     marker: program.marker,
     sortOrder: program.sortOrder,
+    preview: program.preview
+      ? {
+          pageCount: program.preview.pageCount,
+          upToDate: currentPreview(program) !== null,
+          pages: program.preview.pages.map(({ path, ...page }) => ({ ...page, url: previewImageUrl(path) })),
+        }
+      : null,
     isActive: program.isActive,
     priceCents: program.priceCents,
     label: programLabel(program.name, program.volume),
@@ -134,6 +143,14 @@ export function toAdminProgram(program: ProgramInVolume) {
   };
 }
 
+/** Whether anyone has bought it (paid or later refunded): such programs are never deleted. */
+export async function isProgramSold(db: Database, programId: number): Promise<boolean> {
+  const [row] = await db.select({ id: orderItems.id }).from(orderItems)
+    .innerJoin(orders, eq(orders.id, orderItems.orderId))
+    .where(and(eq(orderItems.programId, programId), inArray(orders.status, ['paid', 'refunded']))).limit(1);
+  return Boolean(row);
+}
+
 /* ── Website ── */
 
 /** What the website shows: switched-on programs with a PDF in an active volume, oldest volume first. */
@@ -143,6 +160,14 @@ export async function listWebsitePrograms(db: Database): Promise<ProgramInVolume
     .where(and(eq(volumes.isActive, true), eq(programs.isActive, true), isNotNull(programs.filePath)))
     .orderBy(asc(volumes.number), asc(programs.sortOrder), asc(programs.name));
   return rows.map(row => ({ ...row.program, volume: row.volume }));
+}
+
+/** The sneak peek pictures, only when made from the current PDF. */
+function publicPreview(program: ProgramInVolume) {
+  const preview = currentPreview(program);
+  return preview
+    ? { pageCount: preview.pageCount, pages: preview.pages.map(({ path, ...page }) => ({ ...page, url: previewImageUrl(path) })) }
+    : null;
 }
 
 /** Public website view of a program. No file details or internal IDs. */
@@ -155,6 +180,7 @@ export function toPublicProgram(program: ProgramInVolume) {
     description: program.description,
     audience: program.audience,
     tags: program.tags,
+    highlights: program.highlights,
     tone: program.tone,
     illustration: program.illustration,
     series: program.series,
@@ -163,6 +189,7 @@ export function toPublicProgram(program: ProgramInVolume) {
     volumeNumber: program.volume.number,
     priceCents: program.priceCents,
     currency: 'ZAR' as const,
+    preview: publicPreview(program),
   };
 }
 

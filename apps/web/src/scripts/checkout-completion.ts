@@ -6,9 +6,9 @@ export function checkoutStatusMessage(result: CheckoutStatusResponse) {
   const messages = {
     pending: ['Payment is still processing', 'We have not yet confirmed the payment. Please check again shortly. Do not start another payment until this one is confirmed. Contact Tilana with the payment reference below if you need help.'],
     succeeded: ['Payment received', `Thank you. Your order${result.orderNumber ? ` ${result.orderNumber}` : ''} is confirmed. Your programs are on their way to your inbox.`],
-    partially_refunded: ['Payment partially refunded', 'Your payment was received and a partial refund has been recorded. Access to the programs from this order remains active. Use your purchase email address to sign in. Contact Tilana with the payment reference below for refund questions.'],
-    refunded: ['Payment refunded', 'Your payment was received and a full refund has been recorded. Access granted by this order has been removed. Any access from other valid purchases is unaffected. Contact Tilana with the payment reference below for refund questions.'],
-    reversed: ['Payment reversed', 'The payment has been reversed and access granted by this order has been removed. Any access from other valid purchases is unaffected. Contact Tilana with the payment reference below before starting another checkout.'],
+    partially_refunded: ['Payment partially refunded', 'Your payment was received and part of it has been refunded. Contact Tilana with the payment reference below if you have questions about the refund.'],
+    refunded: ['Payment refunded', 'This order has been refunded in full. Depending on your bank it can take a few working days to show. Contact Tilana with the payment reference below if you have questions.'],
+    reversed: ['Payment reversed', 'This payment has been reversed. Contact Tilana with the payment reference below before starting another checkout.'],
     failed: ['Sorry, something went wrong', 'This payment was unsuccessful. Your programs have not been sent and your cart has been kept. You can return to checkout and try again. If your bank shows a charge, contact Tilana with the payment reference below before paying again.'],
     abandoned: ['Sorry, something went wrong', 'This checkout was not completed. Your programs have not been sent and your cart has been kept. You can return to checkout when you are ready. If your bank shows a charge, contact Tilana with the payment reference below before paying again.'],
   } satisfies Record<CheckoutStatusResponse['status'], [string, string]>;

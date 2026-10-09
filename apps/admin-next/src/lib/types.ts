@@ -126,6 +126,8 @@ export interface AdminProgram {
   description: string;
   audience: string;
   tags: string[];
+  /** "What's inside": up to 4 short lines next to the PDF pictures on the website. */
+  highlights: string[];
   tone: 'terracotta' | 'sage' | 'sand' | 'white' | 'caramel';
   illustration: 'barbell' | 'breath' | 'plate';
   series: 'strength' | 'focus';
@@ -133,6 +135,15 @@ export interface AdminProgram {
   marker: string;
   sortOrder: number;
   priceCents: number;
+  /**
+   * "Peek inside" pictures made from the PDF: the cover, then blurred inside
+   * pages. `upToDate` is false when they were made from an older PDF.
+   */
+  preview: {
+    pageCount: number;
+    upToDate: boolean;
+    pages: { url: string; page: number; width: number; height: number; blurred: boolean }[];
+  } | null;
   /** "Beginner · Volume 1": the name in the basket and emails. */
   label: string;
   volume: Pick<AdminVolume, 'id' | 'number' | 'name' | 'isActive'>;
@@ -152,17 +163,24 @@ export interface AdminOrder {
   buyer: string;
   email: string;
   totalCents: number;
-  status: 'pending' | 'paid' | 'failed' | 'abandoned';
+  /** Paystack's fee in cents; null until Paystack reports it. */
+  feeCents: number | null;
+  status: 'pending' | 'paid' | 'failed' | 'abandoned' | 'refunded';
   deliveryStatus: 'pending' | 'sent' | 'failed';
   deliveryError: string | null;
   deliveredAt: string | null;
+  /** Set when a person must look at the order. */
+  reviewNote: string | null;
+  refundStatus: 'pending' | 'processed' | 'failed' | null;
+  refundReason: string | null;
+  refundedAt: string | null;
   testPayment: boolean;
   programs: string[];
 }
 
 export interface AdminSales {
   days: number;
-  totals: { revenueCents: number; orders: number; programsSold: number; awaitingPayment: number; emailsNotSent: number };
+  totals: { revenueCents: number; feesCents: number; netCents: number; feesUnknown: number; orders: number; programsSold: number; awaitingPayment: number; emailsNotSent: number; needsReview: number };
   daily: { date: string; orders: number; revenueCents: number }[];
   byProgram: { label: string; sold: number; revenueCents: number }[];
   recent: AdminOrder[];

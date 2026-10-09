@@ -92,12 +92,21 @@ describe('program rules', () => {
   });
 
   it('requires a step for the strength series only', () => {
-    const base = { name: 'Beginner', slug: 'beginner-volume-1', title: '', summary: '', description: '', audience: '', tags: [], tone: 'sand', illustration: 'barbell', marker: '', sortOrder: 0, priceCents: 39_900 } as const;
+    const base = { name: 'Beginner', slug: 'beginner-volume-1', title: '', summary: '', description: '', audience: '', tags: [], highlights: [], tone: 'sand', illustration: 'barbell', marker: '', sortOrder: 0, priceCents: 39_900 } as const;
     expect(programInputSchema.safeParse({ ...base, series: 'strength', step: 2 }).success).toBe(true);
     expect(programInputSchema.safeParse({ ...base, series: 'strength', step: null }).success).toBe(false);
     expect(programInputSchema.safeParse({ ...base, series: 'focus', step: 1 }).success).toBe(false);
     expect(programInputSchema.safeParse({ ...base, series: 'focus', step: null, tags: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] }).success).toBe(false);
     expect(programInputSchema.safeParse({ ...base, series: 'focus', step: null, priceCents: 50 }).success).toBe(false);
+  });
+
+  it('allows up to 4 short "What\'s inside" lines', () => {
+    const base = { name: 'Beginner', slug: 'beginner-volume-1', title: '', summary: '', description: '', audience: '', tags: [], tone: 'sand', illustration: 'barbell', marker: '', sortOrder: 0, priceCents: 39_900, series: 'focus', step: null } as const;
+    const parsed = programInputSchema.parse({ ...base, highlights: ['  6 weeks, 3 sessions a week  ', 'Dumbbells and a bench'] });
+    expect(parsed.highlights).toEqual(['6 weeks, 3 sessions a week', 'Dumbbells and a bench']);
+    expect(programInputSchema.safeParse({ ...base, highlights: ['a', 'b', 'c', 'd', 'e'] }).success).toBe(false);
+    expect(programInputSchema.safeParse({ ...base, highlights: ['x'.repeat(91)] }).success).toBe(false);
+    expect(programInputSchema.safeParse({ ...base, highlights: [''] }).success).toBe(false);
   });
 
   it('reads and shows prices in rand', () => {
@@ -109,5 +118,7 @@ describe('program rules', () => {
     expect(formatRand(39_900)).toBe('R399');
     expect(formatRand(129_900)).toBe('R1 299');
     expect(formatRand(39_950)).toBe('R399.50');
+    expect(formatRand(477_543)).toBe('R4 775.43');
+    expect(formatRand(1_257)).toBe('R12.57');
   });
 });

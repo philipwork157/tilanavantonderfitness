@@ -5,6 +5,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   smallint,
@@ -207,6 +208,17 @@ export const PROGRAM_ILLUSTRATIONS = ['barbell', 'breath', 'plate'] as const;
 export const PROGRAM_SERIES = ['strength', 'focus'] as const;
 
 /**
+ * The sneak peek made from a program's PDF: the cover, plus a few inside pages
+ * blurred, as WebP images in the public Supabase Storage bucket
+ * `program-previews`. `fileVersion` says which PDF they were made from.
+ */
+export interface ProgramPreviewData {
+  fileVersion: number;
+  pageCount: number;
+  pages: { path: string; page: number; width: number; height: number; blurred: boolean }[];
+}
+
+/**
  * A collection of programs: "Volume 1", "Volume 2". Tilana switches a whole
  * volume on or off for the website; its programs only show while it is active.
  */
@@ -245,6 +257,8 @@ export const programs = pgTable('programs', {
   // Who it is for, e.g. "New or returning".
   audience: text('audience').notNull().default(''),
   tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
+  // "What's inside": up to 4 short lines next to the PDF pictures on the website.
+  highlights: text('highlights').array().notNull().default(sql`'{}'::text[]`),
   tone: text('tone', { enum: PROGRAM_TONES }).notNull().default('sand'),
   // Which website illustration to draw (the barbell uses `step` plates).
   illustration: text('illustration', { enum: PROGRAM_ILLUSTRATIONS }).notNull().default('barbell'),
@@ -267,6 +281,8 @@ export const programs = pgTable('programs', {
   fileVersion: integer('file_version').notNull().default(0),
   fileUploadedAt: timestamp('file_uploaded_at', { withTimezone: true }),
   fileUploadedBy: bigint('file_uploaded_by', { mode: 'number' }).references(() => users.id, { onDelete: 'set null' }),
+  // Sneak peek images made automatically from the PDF; null until made.
+  preview: jsonb('preview').$type<ProgramPreviewData>(),
   createdBy: bigint('created_by', { mode: 'number' }).references(() => users.id, { onDelete: 'set null' }),
   updatedBy: bigint('updated_by', { mode: 'number' }).references(() => users.id, { onDelete: 'set null' }),
   ...timestamps,
@@ -278,6 +294,7 @@ export const programs = pgTable('programs', {
   check('programs_series_valid', sql`${table.series} in ('strength', 'focus')`),
   check('programs_step_matches_series', sql`(${table.series} = 'strength' and ${table.step} is not null and ${table.step} between 1 and 3) or (${table.series} = 'focus' and ${table.step} is null)`),
   check('programs_tags_count', sql`coalesce(array_length(${table.tags}, 1), 0) <= 6`),
+  check('programs_highlights_count', sql`coalesce(array_length(${table.highlights}, 1), 0) <= 4`),
   check('programs_sort_order_non_negative', sql`${table.sortOrder} >= 0`),
   check('programs_price_valid', sql`${table.priceCents} between 100 and 10000000`),
   check('programs_currency_valid', sql`${table.currency} = 'ZAR'`),
@@ -288,8 +305,10 @@ export const programs = pgTable('programs', {
   index('programs_volume_order_idx').on(table.volumeId, table.sortOrder),
 ]).enableRLS();
 
-export const ORDER_STATUSES = ['pending', 'paid', 'failed', 'abandoned'] as const;
+export const ORDER_STATUSES = ['pending', 'paid', 'failed', 'abandoned', 'refunded'] as const;
 export const ORDER_DELIVERY_STATUSES = ['pending', 'sent', 'failed'] as const;
+/** A refund asked from Paystack: pending until Paystack confirms it (then the order is refunded) or it fails. */
+export const ORDER_REFUND_STATUSES = ['pending', 'processed', 'failed'] as const;
 
 /**
  * A checkout. Created as `pending` before the buyer goes to Paystack; becomes
@@ -317,13 +336,31 @@ export const orders = pgTable('orders', {
   authorizationUrl: text('authorization_url'),
   paystackTransactionId: text('paystack_transaction_id'),
   paymentChannel: text('payment_channel'),
+  // Paystack's fee for this payment, in cents, as Paystack reported it (null until known).
+  feeCents: integer('fee_cents'),
   paidAt: timestamp('paid_at', { withTimezone: true }),
   deliveryStatus: text('delivery_status', { enum: ORDER_DELIVERY_STATUSES }).notNull().default('pending'),
   deliveryError: text('delivery_error'),
   deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+  // Background checks: how often this order was re-verified with Paystack, and when.
+  checkCount: integer('check_count').notNull().default(0),
+  lastCheckedAt: timestamp('last_checked_at', { withTimezone: true }),
+  // PDF emails tried so far (the background job retries a few times).
+  deliveryAttempts: integer('delivery_attempts').notNull().default(0),
+  // When Tilana's "New sale" email went out, so it is sent exactly once.
+  saleNotifiedAt: timestamp('sale_notified_at', { withTimezone: true }),
+  // Set when a person must look at the order (payment did not match, a dispute).
+  reviewNote: text('review_note'),
+  refundStatus: text('refund_status', { enum: ORDER_REFUND_STATUSES }),
+  refundReason: text('refund_reason'),
+  paystackRefundId: text('paystack_refund_id'),
+  refundRequestedAt: timestamp('refund_requested_at', { withTimezone: true }),
+  refundedAt: timestamp('refunded_at', { withTimezone: true }),
   ...timestamps,
 }, table => [
-  check('orders_status_valid', sql`${table.status} in ('pending', 'paid', 'failed', 'abandoned')`),
+  check('orders_status_valid', sql`${table.status} in ('pending', 'paid', 'failed', 'abandoned', 'refunded')`),
+  check('orders_refund_status_valid', sql`${table.refundStatus} is null or ${table.refundStatus} in ('pending', 'processed', 'failed')`),
+  check('orders_refunded_has_date', sql`${table.status} <> 'refunded' or ${table.refundedAt} is not null`),
   check('orders_delivery_status_valid', sql`${table.deliveryStatus} in ('pending', 'sent', 'failed')`),
   check('orders_payment_mode_valid', sql`${table.paymentMode} in ('test', 'live')`),
   check('orders_total_valid', sql`${table.totalCents} > 0`),

@@ -1,6 +1,6 @@
 import 'server-only';
 import { orderItems, orders, type Database } from '@tilana/db';
-import { and, count, desc, eq, gte, ilike, inArray, or, sql, sum } from 'drizzle-orm';
+import { and, count, desc, eq, gte, ilike, inArray, isNotNull, or, sql, sum } from 'drizzle-orm';
 
 /** Days are counted in South African time. */
 const ZONE = 'Africa/Johannesburg';
@@ -25,10 +25,17 @@ export async function salesSummary(db: Database, days: number, now = new Date())
   // The zone is written into the SQL (not a parameter) so SELECT and GROUP BY match.
   const day = sql<string>`to_char(${orders.paidAt} at time zone ${sql.raw(`'${ZONE}'`)}, 'YYYY-MM-DD')`;
 
-  const [totals] = await db.select({ orders: count(), revenueCents: sum(orders.totalCents) }).from(orders).where(paidSince);
+  const [totals] = await db.select({
+    orders: count(),
+    revenueCents: sum(orders.totalCents),
+    feesCents: sum(orders.feeCents),
+    // Paid orders whose fee Paystack has not reported yet (filled in by the order checks).
+    feesUnknown: count(sql`case when ${orders.feeCents} is null then 1 end`),
+  }).from(orders).where(paidSince);
   const [sold] = await db.select({ items: count() }).from(orderItems).innerJoin(orders, eq(orders.id, orderItems.orderId)).where(paidSince);
   const [waiting] = await db.select({ orders: count() }).from(orders).where(and(eq(orders.status, 'pending'), gte(orders.createdAt, since)));
   const [unsent] = await db.select({ orders: count() }).from(orders).where(and(eq(orders.status, 'paid'), eq(orders.deliveryStatus, 'failed')));
+  const [review] = await db.select({ orders: count() }).from(orders).where(isNotNull(orders.reviewNote));
 
   const perDay = await db.select({ day, orders: count(), revenueCents: sum(orders.totalCents) }).from(orders).where(paidSince).groupBy(day);
   const byDay = new Map(perDay.map(row => [row.day, row]));
@@ -48,10 +55,15 @@ export async function salesSummary(db: Database, days: number, now = new Date())
     days,
     totals: {
       revenueCents: Number(totals?.revenueCents ?? 0),
+      feesCents: Number(totals?.feesCents ?? 0),
+      // What reaches Tilana's bank: sales minus Paystack's fees.
+      netCents: Number(totals?.revenueCents ?? 0) - Number(totals?.feesCents ?? 0),
+      feesUnknown: totals?.feesUnknown ?? 0,
       orders: totals?.orders ?? 0,
       programsSold: sold?.items ?? 0,
       awaitingPayment: waiting?.orders ?? 0,
       emailsNotSent: unsent?.orders ?? 0,
+      needsReview: review?.orders ?? 0,
     },
     daily,
     byProgram: perProgram.map(row => ({ label: row.label, sold: row.sold, revenueCents: Number(row.revenueCents ?? 0) })),
@@ -73,10 +85,15 @@ async function withPrograms(db: Database, rows: OrderRow[]) {
     buyer: `${order.firstName} ${order.lastName}`.trim(),
     email: order.email,
     totalCents: order.totalCents,
+    feeCents: order.feeCents,
     status: order.status,
     deliveryStatus: order.deliveryStatus,
     deliveryError: order.deliveryError,
     deliveredAt: order.deliveredAt,
+    reviewNote: order.reviewNote,
+    refundStatus: order.refundStatus,
+    refundReason: order.refundReason,
+    refundedAt: order.refundedAt,
     testPayment: order.paymentMode === 'test',
     programs: items.filter(item => item.orderId === order.id).map(item => item.label),
   }));
@@ -97,11 +114,18 @@ export async function findOrders(db: Database, query: string) {
   return withPrograms(db, rows);
 }
 
-/** Today's paid sales (South African day) and paid orders whose PDFs did not go out, for the Overview. */
+/** Today's paid sales (South African day) and orders needing a person, for the Overview. */
 export async function salesToday(db: Database, now = new Date()) {
   const since = new Date(`${saDate(now)}T00:00:00+02:00`);
   const [today] = await db.select({ orders: count(), revenueCents: sum(orders.totalCents) }).from(orders)
     .where(and(eq(orders.status, 'paid'), gte(orders.paidAt, since)));
   const [unsent] = await db.select({ orders: count() }).from(orders).where(and(eq(orders.status, 'paid'), eq(orders.deliveryStatus, 'failed')));
-  return { ordersToday: today?.orders ?? 0, revenueTodayCents: Number(today?.revenueCents ?? 0), emailsNotSent: unsent?.orders ?? 0 };
+  const [review] = await db.select({ orders: count() }).from(orders).where(isNotNull(orders.reviewNote));
+  return {
+    ordersToday: today?.orders ?? 0,
+    revenueTodayCents: Number(today?.revenueCents ?? 0),
+    emailsNotSent: unsent?.orders ?? 0,
+    // Orders a person must look at: PDFs not emailed, or a "Needs review" note.
+    needsAttention: (unsent?.orders ?? 0) + (review?.orders ?? 0),
+  };
 }

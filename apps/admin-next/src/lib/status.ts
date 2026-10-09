@@ -52,6 +52,12 @@ export const orderStatus: Record<string, StatusStyle> = {
   pending: { label: 'Awaiting payment', tone: 'info' },
   failed: { label: 'Payment failed', tone: 'danger' },
   abandoned: { label: 'Not completed', tone: 'neutral' },
+  refunded: { label: 'Refunded', tone: 'neutral' },
+};
+
+export const orderRefundStatus: Record<string, StatusStyle> = {
+  pending: { label: 'Refund pending', tone: 'warning' },
+  failed: { label: 'Refund failed', tone: 'danger' },
 };
 
 export const orderDeliveryStatus: Record<string, StatusStyle> = {

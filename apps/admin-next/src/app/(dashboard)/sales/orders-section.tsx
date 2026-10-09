@@ -1,7 +1,8 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { Mail, Search, ShoppingBag } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Check, Mail, Search, ShoppingBag, TriangleAlert, Undo2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useDeferredValue, useState } from 'react';
 import { EmptyState } from '@/components/empty-state';
 import { StatusBadge } from '@/components/status-badge';
@@ -12,13 +13,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { api } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import { formatRand } from '@/lib/programs';
-import { orderDeliveryStatus, orderStatus, statusStyle } from '@/lib/status';
+import { orderDeliveryStatus, orderRefundStatus, orderStatus, statusStyle } from '@/lib/status';
 import type { AdminOrder } from '@/lib/types';
+import { RefundDialog } from './refund-dialog';
 import { ResendDialog } from './resend-dialog';
 
 /**
  * The latest orders, or (while searching) any order by number, email or name,
- * with "Email PDFs again" on paid orders.
+ * with "Email PDFs again" and "Refund" on paid orders and "Mark as checked"
+ * on orders that need a person.
  */
 export function OrdersSection({ recent, loading, period }: { recent: AdminOrder[] | undefined; loading: boolean; period: string }) {
   const [query, setQuery] = useState('');
@@ -31,6 +34,17 @@ export function OrdersSection({ recent, loading, period }: { recent: AdminOrder[
     placeholderData: (previous) => previous,
   });
   const [resending, setResending] = useState<AdminOrder | null>(null);
+  const [refunding, setRefunding] = useState<AdminOrder | null>(null);
+  const queryClient = useQueryClient();
+  const markChecked = useMutation({
+    mutationFn: (orderNumber: string) => api(`/api/orders/${orderNumber}/review`, { method: 'POST' }),
+    onSuccess: () => {
+      toast.success('Marked as checked');
+      void queryClient.invalidateQueries({ queryKey: ['sales'] });
+      void queryClient.invalidateQueries({ queryKey: ['orders'] });
+    },
+    onError: () => toast.error('Not changed', { description: 'Please try again.' }),
+  });
 
   const rows = searching ? search.data?.orders : recent;
   const pending = searching ? search.isPending : loading;
@@ -74,6 +88,7 @@ export function OrdersSection({ recent, loading, period }: { recent: AdminOrder[
               {!pending && rows?.map((order) => {
                 const status = statusStyle(orderStatus, order.status);
                 const delivery = statusStyle(orderDeliveryStatus, order.deliveryStatus);
+                const refund = order.status === 'paid' && order.refundStatus && order.refundStatus !== 'processed' ? statusStyle(orderRefundStatus, order.refundStatus) : null;
                 return (
                   <TableRow key={order.orderNumber}>
                     <TableCell className="px-5 py-3 whitespace-normal">
@@ -84,19 +99,38 @@ export function OrdersSection({ recent, loading, period }: { recent: AdminOrder[
                       </span>
                     </TableCell>
                     <TableCell className="hidden px-5 text-sm whitespace-normal md:table-cell">{order.programs.join(', ')}</TableCell>
-                    <TableCell className="hidden px-5 text-right font-semibold tabular-nums sm:table-cell">{formatRand(order.totalCents)}</TableCell>
+                    <TableCell className="hidden px-5 text-right tabular-nums sm:table-cell">
+                      <span className="block font-semibold">{formatRand(order.totalCents)}</span>
+                      {order.feeCents !== null && <span className="block text-xs text-muted-foreground">fee {formatRand(order.feeCents)}</span>}
+                    </TableCell>
                     <TableCell className="px-5 py-3 whitespace-normal">
                       <span className="flex flex-wrap items-center gap-1.5">
                         <StatusBadge label={status.label} tone={status.tone} />
                         {order.status === 'paid' && <StatusBadge label={delivery.label} tone={delivery.tone} />}
+                        {refund && <StatusBadge label={refund.label} tone={refund.tone} />}
+                        {order.reviewNote && <StatusBadge label="Needs review" tone="warning" icon={TriangleAlert} />}
                         {order.testPayment && <StatusBadge label="Test" tone="warning" />}
                       </span>
-                      {order.deliveryError && <span className="mt-1 block text-xs text-destructive">{order.deliveryError}</span>}
-                      {order.status === 'paid' && (
-                        <Button variant="outline" size="sm" className="mt-2" onClick={() => setResending(order)}>
-                          <Mail aria-hidden /> Email PDFs again
-                        </Button>
-                      )}
+                      {order.deliveryError && order.deliveryStatus !== 'sent' && <span className="mt-1 block text-xs text-destructive">{order.deliveryError}</span>}
+                      {order.reviewNote && <span className="mt-1 block max-w-md text-xs text-status-warning">{order.reviewNote}</span>}
+                      {order.status === 'refunded' && order.refundReason && <span className="mt-1 block text-xs text-muted-foreground">Refund: {order.refundReason}</span>}
+                      <span className="mt-2 flex flex-wrap gap-1.5">
+                        {order.status === 'paid' && (
+                          <Button variant="outline" size="sm" onClick={() => setResending(order)}>
+                            <Mail aria-hidden /> Email PDFs again
+                          </Button>
+                        )}
+                        {order.status === 'paid' && order.refundStatus !== 'pending' && (
+                          <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setRefunding(order)}>
+                            <Undo2 aria-hidden /> Refund
+                          </Button>
+                        )}
+                        {order.reviewNote && (
+                          <Button variant="ghost" size="sm" disabled={markChecked.isPending} onClick={() => markChecked.mutate(order.orderNumber)}>
+                            <Check aria-hidden /> Mark as checked
+                          </Button>
+                        )}
+                      </span>
                     </TableCell>
                   </TableRow>
                 );
@@ -107,6 +141,7 @@ export function OrdersSection({ recent, loading, period }: { recent: AdminOrder[
       )}
 
       <ResendDialog order={resending} onOpenChange={(open) => { if (!open) setResending(null); }} />
+      <RefundDialog order={refunding} onOpenChange={(open) => { if (!open) setRefunding(null); }} />
     </section>
   );
 }

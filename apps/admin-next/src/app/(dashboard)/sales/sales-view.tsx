@@ -61,17 +61,22 @@ export function SalesView() {
         <div role="alert" className="rounded-2xl border-2 border-destructive/40 bg-destructive/10 p-6 text-sm font-medium text-destructive">{error.message}</div>
       ) : (
         <>
-          <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Kpi label="Sales" hint={`Last ${period}`} value={data ? formatRand(data.totals.revenueCents) : undefined} />
+          <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Kpi label="Sales" hint={`Paid by buyers, last ${period}`} value={data ? formatRand(data.totals.revenueCents) : undefined} />
+            <Kpi label="Paystack fees" hint={data ? feeHint(data.totals) : ''} value={data ? formatRand(data.totals.feesCents) : undefined} />
+            <Kpi label="You receive" hint="Sales minus Paystack fees" value={data ? formatRand(data.totals.netCents) : undefined} />
             <Kpi label="Orders" hint="Paid" value={data?.totals.orders.toLocaleString('en-ZA')} />
             <Kpi label="Programs sold" hint="Across all orders" value={data?.totals.programsSold.toLocaleString('en-ZA')} />
             <Kpi label="Awaiting payment" hint="Started but not paid yet" value={data?.totals.awaitingPayment.toLocaleString('en-ZA')} />
           </div>
 
-          {data && data.totals.emailsNotSent > 0 && (
+          {data && data.totals.emailsNotSent + data.totals.needsReview > 0 && (
             <div role="alert" className="mb-6 flex items-start gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm">
               <MailWarning className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
-              <p><strong>{data.totals.emailsNotSent} paid order{data.totals.emailsNotSent === 1 ? '' : 's'}</strong> could not be emailed. Look for “Email failed” below and use “Email PDFs again”.</p>
+              <p>
+                {data.totals.emailsNotSent > 0 && <><strong>{data.totals.emailsNotSent} paid order{data.totals.emailsNotSent === 1 ? '' : 's'}</strong> could not be emailed (the admin keeps retrying); use “Email PDFs again” once the problem is fixed. </>}
+                {data.totals.needsReview > 0 && <><strong>{data.totals.needsReview} order{data.totals.needsReview === 1 ? '' : 's'}</strong> marked “Needs review”: read the note, deal with it in Paystack, then “Mark as checked”.</>}
+              </p>
             </div>
           )}
 
@@ -155,4 +160,11 @@ function ProgramRanking({ rows }: { rows: AdminSales['byProgram'] }) {
       })}
     </ol>
   );
+}
+
+/** "3.2% of sales", plus how many paid orders still wait for Paystack to report their fee. */
+function feeHint(totals: AdminSales['totals']): string {
+  const share = totals.revenueCents ? `${((totals.feesCents / totals.revenueCents) * 100).toFixed(1)}% of sales` : 'No sales yet';
+  if (!totals.feesUnknown) return share;
+  return `${share} · ${totals.feesUnknown} fee${totals.feesUnknown === 1 ? '' : 's'} not known yet`;
 }
