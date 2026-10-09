@@ -55,7 +55,7 @@ export const contactValidationMessages = {
   turnstileToken: 'Please complete the security check.',
 } as const satisfies Record<ContactFormField, string>;
 
-/** Browser-to-Nuxt contract for the public contact form. */
+/** Website-to-admin contract for the public contact form. */
 export const contactFormRequestSchema = z.object({
   name: z.string().trim().min(2).max(100),
   email: z.string().trim().email().max(254),

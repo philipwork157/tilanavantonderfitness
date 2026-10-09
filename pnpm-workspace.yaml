@@ -6,7 +6,6 @@ packages:
 allowBuilds:
   esbuild: true
   unrs-resolver: true
-  vue-demi: true
   workerd: true
 onlyBuiltDependencies:
   - esbuild

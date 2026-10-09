@@ -1,5 +1,10 @@
 # Admin rebuild starting point
 
+> **Update, October 2026:** the rebuilt admin is `apps/admin-next` (Next.js). The
+> interim blank Nuxt admin (`apps/admin`) and `packages/ui-nuxt` described below
+> were removed; they are in Git history. The rest of this page is the original
+> record of the reset.
+
 The old admin/backend has been retired locally so the next version can be built
 with a smaller feature scope. No remote database, Supabase account, R2 document,
 email, payment, GitHub setting or deployed service was changed.

@@ -14,7 +14,7 @@ import { createDatabase } from '../src/client';
 import { ROLE_KEYS, type RoleKey } from '../src/roles';
 import { roles, userRoles, users } from '../src/schema';
 
-const envFile = '../../apps/admin/.env';
+const envFile = '../../apps/admin-next/.env.local';
 if (existsSync(envFile)) process.loadEnvFile(envFile);
 
 const { values } = parseArgs({
@@ -37,12 +37,12 @@ if (!ROLE_KEYS.includes(role)) {
   console.error(`--role must be one of: ${ROLE_KEYS.join(', ')}`);
   process.exit(1);
 }
-if (!process.env.NUXT_DATABASE_URL) {
-  console.error('NUXT_DATABASE_URL is not set (apps/admin/.env).');
+if (!process.env.DATABASE_URL) {
+  console.error('DATABASE_URL is not set (apps/admin-next/.env.local).');
   process.exit(1);
 }
 
-const { db, close } = createDatabase(process.env.NUXT_DATABASE_URL, { max: 1 });
+const { db, close } = createDatabase(process.env.DATABASE_URL, { max: 1 });
 
 try {
   const result = await db.transaction(async (tx) => {

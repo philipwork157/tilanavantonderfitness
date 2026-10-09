@@ -2,7 +2,6 @@ import 'server-only';
 
 /**
  * Server settings from the environment (apps/admin-next/.env.local locally).
- * Same settings as the Nuxt admin's runtimeConfig, without the NUXT_ prefix.
  * Read on every call, so tests and restarts always see current values.
  */
 export function serverConfig() {

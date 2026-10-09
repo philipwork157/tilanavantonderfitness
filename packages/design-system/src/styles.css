@@ -2,7 +2,7 @@
 
 /* ==========================================================
    Tilana van Tonder · Design tokens v2
-   One source of truth for the Astro website and the Nuxt admin.
+   Brand tokens (the website and admin keep their own copies in their CSS).
    Layers: 1 primitives · 2 semantic (what components use) ·
    3 context (dark theme, compact admin density).
    Components should use semantic tokens, not primitives or hex.
@@ -36,7 +36,7 @@
   --slate-600: #476270;
   --pure-white: #fff;        /* brand · Pure White */
 
-  /* Numbered brand scale for UI libraries that need shades (Nuxt UI). */
+  /* Numbered brand scale for UI libraries that need shades. */
   --brand-50: #fff8f3;
   --brand-100: #fbeee5;
   --brand-200: #f4d9c7;

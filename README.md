@@ -1,87 +1,65 @@
 # Tilana van Tonder platform
 
-A pnpm/Turborepo workspace with the existing Astro public website, a clean Nuxt
-admin starting point and shared Tilana design packages.
+A pnpm/Turborepo workspace with the Astro public website and the Next.js admin
+that serves its APIs (programs, checkout with Paystack, contact, newsletter and
+blog). Read `CLAUDE.md` for the full guide.
 
-## Admin rebuild
-
-The old backend and its tests are preserved locally in `tilana-fitness-old/`.
-The new admin has Supabase password sign-in; access comes from the `users` and
-`roles` tables in `packages/db` (Drizzle). Email, payments and business APIs are
-not implemented yet.
-
-See [the rebuild notes](docs/admin-rebuild.md) for archive contents, recovery
-information and the next feature scope. No deployed service or remote database
-was reset. The ignored archive is local reference material, not a GitHub backup.
-
-## Active workspace
+## Workspace
 
 ```text
 apps/
-  web/                 Astro public website (new design, live blog, kitchen)
-  admin/               Clean Nuxt starting point
+  web/                 Astro public website (programs, checkout, live blog, kitchen)
+  admin-next/          Next.js admin and the website's API
 packages/
-  contracts/           Existing website-compatible API contracts
+  contracts/           Website-compatible API contracts (zod)
   content/             Safe Markdown rendering shared by web and admin
   db/                  Drizzle schema and migrations
-  design-system/       Admin brand tokens and CSS
-  ui-nuxt/             Shared Nuxt layer and components
+  design-system/       Brand design tokens
 tilana-fitness-old/     Ignored old backend, tests and private configuration
 tilana-content-work/    Ignored PDF/Word work, marketing exports and UI previews
 ```
 
+The interim Nuxt admin (`apps/admin`, `packages/ui-nuxt`) was removed in
+October 2026; it is in Git history. See [the rebuild notes](docs/admin-rebuild.md)
+for the original reset and recovery point.
+
 ## Local creative files and caches
 
 Personal PDF/Word drafts, renders, reels and generated images live in
-`tilana-content-work/`, not in the application folders. See its local `README.md`
-for the retained folder layout and generator scripts. Git does not back up this
+`tilana-content-work/`, not in the application folders. Git does not back up this
 folder; keep a separate copy of important documents. Website images live in
 `apps/web/public`.
 
-`.turbo/cache`, old root `.cache`/`.astro`, root `dist` and `.pnpm-store` are
-regenerable build/dependency caches, not creative documents. Keep installed
-`node_modules` and active app caches while local servers are running. `.openai`
-contains hosting configuration; it is not a disposable output folder.
+`.turbo/cache`, `.next`, `.astro`, `dist` and `.pnpm-store` are regenerable
+build/dependency caches, not creative documents.
 
 ## Local development
 
 ```sh
 pnpm install
+pnpm --filter @tilana/db db:migrate
 pnpm dev
 ```
 
-The website uses `http://localhost:4321`; admin uses `http://localhost:3001`.
-Use `pnpm dev:web` or `pnpm dev:admin` to run one application, and
-`pnpm dev:stop` to stop managed development servers.
-
-The local website's catalogue, enquiry/newsletter, checkout and customer access
-features need the backend APIs to be rebuilt, or an explicitly selected existing
-API origin. Do not mistake the clean admin page for a working backend.
+The website runs on `http://localhost:4321` and the admin on
+`http://localhost:3002`. Use `pnpm dev:web` or `pnpm dev:admin-next` to run one
+application, and `pnpm dev:stop` to stop managed development servers.
 
 ## Environment files
 
-Each app keeps its own ignored `.env`. The admin's `apps/admin/.env` holds only
-the settings in `apps/admin/.env.example` (currently `NUXT_SUPABASE_URL`,
-`NUXT_SUPABASE_PUBLISHABLE_KEY`, `NUXT_DATABASE_URL`); `pnpm db:*` commands read it
-too. Older integration settings are archived in `tilana-fitness-old/apps/admin/.env`
-and return one at a time as features are rebuilt. Keep real secrets out of Git.
+Each app keeps its own ignored settings file. The admin's
+`apps/admin-next/.env.local` holds the settings listed in
+`apps/admin-next/.env.example`; `pnpm db:*` commands read `DATABASE_URL` from it
+too. The website keeps `apps/web/.env` (see `apps/web/.env.example`); only
+`PUBLIC_*` values reach browsers. Keep real secrets out of Git.
 
-The website retains `apps/web/.env` and `apps/web/.env.example`. Its public
-settings remain separate from private backend configuration.
-
-## Verification and deployment
+## Verification
 
 ```sh
 pnpm test
 pnpm check
 pnpm build:web
-pnpm build:admin
+pnpm build:admin-next
 ```
 
-Existing website tests remain active. Old admin/database/browser tests and
-migrations are archived. Public deployment remains available; admin Fly
-deployment and scheduled legacy recovery are paused in this branch. Nothing
-should deploy the starter over an existing working admin.
-
-Keep brand decisions in the shared design system. Build the new admin a feature
-at a time: login, programs/volumes/private PDFs, sales and a small dashboard.
+Admin database tests need a throwaway Postgres in `TEST_DATABASE_URL`.

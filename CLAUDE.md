@@ -5,14 +5,11 @@ changing this repository.
 
 ## Current rebuild state
 
-The old admin/backend has been retired locally. `apps/admin` is being rebuilt
-feature by feature. Implemented so far: admin sign-in (Supabase Auth password
-login, httpOnly cookies, access from the `users`/`roles`/`user_roles` tables,
-`requireAdmin()`/`requireRole()` for every admin API route) and an empty admin
-shell (Overview, Inquiries, Newsletter, Blog). There are no payments, emails or
-customer portal yet. Rebuild
-features only when the user requests them. Do not silently restore the old
-feature scope.
+The old admin/backend has been retired. The admin is `apps/admin-next`
+(Next.js). The interim Nuxt admin (`apps/admin`) and its layer
+(`packages/ui-nuxt`) were removed in October 2026; they remain in Git history
+only. Rebuild features only when the user requests them. Do not silently
+restore the old feature scope.
 
 `tilana-fitness-old/` contains the old admin, Drizzle/schema/migrations, email
 package, tests, documentation, configuration and private environment files.
@@ -47,16 +44,13 @@ website. Do not delete creative work when clearing caches.
   from the admin (`beginner-volume-1`); see Programs below.
   Preserve its appearance, content, assets and public environment setup unless
   the user requests changes.
-- `apps/admin`: Nuxt admin (port 3001). It extends `@tilana/ui-nuxt`. The
-  website's API calls still go here.
-- `apps/admin-next`: the new admin, built side by side (port 3002): Next.js
-  (App Router), shadcn/ui on Tailwind CSS v4, Motion, TanStack Query. It has
-  every Nuxt API endpoint (same URLs and behaviour; point the website's
-  PUBLIC_API_BASE_URL at it to switch) and every screen: overview, inquiries,
-  blog list and Markdown editor (Tiptap, configured like the Nuxt editor so
-  posts round-trip unchanged), newsletter subscribers and campaigns. Brand
+- `apps/admin-next`: the admin (port 3002): Next.js (App Router), shadcn/ui
+  on Tailwind CSS v4, Motion, TanStack Query. It serves every API the website
+  calls (the website's `PUBLIC_API_BASE_URL` points at it) and every screen:
+  overview, inquiries, blog list and Markdown editor (Tiptap), newsletter
+  subscribers and campaigns, programs and sales. Brand
   theme in `src/app/globals.css` (light + `.dark` espresso). API routes keep the
-  Nuxt URLs and `{ statusCode, statusMessage }` error shape; screens call them
+  old admin's URLs and `{ statusCode, statusMessage }` error shape; screens call them
   with `api()` from `src/lib/api.ts` (no server actions). `src/proxy.ts`
   refreshes the session and redirects signed-out visitors; the dashboard layout
   and every API route still check `getAdmin()`/`requireAdmin()`. Settings in
@@ -74,30 +68,28 @@ website. Do not delete creative work when clearing caches.
   dark theme under `.dark`, compact admin density under
   `[data-density='compact']`). Components use semantic tokens
   (`--color-text-primary`, `--color-surface`, `--space-4`, `--radius-md`...),
-  never hex values or primitives. The admin uses these tokens; the website
-  has its own in `apps/web/src/site/styles/base.css`. The design-system
-  document targets Next.js/HeroUI; this repo maps the same tokens onto Nuxt UI
-  in `packages/ui-nuxt/app/assets/css/main.css`.
-- `packages/ui-nuxt`: shared Nuxt layer and components.
+  never hex values or primitives. No app imports it directly today: the
+  website has its own tokens in `apps/web/src/site/styles/base.css` and the
+  admin in `apps/admin-next/src/app/globals.css`.
 - `packages/content`: safe Markdown rendering (`renderMarkdown`) and reading
   time, shared by the website and admin.
 
-The website still calls catalogue, checkout, contact, newsletter and customer
-access endpoints on its configured API origin. The new local admin does not
-implement them yet. Do not substitute fake successful payments, messages or
-email delivery. Deployed APIs are unaffected until an explicit deployment.
+The website calls the programs, checkout, contact, newsletter and blog
+endpoints on its configured API origin (the admin). Do not substitute fake
+successful payments, messages or email delivery. Deployed APIs are unaffected
+until an explicit deployment.
 
 ## Development and security
 
-Use the existing Nuxt/Astro stack and workspace aliases. Keep shared types in
+Use the existing Next.js/Astro stack and workspace aliases. Keep shared types in
 `@tilana/contracts`, backend rules in server services and HTTP validation/auth
 in routes. If Drizzle is reintroduced, keep schema/migration ownership explicit.
 Keep application IDs consistent; do not invent several competing identity models.
 
 Actual integration credentials live only in each app's ignored `.env` or provider
-secrets. The admin uses `apps/admin/.env` (also read by `pnpm db:*`) and only the
-settings listed in `apps/admin/.env.example`. The website keeps `apps/web/.env`; only
-`PUBLIC_*` values or deliberately public Nuxt runtime config may reach browsers.
+secrets. The admin uses `apps/admin-next/.env.local` (also read by `pnpm db:*`)
+and only the settings listed in `apps/admin-next/.env.example`. The website keeps
+`apps/web/.env`; only `PUBLIC_*` values may reach browsers.
 Never print, commit or expose secrets, tokens, magic links or private documents.
 Maintain secret-free `.env.example` files containing only settings for implemented
 features.
@@ -110,14 +102,14 @@ necessary safety boundaries.
 
 ## Testing and commands
 
-- `pnpm dev`: all local applications (website, Nuxt admin, Next admin); `pnpm dev:stop` stops managed servers.
+- `pnpm dev`: all local applications (website and admin); `pnpm dev:stop` stops managed servers.
 - `pnpm db:generate`: create a migration from schema changes; `pnpm db:migrate`:
-  apply pending migrations to the database in `apps/admin/.env`; `pnpm db:add-admin --email ...`.
-- `pnpm dev:web` / `pnpm dev:admin` / `pnpm dev:admin-next`: one application.
-- `pnpm test`: tests in active workspaces (currently the existing website tests).
+  apply pending migrations to the database in `apps/admin-next/.env.local`; `pnpm db:add-admin --email ...`.
+- `pnpm dev:web` / `pnpm dev:admin-next`: one application.
+- `pnpm test`: tests in active workspaces (website and admin; admin database tests need `TEST_DATABASE_URL`).
 - `pnpm test:coverage`: active test coverage.
 - `pnpm check`: active lint/type checks.
-- `pnpm build:web` / `pnpm build:admin` / `pnpm build:admin-next` / `pnpm build`: production builds.
+- `pnpm build:web` / `pnpm build:admin-next` / `pnpm build`: production builds.
 
 Old financial/integration/browser tests and database commands are archived.
 Write regression tests for newly implemented behavior. Use isolated databases
@@ -132,8 +124,8 @@ Keep public deployment functional. An ignored archive is not a remote backup.
 
 ## Every screen (website and admin)
 
-- Supports light and dark mode. The admin uses the design-system tokens
-  (switching under `.dark`); the website uses its own tokens, switching under
+- Supports light and dark mode. The admin uses its theme tokens in
+  `globals.css` (switching under `.dark`); the website uses its own tokens, switching under
   `[data-theme='dark']`. Check both themes before handoff.
 - Works on mobile: usable from 360px wide, no horizontal page scroll, touch
   targets at least 44px on the website and 36px in the admin.
@@ -141,12 +133,12 @@ Keep public deployment functional. An ignored archive is not a remote backup.
 
 ## Email and public endpoints
 
-- Email goes through Amazon SES (`apps/admin/server/utils/email.ts`). In
-  development `NUXT_EMAIL_DEV_REDIRECT_TO` is required and receives every
+- Email goes through Amazon SES (`apps/admin-next/src/server/utils/email.ts`). In
+  development `EMAIL_DEV_REDIRECT_TO` is required and receives every
   outgoing email; production leaves it unset. Never send to real people from dev.
 - Save first, then email: a failed email is recorded on the row, never lost.
 - Website-facing endpoints are listed in `PUBLIC_WEBSITE_PATHS`
-  (`server/utils/website-origins.ts`) and only accept `NUXT_WEBSITE_ORIGINS`.
+  (`server/utils/website-origins.ts`) and only accept `WEBSITE_ORIGINS`.
   `/api/contact` also requires Turnstile in production, a honeypot and a rate limit.
 
 ## Blog
@@ -157,7 +149,7 @@ Keep public deployment functional. An ignored archive is not a remote backup.
 - Closing line and quote are separate fields; "With love, Tilana" and the
   "Please note" box are fixed in the website template, not stored per post.
 - Cover photos go to the public Supabase Storage bucket `blog-images`, written
-  only by the server with `NUXT_SUPABASE_SERVICE_ROLE_KEY`. Uploads are
+  only by the server with `SUPABASE_SERVICE_ROLE_KEY`. Uploads are
   re-encoded to WebP with sharp (metadata stripped); SVG is rejected.
 - The website is a Cloudflare Worker (`apps/web/wrangler.jsonc`). Every page
   is prebuilt except `/blog`, `/blog/<slug>` and `/sitemap-blog.xml`
@@ -175,15 +167,15 @@ Keep public deployment functional. An ignored archive is not a remote backup.
 - Every newsletter has a personal unsubscribe link (`unsubscribe_token`) and a
   `List-Unsubscribe` header.
 - A campaign shares one published blog post. It can only be sent after a test
-  email to `NUXT_NEWSLETTER_TEST_TO` that is newer than the last edit, and only
+  email to `NEWSLETTER_TEST_TO` that is newer than the last edit, and only
   when the reviewed recipient count still matches. In development (redirect
-  set) test emails go only to `NUXT_EMAIL_DEV_REDIRECT_TO`.
+  set) test emails go only to `EMAIL_DEV_REDIRECT_TO`.
 - Sending runs in the background (`startCampaignRunner`): one
   `newsletter_deliveries` row per subscriber, claimed before sending, so nobody
   is emailed twice. Rate limits are retried; SES account problems pause the
   campaign (Resume in the admin). A restart resumes `sending` campaigns.
 - SES bounces and complaints arrive through SNS at `POST /api/webhooks/ses`
-  (signature and `NUXT_SES_EVENTS_TOPIC_ARN` checked). Permanent bounces and
+  (signature and `SES_EVENTS_TOPIC_ARN` checked). Permanent bounces and
   complaints mark the subscriber `bounced`/`complained`; they are never emailed
   again unless they sign up and confirm again.
 - Emails use a JPEG copy of the cover photo (`email/...jpg` in the bucket),
@@ -309,21 +301,9 @@ Keep public deployment functional. An ignored archive is not a remote backup.
 - Overview shows today's paid sales and orders (South African day) and paid
   orders whose PDFs were not emailed.
 
-## Admin UI
-
-- Built on Nuxt UI dashboard components (`UDashboardGroup`, `UDashboardSidebar`,
-  `UDashboardPanel`, `UDashboardNavbar`) styled by the design tokens.
-- Every admin page wraps its content in `<AdminPage id title>` (navbar with the
-  sidebar collapse button and theme toggle). Sidebar items live in
-  `apps/admin/app/utils/admin-navigation.ts`; the account menu (email, log out)
-  is `AdminUserMenu`.
-- Pages use the full width. Statuses use `AdminStatusBadge` with a tone from
-  `app/utils/status-tones.ts`; coloured icons use `AdminIconChip`; list pages
-  have an `AdminRefreshButton`.
-
 ## Next.js admin (apps/admin-next): standards
 
-The Nuxt admin is being ported here; new admin work goes in `apps/admin-next`.
+All admin work goes in `apps/admin-next`.
 
 - **Checks must pass before handing over**: `pnpm --filter @tilana/admin-next lint`
   (zero warnings), `typecheck`, `test` and `build`. Also open the changed screens
@@ -389,7 +369,7 @@ The Nuxt admin is being ported here; new admin work goes in `apps/admin-next`.
   server's connection string can read or write.
 - `users` holds everyone who signs in; roles come from `roles` + `user_roles`
   (a user may hold several). Admin-area access: `admin` or `staff`
-  (`requireAdmin`, `requireRole` in `apps/admin/server/utils/supabase.ts`).
+  (`requireAdmin`, `requireRole` in `apps/admin-next/src/server/auth/admin.ts`).
 
 ## Editing and handoff
 
