@@ -185,3 +185,11 @@ export interface AdminSales {
   byProgram: { label: string; sold: number; revenueCents: number }[];
   recent: AdminOrder[];
 }
+
+/** The Website page (PostHog). `configured: false` until the PostHog key is set. */
+export type AdminWebsiteStats =
+  | { configured: false }
+  | Awaited<ReturnType<typeof import('@/server/services/website-stats').websiteStats>>;
+export type AdminWebsiteLive =
+  | { configured: false }
+  | Awaited<ReturnType<typeof import('@/server/services/website-stats').liveStats>>;

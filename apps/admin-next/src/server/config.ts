@@ -48,6 +48,14 @@ export function serverConfig() {
     cronSecret: env.CRON_SECRET ?? '',
     /** Amazon SNS topic that delivers SES bounces and complaints (webhook is off when empty). */
     sesEventsTopicArn: env.SES_EVENTS_TOPIC_ARN ?? '',
+    /**
+     * PostHog, for the Website page. Server only: a personal API key with only
+     * "Query: Read" for this project (phx_...), the project ID and the app host
+     * for the project's region (https://eu.posthog.com). Empty key = page off.
+     */
+    posthogPersonalApiKey: env.POSTHOG_PERSONAL_API_KEY ?? '',
+    posthogProjectId: env.POSTHOG_PROJECT_ID ?? '',
+    posthogHost: env.POSTHOG_HOST || 'https://eu.posthog.com',
   };
 }
 
