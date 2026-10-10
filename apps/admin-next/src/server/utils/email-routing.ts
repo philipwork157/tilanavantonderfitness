@@ -1,5 +1,5 @@
 import 'server-only';
-/** Pure email rules, kept free of Nuxt/AWS imports so they can be unit tested. */
+/** Pure email rules, kept free of framework and AWS imports so they can be unit tested. */
 
 export interface OutgoingEmail {
   to: string[];

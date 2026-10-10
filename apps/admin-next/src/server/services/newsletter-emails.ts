@@ -1,6 +1,6 @@
 import 'server-only';
 /**
- * Newsletter emails. Pure functions (no Nuxt or AWS) so they can be previewed
+ * Newsletter emails. Pure functions (no framework or AWS) so they can be previewed
  * and unit tested. Every value from the database is HTML-escaped; layout uses
  * tables and inline styles because email apps ignore most CSS.
  */

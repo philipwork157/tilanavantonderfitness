@@ -11,12 +11,9 @@ node_modules/
 # Screenshots the Claude desktop app saves into the project; keep them in tilana-content-work instead
 /Claude outputs/
 
-# Astro, Nuxt, Nitro, and Turborepo output
+# Astro and Turborepo output (Next.js output is ignored in apps/admin-next)
 dist/
 .astro/
-.nuxt/
-.output/
-.nitro/
 .turbo/
 
 # Tool caches and generated type state

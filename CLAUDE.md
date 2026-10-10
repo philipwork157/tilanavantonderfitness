@@ -337,7 +337,7 @@ All admin work goes in `apps/admin-next`.
   with `ConfirmDialog` (`src/components/confirm-dialog.tsx`), naming the item
   and what happens to it.
 - **Config**: read settings only through `src/server/config.ts` (plain names
-  such as `DATABASE_URL`, no `NUXT_` prefix); document every variable in
+  such as `DATABASE_URL`, never an app prefix); document every variable in
   `.env.example`.
 - **UI**: build from shadcn components and the theme tokens in `globals.css`
   (`bg-card`, `text-muted-foreground`, `bg-tone-sage`...), never raw hex in

@@ -17,9 +17,6 @@ node_modules
 .pnpm-store
 
 # build outputs & caches (rebuilt in the image)
-**/.output
-**/.nuxt
-**/.nitro
 **/dist
 **/.astro
 **/.turbo

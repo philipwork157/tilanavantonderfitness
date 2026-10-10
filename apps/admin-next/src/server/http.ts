@@ -3,8 +3,8 @@ import { logger, withRequestLog } from './logger';
 
 /**
  * An error with an HTTP status and a message that is safe to show. Responses
- * use the same { statusCode, statusMessage } shape as the Nuxt admin, so the
- * website and screens read errors the same way from either app.
+ * always use the same { statusCode, statusMessage } shape, so the website and
+ * the admin screens read every error the same way.
  */
 export class HttpError extends Error {
   constructor(readonly statusCode: number, readonly statusMessage: string) {

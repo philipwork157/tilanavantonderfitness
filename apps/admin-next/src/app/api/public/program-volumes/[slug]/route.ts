@@ -6,7 +6,7 @@ import { findProgramBySlug, isOnWebsite, programLabel } from '@/server/services/
 
 /**
  * Live price and availability of one program, for the basket and checkout.
- * Same URL and response shape as the old Nuxt catalogue endpoint
+ * Same URL and response shape as the earlier catalogue endpoint
  * (catalogue.ts), where each sellable item was a "program volume". The
  * website treats this exact 404 message as "no longer sold".
  */

@@ -15,9 +15,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils';
 
 /**
- * Rich text editor that reads and writes Markdown, configured like the Nuxt
- * admin's editor (Tiptap 3, GitHub-flavoured Markdown, no code blocks, strike
- * or underline) so posts round-trip unchanged between the two admins.
+ * Rich text editor that reads and writes Markdown (Tiptap 3, GitHub-flavoured
+ * Markdown, no code blocks, strike or underline), so saved posts keep the exact
+ * Markdown the website renders.
  */
 export function MarkdownEditor({ value, onChange, placeholder, labelledBy }: {
   value: string;

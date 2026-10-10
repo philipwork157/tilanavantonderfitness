@@ -6,7 +6,7 @@ import { getDatabase } from '@/server/db';
 import { handle } from '@/server/http';
 import { salesToday } from '@/server/services/sales';
 
-/** Numbers for the overview tiles (the Nuxt admin's /api/overview, plus today's sales). */
+/** Numbers for the overview tiles: enquiries, newsletter subscribers and today's sales. */
 export const GET = handle(async () => {
   await requireAdmin();
   const db = getDatabase();

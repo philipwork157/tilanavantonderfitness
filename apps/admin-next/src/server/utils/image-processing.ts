@@ -1,7 +1,7 @@
 import 'server-only';
 import sharp from 'sharp';
 
-/** Pure image handling (no Nuxt imports) so it can be unit tested. */
+/** Pure image handling (no framework imports) so it can be unit tested. */
 
 const ACCEPTED_FORMATS = new Set(['jpeg', 'png', 'webp']);
 
