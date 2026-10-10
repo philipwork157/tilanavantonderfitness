@@ -7,6 +7,7 @@ import {
   readBasket,
   writeBasket,
 } from '@web/scripts/basket';
+import { track } from '@web/utils/analytics';
 import { publicApiUrl } from '@web/utils/public-api';
 import { toProducts, toSitePrograms, type Product } from '../../programs';
 
@@ -97,6 +98,7 @@ export function addToBasket(slug: string): AddResult {
   if (basket.includes(slug)) return 'exists';
   if (basket.length >= MAX_BASKET_ITEMS) return 'full';
   save([...basket, slug]);
+  track('basket_added', { program: slug, basket_size: basket.length + 1 });
   return 'added';
 }
 

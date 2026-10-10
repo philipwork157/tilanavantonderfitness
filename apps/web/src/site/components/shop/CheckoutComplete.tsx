@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { clearPaidBasket } from '@web/scripts/basket';
 import { clearCompletedCheckoutIntent } from '@web/scripts/checkout-intent';
 import { confirmCheckoutStatus } from '@web/scripts/checkout-completion';
+import { track } from '@web/utils/analytics';
 import { publicApiUrl } from '@web/utils/public-api';
 
 type Result = { heading: string; message: string; access: boolean; retry: boolean; recheck: boolean };
@@ -35,6 +36,8 @@ export default function CheckoutComplete({ checkoutHref, programsHref, homeHref,
       retireIntent: clearCompletedCheckoutIntent,
     });
     setView({ kind: 'result', result });
+    // Counts are only a guide: reloading this page counts again. Sales in the admin are the real figures.
+    track(result.access ? 'purchase_completed' : 'purchase_not_completed');
   }, []);
 
   useEffect(() => { void check(); }, [check]);

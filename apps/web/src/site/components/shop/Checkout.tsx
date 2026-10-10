@@ -6,6 +6,7 @@ import { addToBasket as addSlug, readBasket, rememberPendingBasket } from '@web/
 import { refreshBasketCatalogue } from '@web/scripts/basket-catalogue';
 import { getCheckoutIntentKey, readCheckoutRecoveryReference, rememberCheckoutIntent } from '@web/scripts/checkout-intent';
 import { createCheckoutSelectionGuard, sameBasketSelection } from '@web/scripts/checkout-selection';
+import { track } from '@web/utils/analytics';
 import { publicApiUrl } from '@web/utils/public-api';
 import Icon from '../Icon';
 import { addToBasket, productMap, rand, removeFromBasket, useBasket, useCatalogue } from './basket';
@@ -168,6 +169,7 @@ export default function Checkout({ programsHref, completeHref, refundHref, priva
       }
       await rememberCheckoutIntent(parsed.data.idempotencyKey, body.reference);
       rememberPendingBasket(body.reference, [...selection.slugs]);
+      track('checkout_started', { programs: selection.slugs.join(','), program_count: selection.slugs.length }, { beacon: true });
       window.location.assign(body.authorizationUrl);
     }
     catch (checkoutError) {

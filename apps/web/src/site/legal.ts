@@ -17,7 +17,9 @@ export const privacySections = [
       'If you buy one or more programs, the checkout collects your name, email address, optional phone number, the programs you selected, and the order, payment and email delivery status. Card and bank details are entered directly into Paystack and are not stored by this website.',
       'Purchased programs are delivered as PDF files attached to an email sent to the address you entered at checkout. You do not need an account. If you ask for your programs to be sent again, the website uses your email address to find your paid orders.',
       'Please do not send diagnoses, medical records, identity numbers, detailed injury information, pregnancy complications or other sensitive health information through the public contact form.',
-      'The website uses Cloudflare Web Analytics to understand aggregate visits and website performance. Cloudflare Web Analytics does not use cookies, local storage or fingerprinting to identify or track individual visitors. The website also stores a light-or-dark theme preference in your browser. The hosting provider may process standard technical information such as an IP address, browser information and security logs to deliver and protect the site.',
+      'The website uses Cloudflare Web Analytics to understand aggregate visits and website performance. Cloudflare Web Analytics does not use cookies, local storage or fingerprinting to identify or track individual visitors.',
+      'The website also uses PostHog to understand how it is used, for example which pages are viewed and how many people add a program to the basket, start the checkout or complete a purchase. PostHog is set up without cookies or local storage: it counts visits with a temporary code that is worked out on PostHog’s servers from your IP address and browser details and changes every day, so a visit cannot be followed from one day to the next. It does not record your screen or what you type into forms, nobody is identified by name or email address, your IP address is not kept with the analytics, and links in emails and payment references are removed from page addresses before anything is sent.',
+      'The website also stores a light-or-dark theme preference in your browser. The hosting provider may process standard technical information such as an IP address, browser information and security logs to deliver and protect the site.',
     ],
   },
   {
@@ -40,6 +42,7 @@ export const privacySections = [
     body: [
       'Personal information is not sold. It may be processed by service providers that are reasonably necessary to run the website, secure it, provide email, store records or meet professional and legal obligations. Information may also be disclosed where required by law or with your specific permission.',
       'Cloudflare hosts and protects the public website, provides privacy-focused analytics and helps prevent automated spam through Turnstile. Cloudflare may process technical information such as an IP address, browser details and security events when delivering or protecting the website.',
+      'PostHog provides the cookie-free product analytics described above, hosted in the European Union. It receives the pages viewed, the website actions listed above and technical information such as browser type and IP address, which is used only to count visits and is not stored.',
       'Supabase provides the protected database and sign-in used for website enquiries, newsletter subscription records, orders and authorised administration data. Amazon Web Services Simple Email Service (AWS SES) delivers contact notifications, newsletter emails and purchase emails with the program files attached; it processes the recipient address and the information needed to deliver each message.',
       'Paystack processes program payments and related payment information. Cloudflare R2 privately stores the program files that are attached to purchase emails.',
       'These providers may process or store information outside South Africa. Where that occurs, reasonable steps will be taken to use providers and arrangements that offer an adequate level of protection and appropriate contractual, organisational and technical safeguards.',
@@ -146,7 +149,7 @@ export const privacySummary = {
     'No sale of personal information',
     'No health records through the public form',
   ],
-  effective: '7 October 2026',
+  effective: '9 October 2026',
 };
 
 export const refundSummary = {

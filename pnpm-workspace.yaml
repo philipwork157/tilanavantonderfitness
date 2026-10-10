@@ -4,6 +4,7 @@ packages:
   - packages/*
   - '!tilana-fitness-old/**'
 allowBuilds:
+  core-js: false
   esbuild: true
   unrs-resolver: true
   workerd: true
