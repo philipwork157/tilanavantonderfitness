@@ -3,19 +3,19 @@
 This is the canonical shared guide for coding agents. Read it fully before
 changing this repository.
 
-## Current rebuild state
+## History and boundaries
 
 The old admin/backend has been retired. The admin is `apps/admin-next`
 (Next.js). The interim Nuxt admin (`apps/admin`) and its layer
 (`packages/ui-nuxt`) were removed in October 2026; they remain in Git history
-only. Rebuild features only when the user requests them. Do not silently
+only. Build features only when the user requests them. Do not silently
 restore the old feature scope.
 
 `tilana-fitness-old/` contains the old admin, Drizzle/schema/migrations, email
 package, tests, documentation, configuration and private environment files.
 It is ignored by Git, Docker and pnpm and must never be installed, built,
 deployed or migrated. Treat its documents as historical reference, not current
-instructions. Read `docs/admin-rebuild.md` for the recovery point and boundaries.
+instructions.
 
 No remote database, storage, deployed app or production data was reset. New
 database work must use an explicitly isolated development database. Never apply
@@ -94,7 +94,7 @@ Never print, commit or expose secrets, tokens, magic links or private documents.
 Maintain secret-free `.env.example` files containing only settings for implemented
 features.
 
-When payments/access are rebuilt, verify provider evidence on the server,
+For payments, verify provider evidence on the server,
 validate amount/currency/environment, enforce ownership, and make retries
 idempotent. Never grant programs from a browser redirect or mark a paid order
 failed merely because its email is delayed. Simplicity does not remove these
@@ -111,16 +111,22 @@ necessary safety boundaries.
 - `pnpm check`: active lint/type checks.
 - `pnpm build:web` / `pnpm build:admin-next` / `pnpm build`: production builds.
 
-Old financial/integration/browser tests and database commands are archived.
+The old backend's tests stay archived in `tilana-fitness-old/`.
 Write regression tests for newly implemented behavior. Use isolated databases
 and simulated external providers when needed; tests must never send real
 payments, emails or production writes. Run relevant tests, `pnpm check` and
 affected builds before handoff. Report unimplemented/unverified behavior honestly.
 Use `pnpm dev:stop` before replacing managed development processes.
 
-Admin deployment and legacy scheduled recovery are paused in this branch.
-Do not restore them until a working backend is explicitly approved for rollout.
-Keep public deployment functional. An ignored archive is not a remote backup.
+## Deployment
+
+GitHub Actions deploy both apps; see `docs/deploy.md`. A push to `dev` deploys
+development; production is a manual run on `main` (type "deploy"). Order: quality
+checks, admin (database migrations, then Fly.io from the root `Dockerfile`,
+`fly.toml` / `fly.prod.toml`, Frankfurt), then the website (Cloudflare Worker
+from `apps/web/dist/server`). Settings live in Fly secrets and GitHub
+secrets/variables, never in the repository. Do not deploy, change secrets or
+run migrations against a remote database without explicit authorization.
 
 ## Every screen (website and admin)
 

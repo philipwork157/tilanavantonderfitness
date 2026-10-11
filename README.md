@@ -20,8 +20,13 @@ tilana-content-work/    Ignored PDF/Word work, marketing exports and UI previews
 ```
 
 The interim Nuxt admin (`apps/admin`, `packages/ui-nuxt`) was removed in
-October 2026; it is in Git history. See [the rebuild notes](docs/admin-rebuild.md)
-for the original reset and recovery point.
+October 2026; it is in Git history.
+
+## Deployment
+
+GitHub Actions deploy the admin to Fly.io and the website to a Cloudflare
+Worker: every push to `dev` deploys development, and production is a manual
+run on `main`. Setup and everyday use: [docs/deploy.md](docs/deploy.md).
 
 ## Local creative files and caches
 

@@ -3,7 +3,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".output/**", ".next/**", "!.next/cache/**"]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
     "lint": {
       "dependsOn": ["^lint"],
@@ -15,11 +15,13 @@
     },
     "test": {
       "dependsOn": ["^test"],
-      "outputs": []
+      "outputs": [],
+      "passThroughEnv": ["TEST_DATABASE_URL"]
     },
     "test:coverage": {
       "dependsOn": ["^test:coverage"],
-      "outputs": ["coverage/**"]
+      "outputs": ["coverage/**"],
+      "passThroughEnv": ["TEST_DATABASE_URL"]
     },
     "dev": {
       "cache": false,

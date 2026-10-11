@@ -1,68 +1,76 @@
-name: Build and deploy (production)
+name: Deploy (production)
 
-# Production never runs on push. Only the public website may be deployed
-# during the backend restart; the existing Fly application stays unchanged.
+# Manual only: Actions > Deploy (production) > Run workflow, on the main branch,
+# typing "deploy" to confirm. Runs the checks, then the admin (database
+# migrations + Fly.io), then the website (Cloudflare Worker).
+#   Admin:   https://admin.tilanavantonder.co.za  (fly.prod.toml)
+#   Website: https://tilanavantonder.co.za, Cloudflare Worker "tilanavantonder-website-prod"
+# One-time setup (secrets, variables, domains): docs/deploy.md
 on:
   workflow_dispatch:
     inputs:
       target:
-        description: Public website only (admin deployment is paused)
+        description: What to deploy
         required: true
-        default: public
+        default: everything
         type: choice
         options:
-          - public
+          - everything
+          - admin
+          - website
       confirm:
         description: 'Type "deploy" to confirm the production release'
         required: true
-        default: ""
+        default: ''
 
 concurrency:
-  group: production-${{ github.event_name }}
+  group: deploy-production
   cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   validate:
-    name: Validate request
+    name: Check the request
     runs-on: ubuntu-latest
     steps:
-      - name: Require the main branch and confirmation for deployments
+      - name: Require the main branch and confirmation
         env:
           CONFIRM: ${{ inputs.confirm }}
           REF_NAME: ${{ github.ref_name }}
-          TARGET: ${{ inputs.target }}
         run: |
           if [ "$REF_NAME" != "main" ]; then
-            echo "Production deployments must be run from the main branch."
+            echo '::error::Production deploys run from the main branch only.'
             exit 1
           fi
           if [ "$CONFIRM" != "deploy" ]; then
-            echo 'Enter "deploy" in the confirmation field.'
-            exit 1
-          fi
-          if [ "$TARGET" != "public" ]; then
-            echo 'Admin deployment is paused during the backend restart. Select public.'
+            echo '::error::Type "deploy" in the confirmation field.'
             exit 1
           fi
 
   quality:
-    name: Required quality gate
+    name: Quality checks
+    needs: validate
     uses: ./.github/workflows/quality.yml
 
-  build-public:
-    name: Build public website
-    needs: [validate, quality]
-    if: inputs.target == 'public'
+  admin:
+    name: Admin (Fly.io)
+    needs: quality
+    if: inputs.target == 'everything' || inputs.target == 'admin'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    env:
-      DEPLOYMENT_ENVIRONMENT: production
-      PUBLIC_API_BASE_URL: ${{ secrets.PUBLIC_API_BASE_URL_PROD }}
-      PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.PUBLIC_TURNSTILE_SITE_KEY_PROD }}
+    timeout-minutes: 20
+    environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+      - name: Check secrets
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}
+        run: |
+          test -n "$DATABASE_URL" || { echo '::error::Add the DATABASE_URL_PROD secret (see docs/deploy.md).'; exit 1; }
+          test -n "$FLY_API_TOKEN" || { echo '::error::Add the FLY_API_TOKEN_PROD secret (see docs/deploy.md).'; exit 1; }
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
       - name: Set up Node
@@ -70,61 +78,66 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - name: Validate public environment
-        run: node apps/web/scripts/validate-public-deployment-env.mjs
-      - name: Validate Cloudflare credentials
+      - name: Install database tools
+        run: pnpm install --frozen-lockfile --filter "@tilana/db..."
+      - name: Database migrations
+        run: pnpm db:migrate
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          test -n "$CLOUDFLARE_API_TOKEN" || { echo '::error::CLOUDFLARE_API_TOKEN is missing.'; exit 1; }
-          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo '::error::CLOUDFLARE_ACCOUNT_ID is missing.'; exit 1; }
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Build public website
-        run: pnpm build:web
-      - name: Save public website build
-        uses: actions/upload-artifact@v7
-        with:
-          name: public-website
-          path: apps/web/dist/client
-          if-no-files-found: error
-          retention-days: 1
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@1.5
+      - name: Deploy to Fly.io
+        run: flyctl deploy --config fly.prod.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}
 
-  admin-paused:
-    name: Admin deployment paused
-    needs: validate
+  website:
+    name: Website (Cloudflare)
+    needs: [quality, admin]
+    # After the admin when both are deployed; on its own when only the website is.
+    if: >-
+      !cancelled() && needs.quality.result == 'success'
+      && (needs.admin.result == 'success' || needs.admin.result == 'skipped')
+      && (inputs.target == 'everything' || inputs.target == 'website')
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Explain the backend restart pause
-        run: echo '::notice::Admin deployment is paused during the backend restart. The existing Fly application is unchanged.'
-
-  deploy-public:
-    name: Deploy public website
-    needs: build-public
-    if: inputs.target == 'public'
-    runs-on: ubuntu-latest
+    timeout-minutes: 20
     environment: production
     permissions:
       contents: read
       deployments: write
+    env:
+      DEPLOYMENT_ENVIRONMENT: production
+      CLOUDFLARE_ENV: production
+      PUBLIC_API_BASE_URL: https://admin.tilanavantonder.co.za
+      PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY_PROD || secrets.PUBLIC_TURNSTILE_SITE_KEY_PROD }}
+      PUBLIC_POSTHOG_KEY: ${{ vars.PUBLIC_POSTHOG_KEY }}
+      PUBLIC_POSTHOG_HOST: https://eu.i.posthog.com
+      PUBLIC_SITE_ENVIRONMENT: production
     steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Check website settings
+        run: node apps/web/scripts/validate-public-deployment-env.mjs
+      - name: Check Cloudflare credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo '::error::Add the CLOUDFLARE_API_TOKEN secret.'; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo '::error::Add the CLOUDFLARE_ACCOUNT_ID secret.'; exit 1; }
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
+      - name: Set up Node
+        uses: actions/setup-node@v7
         with:
-          version: 11.22.0
-      - name: Download public website build
-        uses: actions/download-artifact@v7
-        with:
-          name: public-website
-          path: apps/web/dist/client
-      - name: Deploy public website to Cloudflare Pages
-        run: >-
-          pnpm dlx wrangler@4 pages deploy apps/web/dist/client
-          --project-name=tilanavantonder-website-prod
-          --branch=main
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter "@tilana/web..."
+      - name: Build the website
+        run: pnpm --filter @tilana/web build
+      - name: Deploy the Cloudflare Worker
+        run: pnpm --filter @tilana/web exec wrangler deploy --config dist/server/wrangler.json
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

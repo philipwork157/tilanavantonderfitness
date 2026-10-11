@@ -1,0 +1,29 @@
+# Admin (apps/admin-next) on Fly.io: DEVELOPMENT. https://admin-dev.tilanavantonder.co.za
+# Deployed by .github/workflows/deploy-dev.yml on every push to dev:
+#   flyctl deploy --config fly.toml --remote-only
+# Settings come from Fly secrets (see apps/admin-next/.env.example and docs/deploy.md).
+app = "tilanavantonder-admin-dev"
+primary_region = "fra" # Frankfurt, next to Supabase
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  # Development may sleep when nobody uses it; it wakes on the next request.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [[http_service.checks]]
+    grace_period = "20s"
+    interval = "30s"
+    method = "GET"
+    path = "/api/health"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

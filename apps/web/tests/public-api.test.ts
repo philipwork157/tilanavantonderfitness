@@ -24,7 +24,12 @@ describe('single public backend origin', () => {
     ['production', 'https://user:secret@admin.tilanavantonder.co.za', false],
     ['production', 'https://admin.tilanavantonder.co.za/api', false],
   ])('validates deployed %s origin %s', (deployment, base, valid) => {
-    const result = spawnSync(process.execPath, ['scripts/validate-public-deployment-env.mjs'], { env: { ...process.env, DEPLOYMENT_ENVIRONMENT: deployment, PUBLIC_API_BASE_URL: base, PUBLIC_TURNSTILE_SITE_KEY: 'fixture' } });
+    const result = spawnSync(process.execPath, ['scripts/validate-public-deployment-env.mjs'], { env: { ...process.env, DEPLOYMENT_ENVIRONMENT: deployment, PUBLIC_API_BASE_URL: base, PUBLIC_TURNSTILE_SITE_KEY: 'fixture', PUBLIC_SITE_ENVIRONMENT: deployment } });
     expect(result.status === 0).toBe(valid);
+  });
+  it('requires the site environment label to match the deployment', () => {
+    const result = spawnSync(process.execPath, ['scripts/validate-public-deployment-env.mjs'], { env: { ...process.env, DEPLOYMENT_ENVIRONMENT: 'production', PUBLIC_API_BASE_URL: 'https://admin.tilanavantonder.co.za', PUBLIC_TURNSTILE_SITE_KEY: 'fixture', PUBLIC_SITE_ENVIRONMENT: 'development' } });
+    expect(result.status).toBe(1);
+    expect(String(result.stderr)).toContain('PUBLIC_SITE_ENVIRONMENT');
   });
 });

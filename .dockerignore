@@ -10,6 +10,7 @@
 
 # Private/local creative work is never part of an application build context
 /tilana-content-work/
+/Claude outputs/
 
 # dependencies & package-manager state (reinstalled in the image)
 node_modules
@@ -22,6 +23,8 @@ node_modules
 **/.turbo
 **/.cache
 **/.vite
+**/.next
+**/coverage
 *.tsbuildinfo
 
 # local env & scratch
