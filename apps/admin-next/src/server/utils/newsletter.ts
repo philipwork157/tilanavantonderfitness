@@ -39,6 +39,7 @@ export function newsletterTestRecipients(): string[] {
 }
 
 export const unsubscribeUrl = (token: string) => `${websiteUrl()}/newsletter/unsubscribe?token=${encodeURIComponent(token)}`;
+export const oneClickUnsubscribeUrl = (token: string) => `${websiteUrl()}/newsletter/one-click?token=${encodeURIComponent(token)}`;
 export const confirmUrl = (token: string) => `${websiteUrl()}/newsletter/confirmed?token=${encodeURIComponent(token)}`;
 
 /**
@@ -92,7 +93,11 @@ export function startCampaignRunner(campaignId: number) {
       if (campaign?.status !== 'sending') return;
       const content = await campaignContent(db, campaign, { forEmail: true });
       await runCampaignDeliveries(db, campaignId, {
-        buildEmail: person => campaignEmail(person.email, { ...content, unsubscribeUrl: unsubscribeUrl(person.unsubscribeToken) }),
+        buildEmail: person => campaignEmail(person.email, {
+          ...content,
+          unsubscribeUrl: unsubscribeUrl(person.unsubscribeToken),
+          oneClickUnsubscribeUrl: oneClickUnsubscribeUrl(person.unsubscribeToken),
+        }),
         send: sendEmail,
         // About 4 emails a second, well under the SES sending rate.
         delayMs: 250,

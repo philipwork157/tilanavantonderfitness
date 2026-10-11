@@ -65,7 +65,4 @@ export function sameOriginOnly(request: Request, isSameOrigin: (origin?: string,
   if (!isSameOrigin(origin, host)) throw new HttpError(403, 'Request origin is not allowed.');
 }
 
-/** The visitor's IP, from the proxy header when present. */
-export function clientIp(request: Request): string {
-  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-}
+export { clientIp } from './client-ip';

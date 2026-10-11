@@ -1,7 +1,7 @@
 import { MAX_PROGRAM_PDF_BYTES } from '@tilana/contracts/admin-programs';
 import { programs } from '@tilana/db';
 import { and, eq } from 'drizzle-orm';
-import { requireAdmin } from '@/server/auth/admin';
+import { requireAdmin, requireRole } from '@/server/auth/admin';
 import { isSameOrigin } from '@/server/auth/admin-access';
 import { getDatabase } from '@/server/db';
 import { handle, HttpError, routeId, sameOriginOnly, type IdContext } from '@/server/http';
@@ -10,10 +10,10 @@ import { makeProgramPreview } from '@/server/services/program-previews';
 import { findProgram, programLabel, toAdminProgram } from '@/server/services/programs';
 import { downloadProgramFile, inspectPdf, PdfRejectedError, programFileName, uploadProgramFile } from '@/server/utils/program-files';
 
-/** Upload or replace the program's PDF (multipart field "file"). */
+/** Upload or replace the program's PDF (multipart field "file"). Admins only: it is what buyers receive. */
 export const POST = handle(async (request: Request, context: IdContext) => {
   sameOriginOnly(request, isSameOrigin);
-  const admin = await requireAdmin();
+  const admin = await requireRole(['admin']);
   const id = await routeId(context);
   const declared = Number(request.headers.get('content-length') ?? 0);
   if (declared > MAX_PROGRAM_PDF_BYTES + 64 * 1024) throw new HttpError(413, 'PDFs must be 15 MB or smaller.');

@@ -1,12 +1,12 @@
 import { programInputSchema } from '@tilana/contracts/admin-programs';
 import { hasAnyRole, programs } from '@tilana/db';
 import { and, eq, ne } from 'drizzle-orm';
-import { requireAdmin } from '@/server/auth/admin';
+import { requireAdmin, requireRole } from '@/server/auth/admin';
 import { isSameOrigin } from '@/server/auth/admin-access';
 import { getDatabase } from '@/server/db';
 import { handle, HttpError, readJson, routeId, sameOriginOnly, type IdContext } from '@/server/http';
 import { removePreviewImages } from '@/server/services/program-previews';
-import { findProgram, isOnWebsite, isProgramSold, toAdminProgram } from '@/server/services/programs';
+import { findProgram, isOnWebsite, isProgramInAnyOrder, toAdminProgram } from '@/server/services/programs';
 
 export const GET = handle(async (_request: Request, context: IdContext) => {
   await requireAdmin();
@@ -47,18 +47,24 @@ export const PUT = handle(async (request: Request, context: IdContext) => {
 });
 
 /**
- * Delete a program that was never sold. Its PDFs stay in storage; its
+ * Delete a program that is switched off and in no order (admins only). Its PDFs stay in storage; its
  * sneak peek pictures are removed. Sold
  * programs stay: "Email PDFs again" needs them for past buyers.
  */
 export const DELETE = handle(async (request: Request, context: IdContext) => {
   sameOriginOnly(request, isSameOrigin);
-  await requireAdmin();
+  await requireRole(['admin']);
   const id = await routeId(context);
-  if (await isProgramSold(getDatabase(), id)) {
-    throw new HttpError(409, 'People have bought this program, so it stays: past buyers may need their PDFs again. Switch it off instead to take it off the website.');
+  const db = getDatabase();
+  const existing = await findProgram(db, id);
+  if (!existing) throw new HttpError(404, 'Program not found.');
+  if (isOnWebsite(existing, existing.volume)) {
+    throw new HttpError(409, 'This program is on the website, so someone may be buying it right now. Switch it off first, then delete it.');
   }
-  const deleted = await getDatabase().delete(programs).where(eq(programs.id, id)).returning({ id: programs.id, preview: programs.preview });
+  if (await isProgramInAnyOrder(db, id)) {
+    throw new HttpError(409, 'This program is in an order, so it stays: buyers may need their PDFs again. Keep it switched off to hide it from the website.');
+  }
+  const deleted = await db.delete(programs).where(eq(programs.id, id)).returning({ id: programs.id, preview: programs.preview });
   if (!deleted.length) throw new HttpError(404, 'Program not found.');
   await removePreviewImages(deleted[0]!.preview);
   return Response.json({ ok: true });

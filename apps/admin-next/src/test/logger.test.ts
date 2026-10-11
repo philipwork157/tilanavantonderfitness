@@ -15,7 +15,7 @@ describe('API request logging', () => {
   it('logs one line per request with an ID, status and timing, and returns the ID', async () => {
     const { log, lines } = memoryLogger();
     const response = await withRequestLog(
-      request('/api/contact?token=secret-token', { 'x-forwarded-for': '102.33.4.25, 10.0.0.1' }),
+      request('/api/contact?token=secret-token', { 'fly-client-ip': '102.33.4.25', 'x-forwarded-for': '6.6.6.6, 10.0.0.1' }),
       async () => Response.json({ ok: true }),
       log,
     );
@@ -76,5 +76,17 @@ describe('API request logging', () => {
     expect(maskEmail('not-an-email')).toBe('***');
     expect(maskIp('102.33.4.25')).toBe('102.33.4.x');
     expect(maskIp('2c0f:f4c0:1a2b:9:1:2:3:4')).toBe('2c0f:f4c0:1a2b:…');
+  });
+
+  it('cuts personal data out of database error messages', () => {
+    const { log, lines } = memoryLogger();
+    const cause = Object.assign(new Error('duplicate key value violates unique constraint'), { detail: 'Key (email)=(anna@example.com) already exists.' });
+    const error = new Error('Failed query: insert into "orders" ("email") values ($1)\nparams: anna@example.com,Anna,Smit', { cause });
+    log.error({ err: error }, 'Order could not be saved');
+    const text = JSON.stringify(lines[0]);
+    expect(text).not.toContain('anna@example.com');
+    expect(text).not.toContain('Smit');
+    expect(text).toContain('params: [Redacted]');
+    expect(text).toContain('Failed query: insert into');
   });
 });

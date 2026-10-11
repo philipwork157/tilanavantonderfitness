@@ -22,6 +22,8 @@ export interface CampaignEmailContent {
   websiteUrl: string;
   /** Personal unsubscribe link; null for test emails. */
   unsubscribeUrl: string | null;
+  /** Where mail apps POST a one-click unsubscribe (RFC 8058). */
+  oneClickUnsubscribeUrl?: string | null;
 }
 
 export function campaignEmailHtml(content: CampaignEmailContent): string {
@@ -80,8 +82,12 @@ export function campaignEmail(to: string, content: CampaignEmailContent, options
     subject: options.test ? `[Test] ${content.subject}` : content.subject,
     text: campaignEmailText(content),
     html: campaignEmailHtml(content),
-    headers: content.unsubscribeUrl
-      ? [{ name: 'List-Unsubscribe', value: `<${content.unsubscribeUrl}>` }]
+    // One-click unsubscribe (RFC 8058) for mail apps; the link in the email opens the website page.
+    headers: content.oneClickUnsubscribeUrl
+      ? [
+          { name: 'List-Unsubscribe', value: `<${content.oneClickUnsubscribeUrl}>` },
+          { name: 'List-Unsubscribe-Post', value: 'List-Unsubscribe=One-Click' },
+        ]
       : [],
   };
 }

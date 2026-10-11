@@ -10,7 +10,9 @@ import { POST as startBasket } from '@/app/api/checkout/paystack/basket/route';
 import { GET as checkoutStatus } from '@/app/api/checkout/status/route';
 import { POST as webhook } from '@/app/api/webhooks/paystack/route';
 import { deliverOrder, resendOrder } from '@/server/services/order-delivery';
+import { applySesEvent } from '@/server/services/ses-events';
 import { applyVerifiedPayment, CheckoutAlreadyStartedError, findOrderBy, startCheckout } from '@/server/services/orders';
+import { isProgramInAnyOrder } from '@/server/services/programs';
 import { dayRange, findOrders, salesSummary, salesToday } from '@/server/services/sales';
 import type { OutgoingEmail } from '@/server/utils/email-routing';
 import type { VerifiedPayment } from '@/server/utils/paystack';
@@ -110,6 +112,14 @@ describe.skipIf(!url)('orders (database)', () => {
     expect((await applyVerifiedPayment(db, order, success(order))).justPaid).toBe(true);
   });
 
+  it('keeps a program that is in an unpaid checkout (the payment may still arrive)', async () => {
+    const [unsold] = await db.select().from(programs).where(eq(programs.slug, 'test-shop-nopdf'));
+    expect(await isProgramInAnyOrder(db, unsold!.id)).toBe(false);
+    await startCheckout(db, request(), deps());
+    const [inCheckout] = await db.select().from(programs).where(eq(programs.slug, 'test-shop-a'));
+    expect(await isProgramInAnyOrder(db, inCheckout!.id)).toBe(true);
+  });
+
   it('emails the PDFs once paid and tells Tilana', async () => {
     vi.stubEnv('WEBSITE_URL', 'https://site.test');
     vi.stubEnv('CONTACT_NOTIFY_TO', 'tilana@example.com');
@@ -132,6 +142,22 @@ describe.skipIf(!url)('orders (database)', () => {
     await applyVerifiedPayment(db, order, success(order));
     await deliverOrder(db, order.id, { send: async () => { throw new Error('SES down'); }, download: async () => Buffer.from('x') });
     expect((await findOrderBy(db, 'reference', reference))).toMatchObject({ deliveryStatus: 'failed', deliveryError: 'SES down' });
+    vi.unstubAllEnvs();
+  });
+
+  it('marks the order not sent when the PDF email bounces', async () => {
+    vi.stubEnv('WEBSITE_URL', 'https://site.test');
+    const { reference } = await startCheckout(db, request(), deps());
+    const order = (await findOrderBy(db, 'reference', reference))!;
+    await applyVerifiedPayment(db, order, success(order));
+    const messageId = `ses-${randomUUID()}`;
+    await deliverOrder(db, order.id, { send: async () => ({ messageId }), download: async () => Buffer.from('%PDF-1.7 %%EOF') });
+    expect(await findOrderBy(db, 'reference', reference)).toMatchObject({ deliveryStatus: 'sent', deliveryMessageIds: [messageId] });
+    await applySesEvent(db, { notificationType: 'Bounce', mail: { messageId }, bounce: { bounceType: 'Permanent', bounceSubType: 'General', bouncedRecipients: [{ emailAddress: 'anna@example.com', diagnosticCode: 'mailbox full' }] } });
+    const after = (await findOrderBy(db, 'reference', reference))!;
+    expect(after.deliveryStatus).toBe('failed');
+    expect(after.deliveryError).toContain('refused the PDFs');
+    expect(after.deliveryAttempts).toBe(4);
     vi.unstubAllEnvs();
   });
 

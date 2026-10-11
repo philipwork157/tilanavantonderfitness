@@ -14,7 +14,7 @@ import { GET as cron } from '@/app/api/cron/order-checks/route';
 import { POST as webhook } from '@/app/api/webhooks/paystack/route';
 import { runOrderChecks, type OrderCheckDependencies } from '@/server/services/order-checks';
 import { applyVerifiedPayment, findOrderBy, startCheckout } from '@/server/services/orders';
-import { isProgramSold } from '@/server/services/programs';
+import { isProgramInAnyOrder } from '@/server/services/programs';
 import { requestRefund } from '@/server/services/refunds';
 import type { OutgoingEmail } from '@/server/utils/email-routing';
 import { PaystackError, type VerifiedPayment } from '@/server/utils/paystack';
@@ -130,6 +130,13 @@ describe.skipIf(!url)('order checks, refunds and disputes (database)', () => {
     expect(flagged.status).toBe('pending');
     expect(flagged.reviewNote).toContain('does not match');
     expect(sent.filter(email => email.subject.includes('Needs your attention') && email.subject.includes(order.orderNumber))).toHaveLength(1);
+
+    // "Mark as checked": no new flag, check or email for this payment afterwards.
+    await db.update(orders).set({ reviewNote: null, reviewedAt: later(2 * HOUR) }).where(eq(orders.id, order.id));
+    await runOrderChecks(db, later(4 * HOUR), deps);
+    await applyVerifiedPayment(db, await reload(order), answer(order, 'success', { amountCents: 100 }));
+    expect((await reload(order)).reviewNote).toBeNull();
+    expect(sent.filter(email => email.subject.includes(order.orderNumber))).toHaveLength(1);
   });
 
   it('retries PDF emails on a schedule, then tells Tilana it gave up', async () => {
@@ -172,7 +179,7 @@ describe.skipIf(!url)('order checks, refunds and disputes (database)', () => {
     const again = await applyVerifiedPayment(db, await reload(order), answer(order, 'success'));
     expect(again).toMatchObject({ status: 'refunded', justPaid: false });
     const [program] = await db.select().from(programs).where(eq(programs.slug, 'test-chk-a'));
-    expect(await isProgramSold(db, program!.id)).toBe(true);
+    expect(await isProgramInAnyOrder(db, program!.id)).toBe(true);
   });
 
   it('handles signed refund and dispute webhooks, including refunds made in the Paystack dashboard', async () => {

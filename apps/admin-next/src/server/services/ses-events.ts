@@ -5,9 +5,12 @@ import 'server-only';
  * certificate and the configured topic before anything is changed.
  */
 import { createVerify } from 'node:crypto';
-import { and, eq } from 'drizzle-orm';
-import { newsletterDeliveries, type Database } from '@tilana/db';
+import { and, eq, sql } from 'drizzle-orm';
+import { newsletterDeliveries, orders, type Database } from '@tilana/db';
+import { logger } from '../logger';
 import { suppressSubscriber } from './newsletter-subscribers';
+import { DELIVERY_SCHEDULE } from './order-checks';
+import { alertOrder } from './order-delivery';
 
 export interface SnsMessage {
   Type: 'Notification' | 'SubscriptionConfirmation' | 'UnsubscribeConfirmation';
@@ -86,6 +89,28 @@ interface SesEvent {
 export type SesEventOutcome = 'bounced' | 'complained' | 'ignored';
 
 /**
+ * A bounced PDF email: the buyer has nothing, although the order said "sent".
+ * The order is marked not sent (no more automatic tries to a dead address)
+ * and Tilana is told, so she can send the PDFs to a corrected address.
+ */
+async function markOrderEmailBounced(db: Database, messageId: string, reason: string) {
+  const [order] = await db.select({ id: orders.id, orderNumber: orders.orderNumber, paymentMode: orders.paymentMode, email: orders.email })
+    .from(orders).where(sql`${messageId} = any(${orders.deliveryMessageIds})`).limit(1);
+  if (!order) return;
+  await db.update(orders).set({
+    deliveryStatus: 'failed',
+    deliveryError: `The buyer's email provider refused the PDFs. ${reason}`.slice(0, 500),
+    deliveryAttempts: DELIVERY_SCHEDULE.length,
+  }).where(eq(orders.id, order.id));
+  logger.warn({ orderNumber: order.orderNumber }, 'Program email bounced');
+  await alertOrder(order, 'The PDF email bounced', [
+    `The email with the PDFs for this order could not be delivered to ${order.email}.`,
+    `Reason: ${reason}`,
+    'Check the address with the buyer, then use "Email PDFs again" on the Sales page with the right address.',
+  ]);
+}
+
+/**
  * Applies one SES report. Permanent bounces and complaints suppress the
  * subscriber (found through the delivery's SES message id, or by address for
  * confirmation emails). Temporary bounces are ignored; SES retries those.
@@ -119,6 +144,8 @@ export async function applySesEvent(db: Database, payload: unknown, now = new Da
 
   const detail = recipients.map(person => person.diagnosticCode).filter(Boolean).join('; ');
   const fullReason = detail ? `${reason}: ${detail}` : reason;
+
+  if (kind === 'bounced' && messageId) await markOrderEmailBounced(db, messageId, fullReason);
 
   if (delivery) {
     await db.update(newsletterDeliveries).set({ status: kind, error: fullReason.slice(0, 500) })

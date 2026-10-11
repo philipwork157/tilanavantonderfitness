@@ -1,7 +1,7 @@
 import 'server-only';
-import { and, asc, count, eq, inArray, isNotNull, like, max, ne, or } from 'drizzle-orm';
+import { and, asc, count, eq, isNotNull, like, max, ne, or } from 'drizzle-orm';
 import { slugify } from '@tilana/contracts/blog';
-import { orderItems, orders, programs, volumes, type Database, type Program, type Volume } from '@tilana/db';
+import { orderItems, programs, volumes, type Database, type Program, type Volume } from '@tilana/db';
 import { currentPreview, previewImageUrl } from './program-previews';
 
 /*
@@ -143,11 +143,14 @@ export function toAdminProgram(program: ProgramInVolume) {
   };
 }
 
-/** Whether anyone has bought it (paid or later refunded): such programs are never deleted. */
-export async function isProgramSold(db: Database, programId: number): Promise<boolean> {
+/**
+ * Whether any order includes it: bought, refunded, or a checkout that may
+ * still be paid. Such programs are never deleted, because the order needs the
+ * PDF (a payment can still arrive, and past buyers may need their PDFs again).
+ */
+export async function isProgramInAnyOrder(db: Database, programId: number): Promise<boolean> {
   const [row] = await db.select({ id: orderItems.id }).from(orderItems)
-    .innerJoin(orders, eq(orders.id, orderItems.orderId))
-    .where(and(eq(orderItems.programId, programId), inArray(orders.status, ['paid', 'refunded']))).limit(1);
+    .where(eq(orderItems.programId, programId)).limit(1);
   return Boolean(row);
 }
 

@@ -29,13 +29,16 @@ describe('newsletter emails', () => {
     expect(email.html).toContain('<title>Protein &lt;b&gt;matters&lt;/b&gt;</title>');
   });
 
-  it('links to the post and includes a personal unsubscribe link and header', () => {
-    const email = campaignEmail('anna@example.com', content);
+  it('links to the post and includes a personal unsubscribe link and one-click headers', () => {
+    const email = campaignEmail('anna@example.com', { ...content, oneClickUnsubscribeUrl: 'https://tilanavantonder.co.za/newsletter/one-click?token=abc' });
     expect(email.to).toEqual(['anna@example.com']);
     expect(email.fromName).toBe('Tilana van Tonder');
     expect(email.html).toContain('href="https://tilanavantonder.co.za/blog/protein"');
     expect(email.html).toContain('href="https://tilanavantonder.co.za/newsletter/unsubscribe?token=abc"');
-    expect(email.headers).toEqual([{ name: 'List-Unsubscribe', value: '<https://tilanavantonder.co.za/newsletter/unsubscribe?token=abc>' }]);
+    expect(email.headers).toEqual([
+      { name: 'List-Unsubscribe', value: '<https://tilanavantonder.co.za/newsletter/one-click?token=abc>' },
+      { name: 'List-Unsubscribe-Post', value: 'List-Unsubscribe=One-Click' },
+    ]);
     expect(email.text).toContain('Read the full post: https://tilanavantonder.co.za/blog/protein');
     expect(email.text).toContain('Hi friend,');
   });

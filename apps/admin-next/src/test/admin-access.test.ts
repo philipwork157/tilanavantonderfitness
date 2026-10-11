@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ADMIN_AREA_ROLES, hasAnyRole } from '@tilana/db/roles';
 import { confirmedEmail, createAttemptLimiter, isSameOrigin } from '@/server/auth/admin-access';
+import { clientIp } from '@/server/client-ip';
 import { safeRedirectPath } from '@/lib/safe-redirect';
 import { adminLoginRequestSchema } from '@tilana/contracts/admin-auth';
 
@@ -93,5 +94,28 @@ describe('adminLoginRequestSchema', () => {
   it('rejects an invalid email or empty password', () => {
     expect(adminLoginRequestSchema.safeParse({ email: 'nope', password: 'secret' }).success).toBe(false);
     expect(adminLoginRequestSchema.safeParse({ email: 'tilana@example.com', password: '' }).success).toBe(false);
+  });
+});
+
+describe('clientIp', () => {
+  const ip = (headers: Record<string, string>) => clientIp(new Request('http://localhost/', { headers }));
+  it('trusts Fly-Client-IP, which Fly sets itself', () => {
+    expect(ip({ 'fly-client-ip': '102.33.4.25', 'x-forwarded-for': '1.2.3.4' })).toBe('102.33.4.25');
+  });
+  it('otherwise takes the last X-Forwarded-For entry, never the one a visitor can type', () => {
+    expect(ip({ 'x-forwarded-for': '6.6.6.6, 102.33.4.25' })).toBe('102.33.4.25');
+    expect(ip({})).toBe('unknown');
+  });
+});
+
+describe('createAttemptLimiter memory', () => {
+  it('forgets keys whose attempts have expired', () => {
+    let time = 0;
+    const limiter = createAttemptLimiter({ maxAttempts: 3, windowMs: 1000, now: () => time });
+    for (let i = 0; i < 50; i += 1) limiter.record(`ip-${i}`);
+    expect(limiter.size()).toBe(50);
+    time = 5000;
+    limiter.record('fresh');
+    expect(limiter.size()).toBe(1);
   });
 });

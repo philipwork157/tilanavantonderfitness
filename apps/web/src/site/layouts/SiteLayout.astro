@@ -18,6 +18,7 @@ import BasketDrawer from '../components/shop/BasketDrawer';
 import WhatsAppChat from '../components/WhatsAppChat';
 import { checkoutEnabled, href, site, type NavKey } from '../config';
 import { toProducts, type Program } from '../programs';
+import { isLiveSite } from '@web/utils/site-environment';
 
 interface Props {
   title: string;
@@ -50,9 +51,11 @@ const {
   pageType = 'website',
   publishedAt,
   structuredData,
-  robots = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+  robots: pageRobots = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
   programs,
 } = Astro.props;
+// The development copy of the site is never indexed, whatever the page asks for.
+const robots = isLiveSite ? pageRobots : 'noindex, nofollow';
 const products = programs?.length ? toProducts(programs) : undefined;
 
 const pageTitle = title === site.name ? title : `${title} | ${site.name}`;
@@ -159,13 +162,14 @@ const schema = {
     <script>
       import { animate, inView } from 'motion';
       import { startAnalytics } from '@web/utils/analytics';
+      import { SITE_ENVIRONMENT } from '@web/utils/site-environment';
 
       // Product analytics (PostHog, cookieless). Loads only when a project key is set.
       startAnalytics(
         import.meta.env.PUBLIC_POSTHOG_KEY ?? '',
         import.meta.env.PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com',
         // The development website (deployed from dev) counts as testing, like localhost.
-        import.meta.env.PUBLIC_SITE_ENVIRONMENT || (import.meta.env.DEV ? 'development' : 'production'),
+        SITE_ENVIRONMENT,
       );
 
       // Scroll reveal: elements start hidden only once JavaScript confirms it can animate them.

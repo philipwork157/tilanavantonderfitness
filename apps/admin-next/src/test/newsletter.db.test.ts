@@ -2,7 +2,8 @@
 import { fileURLToPath } from 'node:url';
 import { eq, sql } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { POST as oneClick } from '@/app/api/newsletter/one-click/route';
 import {
   blogPosts,
   createDatabase,
@@ -104,6 +105,19 @@ describe.skipIf(!url)('newsletter (database)', () => {
       expect(await unsubscribe(db, 'x'.repeat(43))).toBe(false);
       const counts = await subscriberCounts(db);
       expect(counts).toEqual({ subscribed: 0, pending: 0, unsubscribed: 1, suppressed: 0 });
+    });
+
+    it('unsubscribes with one click from a mail app (server call, no Origin)', async () => {
+      vi.stubEnv('DATABASE_URL', url!);
+      await subscribed('anna@example.com');
+      const [row] = await db.select().from(newsletterSubscribers);
+      const call = (token: string) => oneClick(new Request('http://localhost/api/newsletter/one-click', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token }),
+      }));
+      expect((await call('x'.repeat(43))).status).toBe(400);
+      expect((await call(row!.unsubscribeToken)).status).toBe(200);
+      expect((await subscriberCounts(db)).unsubscribed).toBe(1);
+      vi.unstubAllEnvs();
     });
 
     it('lets someone who unsubscribed sign up again with a new confirmation', async () => {

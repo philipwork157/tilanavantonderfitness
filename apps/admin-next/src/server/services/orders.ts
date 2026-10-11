@@ -154,6 +154,8 @@ export async function applyVerifiedPayment(db: Database, order: Order, payment: 
       && payment.currency === order.currency
       && payment.mode === order.paymentMode;
     if (!matches) {
+      // A person already checked this payment in Paystack ("Mark as checked"): leave it alone.
+      if (order.reviewedAt) return { status: order.status, justPaid: false };
       // Money may have moved, so never call it failed: keep it open and ask a person to look.
       logger.error({ orderNumber: order.orderNumber, paystack: { amountCents: payment.amountCents, currency: payment.currency, mode: payment.mode } }, 'Paystack payment does not match the order; flagged for review');
       const note = `Paystack reports a successful payment of ${payment.amountCents / 100} ${payment.currency} (${payment.mode}) that does not match this order (${order.totalCents / 100} ${order.currency}, ${order.paymentMode}). Check it in Paystack.`;

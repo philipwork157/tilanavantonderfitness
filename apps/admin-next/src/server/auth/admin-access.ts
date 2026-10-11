@@ -32,12 +32,28 @@ interface RateLimiterOptions {
   now?: () => number;
 }
 
+const MAX_TRACKED_KEYS = 10_000;
+
 /**
  * In-memory attempt limiter (failed sign-ins, contact form posts). It is per
  * server instance and resets on restart, which is enough at this scale.
  */
 export function createAttemptLimiter({ maxAttempts, windowMs, now = Date.now }: RateLimiterOptions) {
   const attempts = new Map<string, number[]>();
+  let lastSweep = now();
+
+  /** Forgets keys whose attempts have all expired, so memory stays small. */
+  const sweep = () => {
+    if (now() - lastSweep < windowMs && attempts.size < MAX_TRACKED_KEYS) return;
+    lastSweep = now();
+    const cutoff = now() - windowMs;
+    for (const [key, times] of attempts) if (!times.some((time) => time > cutoff)) attempts.delete(key);
+    // Still too many (a flood of fresh keys): drop the oldest ones.
+    for (const key of attempts.keys()) {
+      if (attempts.size <= MAX_TRACKED_KEYS) break;
+      attempts.delete(key);
+    }
+  };
 
   const recent = (key: string) => {
     const cutoff = now() - windowMs;
@@ -50,10 +66,13 @@ export function createAttemptLimiter({ maxAttempts, windowMs, now = Date.now }: 
   return {
     isBlocked: (key: string) => recent(key).length >= maxAttempts,
     record: (key: string) => {
+      sweep();
       attempts.set(key, [...recent(key), now()]);
     },
     clear: (key: string) => {
       attempts.delete(key);
     },
+    /** How many keys are remembered (for tests). */
+    size: () => attempts.size,
   };
 }

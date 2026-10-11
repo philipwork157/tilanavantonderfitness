@@ -65,6 +65,8 @@ export async function runOrderChecks(db: Database, now = new Date(), deps: Order
 async function checkUnpaidOrders(db: Database, now: Date, deps: OrderCheckDependencies, result: OrderCheckResult) {
   const candidates = await db.select().from(orders).where(and(
     eq(orders.status, 'pending'),
+    // Checked by a person after a mismatched payment: nothing more to ask Paystack.
+    isNull(orders.reviewedAt),
     lte(orders.createdAt, new Date(now.getTime() - FIRST_CHECK_AFTER)),
     gte(orders.createdAt, new Date(now.getTime() - STOP_AFTER)),
   )).orderBy(asc(orders.lastCheckedAt), asc(orders.createdAt)).limit(BATCH * 4);

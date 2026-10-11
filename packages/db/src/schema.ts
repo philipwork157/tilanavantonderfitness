@@ -342,6 +342,8 @@ export const orders = pgTable('orders', {
   deliveryStatus: text('delivery_status', { enum: ORDER_DELIVERY_STATUSES }).notNull().default('pending'),
   deliveryError: text('delivery_error'),
   deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+  // SES message ids of the latest PDF emails, so a bounce report can find the order.
+  deliveryMessageIds: text('delivery_message_ids').array().notNull().default(sql`'{}'::text[]`),
   // Background checks: how often this order was re-verified with Paystack, and when.
   checkCount: integer('check_count').notNull().default(0),
   lastCheckedAt: timestamp('last_checked_at', { withTimezone: true }),
@@ -351,6 +353,8 @@ export const orders = pgTable('orders', {
   saleNotifiedAt: timestamp('sale_notified_at', { withTimezone: true }),
   // Set when a person must look at the order (payment did not match, a dispute).
   reviewNote: text('review_note'),
+  // When a person marked it as checked ("Mark as checked"): a mismatched payment is then not flagged again.
+  reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
   refundStatus: text('refund_status', { enum: ORDER_REFUND_STATUSES }),
   refundReason: text('refund_reason'),
   paystackRefundId: text('paystack_refund_id'),

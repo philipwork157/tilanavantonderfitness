@@ -97,10 +97,14 @@ describe('orders', () => {
     expect(newReference(number)).toMatch(/^[A-Za-z0-9.=-]{10,160}$/);
   });
 
-  it('splits large deliveries over several emails', () => {
-    const file = (mb: number) => ({ attachment: { fileName: 'a.pdf', contentType: 'application/pdf', data: new Uint8Array(mb * 1024 * 1024) } });
-    expect(groupAttachments([file(5), file(5), file(5)]).map(group => group.length)).toEqual([3]);
-    expect(groupAttachments([file(12), file(12), file(3)]).map(group => group.length)).toEqual([1, 2]);
+  it('splits large deliveries over several emails that stay under 25 MB once encoded', () => {
+    const MB = 1024 * 1024;
+    const sizes = (...mb: number[]) => groupAttachments(mb, size => size * MB).map(group => group.length);
+    expect(sizes(5, 5, 5)).toEqual([3]);
+    expect(sizes(12, 12, 3)).toEqual([1, 2]);
+    expect(sizes(10, 10)).toEqual([1, 1]);
+    // The biggest allowed PDF (15 MB) still fits in one email: 15 MB x 4/3 base64 is about 20 MB.
+    expect(sizes(15)).toEqual([1]);
   });
 
   it('tells Tilana about the sale, and loudly when the PDFs did not go out', () => {

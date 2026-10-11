@@ -3,6 +3,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import pino, { type DestinationStream, type Logger } from 'pino';
 import pretty from 'pino-pretty';
+import { clientIp } from './client-ip';
 import { isDevelopment, serverConfig } from './config';
 
 /**
@@ -84,12 +85,36 @@ function defaultDestination(): DestinationStream | undefined {
   });
 }
 
+/**
+ * Error messages can quote personal data even when no field is named "email":
+ * a failed database query lists its values ("params: anna@example.com, ...")
+ * and Postgres explains clashes as "Key (email)=(anna@example.com)". These are
+ * cut out of every message, stack and detail before an error is logged.
+ */
+export function scrubErrorText(text: string): string {
+  return text
+    .replace(/\nparams: [^\n]*/g, '\nparams: [Redacted]')
+    .replace(/(Key \([^)]*\)=\()[^)]*\)/g, '$1[Redacted])')
+    .replace(/([A-Za-z0-9._%+-])[A-Za-z0-9._%+-]*@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)/g, '$1***@$2');
+}
+
+function scrubErrorObject(value: unknown, depth = 0): unknown {
+  if (typeof value === 'string') return scrubErrorText(value);
+  if (!value || typeof value !== 'object' || depth > 4) return value;
+  if (Array.isArray(value)) return value.map((item) => scrubErrorObject(item, depth + 1));
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, scrubErrorObject(item, depth + 1)]));
+}
+
+function serializeError(error: unknown) {
+  return scrubErrorObject(pino.stdSerializers.err(error as Error));
+}
+
 export function createLogger(destination = defaultDestination(), level = defaultLevel()): Logger {
   const options = {
     level,
     base: { app: 'admin' },
     redact: { paths: redactPaths, censor: '[Redacted]' },
-    serializers: { err: pino.stdSerializers.err },
+    serializers: { err: serializeError },
     // Adds the request ID and user to every line logged while handling a request.
     mixin() {
       const context = requestContext.getStore();
@@ -124,7 +149,8 @@ function requestIdFor(request: Request): string {
 }
 
 function visitorIp(request: Request): string {
-  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'local';
+  const ip = clientIp(request);
+  return ip === 'unknown' ? 'local' : ip;
 }
 
 /**

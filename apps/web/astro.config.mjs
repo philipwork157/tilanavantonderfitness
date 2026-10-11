@@ -18,6 +18,11 @@ export default defineConfig({
   // React islands (with Motion) for the interactive parts of the site.
   integrations: [react(), sitemap({ customSitemaps: [`${site}/sitemap-blog.xml`] })],
   devToolbar: { enabled: false },
+  // Astro's own cross-site POST check is off: the only POST route is the
+  // newsletter one-click unsubscribe, which mail apps call from their servers
+  // (no Origin header). Forms on the site post to the admin, which checks
+  // origins itself.
+  security: { checkOrigin: false },
   vite: {
     resolve: {
       alias: {

@@ -10,6 +10,8 @@ import { logger, setRequestUser } from '@/server/logger';
 
 const FAILURE_WINDOW_MS = 15 * 60 * 1000;
 const failedLogins = createAttemptLimiter({ maxAttempts: 5, windowMs: FAILURE_WINDOW_MS });
+/** Per account, whatever the IP: stops guessing one password from many addresses. */
+const failedLoginsPerAccount = createAttemptLimiter({ maxAttempts: 20, windowMs: FAILURE_WINDOW_MS });
 
 export const POST = handle(async (request: Request) => {
   sameOriginOnly(request, isSameOrigin);
@@ -20,7 +22,7 @@ export const POST = handle(async (request: Request) => {
   const { email, password } = parsed.data;
 
   const limitKey = `${clientIp(request)}:${email}`;
-  if (failedLogins.isBlocked(limitKey)) {
+  if (failedLogins.isBlocked(limitKey) || failedLoginsPerAccount.isBlocked(email)) {
     throw new HttpError(429, 'Too many sign-in attempts. Please wait 15 minutes and try again.');
   }
 
@@ -32,6 +34,7 @@ export const POST = handle(async (request: Request) => {
   }
   if (error || !data.user) {
     failedLogins.record(limitKey);
+    failedLoginsPerAccount.record(email);
     throw new HttpError(401, 'The email address or password is incorrect.');
   }
 
@@ -50,10 +53,12 @@ export const POST = handle(async (request: Request) => {
     await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
     await clearSupabaseCookies();
     failedLogins.record(limitKey);
+    failedLoginsPerAccount.record(email);
     throw new HttpError(403, 'This account does not have admin access.');
   }
 
   failedLogins.clear(limitKey);
+  failedLoginsPerAccount.clear(email);
   setRequestUser(admin);
   logger.info('Admin signed in');
   return NextResponse.json({ user: admin });
