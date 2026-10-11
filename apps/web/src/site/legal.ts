@@ -167,3 +167,96 @@ export const refundSummary = {
   ],
   effective: '7 October 2026',
 };
+
+/** Terms of sale and use (Electronic Communications and Transactions Act, section 43 details included). */
+export const termsSections = [
+  {
+    title: 'Who you are buying from',
+    body: [
+      `Programmes on this website are sold by ${site.name}, a sole proprietor trading in South Africa. Email: ${site.email}. Physical and postal address: Ternberry Village, Cleveland 31, Cape Town, Western Cape, 7580, South Africa.`,
+      'These terms apply to every purchase on this website and to using the website itself. By buying a programme you confirm that you have read them, together with the refund and cancellation policy and the privacy policy.',
+    ],
+  },
+  {
+    title: 'What you are buying',
+    body: [
+      'Each programme is a digital training guide in PDF format. The programme page describes what it contains, and the sneak peek shows sample pages. Nothing physical is posted to you.',
+      'Programmes are once-off purchases. There is no subscription, no recurring charge and no account to create.',
+    ],
+  },
+  {
+    title: 'Prices and payment',
+    body: [
+      'Prices are shown in South African rand (ZAR) and are the full amount you pay for the programme. The total for your basket is shown before you pay.',
+      'Payments are processed by Paystack, a licensed payment provider. Card and bank details are entered on Paystack’s secure payment page and never reach this website. Paystack uses encryption and industry security standards to protect payments.',
+      'An order is only complete once Paystack confirms the payment. If a price on the website is clearly wrong, the order may be cancelled and fully refunded before the programme is sent.',
+    ],
+  },
+  {
+    title: 'Delivery',
+    body: [
+      'Your programme is emailed to the address you enter at checkout as soon as Paystack confirms your payment, with the PDF attached. Please check the address carefully before paying.',
+      `If nothing has arrived within an hour, check your spam or promotions folder, then email ${site.email} with your order number and the programme will be sent again.`,
+    ],
+  },
+  {
+    title: 'Cancellations and refunds',
+    body: [
+      'Because the programme is a digital file delivered immediately, your rights to cancel and receive a refund are set out in the refund and cancellation policy, which forms part of these terms. Nothing in these terms takes away rights you have under the Consumer Protection Act or the Electronic Communications and Transactions Act.',
+    ],
+  },
+  {
+    title: 'Your licence to use the programme',
+    body: [
+      'You may download, print and use the programme for your own personal training. The programme remains the intellectual property of Tilana van Tonder.',
+      'You may not share, resell, upload, publish or copy the programme for other people, or use it to train clients, without written permission.',
+    ],
+  },
+  {
+    title: 'Health and safety',
+    body: [
+      'The programmes and website content provide general fitness and lifestyle education. They are not medical advice, a diagnosis or a treatment plan, and they do not replace private training or care from a qualified health professional who knows your history.',
+      'Please speak to your doctor before starting a new exercise programme, especially if you are pregnant, injured, recovering from illness or have a medical condition. Stop exercising and get medical help if you feel pain, dizziness or shortness of breath.',
+      'You train at your own pace and within your own limits. To the extent the law allows, Tilana van Tonder is not responsible for injury or loss caused by exercises done incorrectly or against this advice.',
+    ],
+  },
+  {
+    title: 'Using the website',
+    body: [
+      'Please do not misuse the website, for example by trying to break its security, sending automated requests or submitting false orders or enquiries.',
+      'The website and its content are provided as they are. Reasonable care is taken to keep them accurate and available, but the website may sometimes be unavailable for maintenance or reasons outside our control.',
+    ],
+  },
+  {
+    title: 'Privacy',
+    body: [
+      'Personal information you share when buying a programme, subscribing or making an enquiry is handled as described in the privacy policy.',
+    ],
+  },
+  {
+    title: 'Law, complaints and changes',
+    body: [
+      'These terms are governed by the laws of the Republic of South Africa.',
+      `Please contact ${site.email} first with any question or complaint, and we will try to resolve it fairly. You may also approach the National Consumer Commission or another consumer protection body.`,
+      'These terms may be updated from time to time. The version shown on this page when you buy applies to that purchase.',
+    ],
+  },
+] as const;
+
+export const termsSummary = {
+  eyebrow: 'Buying a programme',
+  title: 'Terms of sale,',
+  script: 'in plain words.',
+  intro: 'Who you are buying from, what you get, how payment and delivery work, and how to use your programme safely.',
+  heading: 'Simple and fair.',
+  points: [
+    'Once-off digital PDF programmes',
+    'Prices in rand, paid securely through Paystack',
+    'Emailed straight after payment',
+    'For your own personal use',
+    'General education, not medical advice',
+    'Your consumer rights stay protected',
+  ],
+  effective: '11 October 2026',
+};
+

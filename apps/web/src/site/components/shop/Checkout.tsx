@@ -35,7 +35,7 @@ function validate(f: Fields): Errors {
  * availability are confirmed by the catalogue API before payment; the server
  * re-checks everything and sends the customer to Paystack's hosted checkout.
  */
-export default function Checkout({ programsHref, completeHref, refundHref, privacyHref }: { programsHref: string; completeHref: string; refundHref: string; privacyHref: string }) {
+export default function Checkout({ programsHref, completeHref, refundHref, privacyHref, termsHref }: { programsHref: string; completeHref: string; refundHref: string; privacyHref: string; termsHref: string }) {
   const basket = useBasket();
   // Programs for the "add another" picks; prices to pay come from `volumes` below.
   const products = useCatalogue();
@@ -260,7 +260,7 @@ export default function Checkout({ programsHref, completeHref, refundHref, priva
           <label className={errors.consent ? 'co-consent invalid' : 'co-consent'}>
             <input name="consent" type="checkbox" checked={fields.consent} onChange={(e) => set('consent', e.target.checked)} aria-invalid={Boolean(errors.consent)} aria-describedby={errors.consent ? 'err-consent' : undefined} />
             <span>
-              I agree to the <a href={refundHref} target="_blank" rel="noopener">refund and cancellation policy</a> and <a href={privacyHref} target="_blank" rel="noopener">privacy policy</a>, and understand these are digital programs providing general education, not clinical care.
+              I agree to the <a href={termsHref} target="_blank" rel="noopener">terms of sale</a>, the <a href={refundHref} target="_blank" rel="noopener">refund and cancellation policy</a> and the <a href={privacyHref} target="_blank" rel="noopener">privacy policy</a>, and understand these are digital programs providing general education, not clinical care.
             </span>
           </label>
           {errors.consent && <small className="co-consent-error" id="err-consent">{errors.consent}</small>}

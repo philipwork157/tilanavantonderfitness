@@ -12,7 +12,7 @@ import { checkoutEnabled, href } from '@web/site/config';
   </section>
   <section class="wrap shop-body">
     {checkoutEnabled
-      ? <Checkout client:load programsHref={href('/program')} completeHref={href('/checkout/complete')} refundHref={href('/refund-policy')} privacyHref={href('/privacy')} />
+      ? <Checkout client:load programsHref={href('/program')} completeHref={href('/checkout/complete')} refundHref={href('/refund-policy')} privacyHref={href('/privacy')} termsHref={href('/terms')} />
       : (
         <div class="co-state co-empty">
           <span class="co-empty-icon" aria-hidden="true"><Icon name="bag" /></span>

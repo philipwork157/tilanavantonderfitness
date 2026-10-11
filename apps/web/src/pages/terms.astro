@@ -1,0 +1,14 @@
+---
+import LegalPage from '@web/site/components/LegalPage.astro';
+import { termsSections, termsSummary } from '@web/site/legal';
+import { href, site } from '@web/site/config';
+---
+<LegalPage pageTitle="Terms of Sale" description="Terms for buying and using Tilana van Tonder's digital training programmes, including seller details, payment, delivery and licence." summary={termsSummary} sections={termsSections}>
+  <li data-reveal>
+    <span class="n">11</span>
+    <div>
+      <h2>Related policies</h2>
+      <p>Read the <a href={href('/refund-policy')}>refund and cancellation policy</a> and the <a href={href('/privacy')}>privacy policy</a>. Questions? Email <a href={`mailto:${site.email}`}>{site.email}</a>.</p>
+    </div>
+  </li>
+</LegalPage>
