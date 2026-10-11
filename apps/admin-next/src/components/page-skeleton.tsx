@@ -5,9 +5,9 @@ import { Skeleton } from '@/components/ui/skeleton';
  * the server checks the session and renders the page. Shapes follow the real
  * pages so nothing jumps when they arrive.
  */
-export function PageSkeleton({ variant, label }: { variant: 'tiles' | 'table' | 'editor'; label: string }) {
+export function PageSkeleton({ variant, label, wide = false }: { variant: 'tiles' | 'table' | 'editor'; label: string; wide?: boolean }) {
   return (
-    <div className="mx-auto w-full max-w-6xl" aria-busy="true">
+    <div className={wide ? 'w-full' : 'mx-auto w-full max-w-6xl'} aria-busy="true">
       <p role="status" className="sr-only">Loading {label}</p>
       {variant === 'editor' ? <EditorSkeleton /> : (
         <>
