@@ -1,39 +1,50 @@
 ---
-import { render } from 'astro:content';
+import { renderMarkdown } from '@tilana/content';
 import SiteLayout from '@web/site/layouts/SiteLayout.astro';
 import Icon from '@web/site/components/Icon';
 import RecipeCard from '@web/site/components/RecipeCard';
 import RecipeMethod from '@web/site/components/RecipeMethod';
 import { href } from '@web/site/config';
-import { getRecipes, toRecipeCard, type Recipe } from '@web/site/kitchen';
+import { loadRecipes, recipeStructuredData, relatedRecipes, setKitchenCacheHeaders, toRecipeCard } from '@web/site/kitchen';
 
-export async function getStaticPaths() {
-  const recipes = await getRecipes();
-  return recipes.map((entry) => ({
-    params: { slug: entry.id },
-    // Related: the closest in protein first, so a high-protein dinner suggests other hearty meals.
-    props: {
-      entry,
-      others: recipes
-        .filter((r) => r.id !== entry.id)
-        .sort((a, b) => Math.abs(a.data.nutrition.protein - entry.data.nutrition.protein) - Math.abs(b.data.nutrition.protein - entry.data.nutrition.protein))
-        .slice(0, 3),
-    },
-  }));
-}
+// Rendered on request so edits in the admin appear without a rebuild.
+export const prerender = false;
+const { recipes, ok } = await loadRecipes();
+const recipe = recipes.find((item) => item.slug === Astro.params.slug);
+// The admin could not be reached and there is no saved copy: ask the visitor to try again.
+if (!recipe && !ok) return new Response('The recipes are taking a moment to load. Please refresh the page in a minute.', { status: 503, headers: { 'retry-after': '60', 'content-type': 'text/plain; charset=utf-8' } });
+// An empty 404 makes Astro show the site's normal "Page not found" page.
+if (!recipe) return new Response(null, { status: 404 });
+setKitchenCacheHeaders(Astro.response.headers);
 
-const { entry, others } = Astro.props as { entry: Recipe; others: Recipe[] };
-const { Content } = await render(entry);
-const d = entry.data;
+const others = relatedRecipes(recipe, recipes);
+// Markdown is rendered with raw HTML disabled and unsafe links removed (see @tilana/content).
+const notesHtml = recipe.notesMarkdown.trim() ? renderMarkdown(recipe.notesMarkdown) : '';
+const d = recipe;
 const n = d.nutrition;
 const macroKcal = n.protein * 4 + n.carbs * 4 + n.fat * 9;
 const macros = [
   { key: 'protein', label: 'Protein', g: n.protein, kcal: n.protein * 4 },
   { key: 'carbs', label: 'Carbs', g: n.carbs, kcal: n.carbs * 4 },
   { key: 'fat', label: 'Fat', g: n.fat, kcal: n.fat * 9 },
-].map((m) => ({ ...m, pct: Math.round((m.kcal / macroKcal) * 100) }));
+].map((m) => ({ ...m, pct: macroKcal ? Math.round((m.kcal / macroKcal) * 100) : 0 }));
+
+// Recipe details for Google (time, servings, calories, ingredients and steps).
+const canonical = new URL(`/kitchen/${d.slug}`, Astro.site).href;
+const structuredData = [
+  {
+    '@type': 'WebPage',
+    '@id': `${canonical}#webpage`,
+    url: canonical,
+    name: d.title,
+    description: d.description,
+    isPartOf: { '@id': new URL('/#website', Astro.site).href },
+    mainEntity: { '@id': `${canonical}#recipe` },
+  },
+  recipeStructuredData(d, canonical, new URL('/#person', Astro.site).href),
+];
 ---
-<SiteLayout title={d.title} description={d.description} current="kitchen">
+<SiteLayout title={d.title} description={d.description} current="kitchen" image={d.imageUrl ?? undefined} imageAlt={d.imageAlt ?? undefined} imageWidth={d.imageWidth ?? undefined} imageHeight={d.imageHeight ?? undefined} imageType={d.imageUrl ? 'image/webp' : undefined} pageType="article" publishedAt={d.publishedAt} structuredData={structuredData}>
   <article>
     <header class="wrap recipe-head">
       <div>
@@ -50,7 +61,7 @@ const macros = [
         {d.tags.length > 0 && <ul class="tag-list">{d.tags.map((t) => <li>{t}</li>)}</ul>}
       </div>
       <figure class={`recipe-cover tone-${d.tone}`}>
-        {d.image ? <img src={d.image} alt={d.imageAlt ?? ''} /> : <Icon name={d.icon} className="recipe-cover-icon" />}
+        {d.imageUrl ? <img src={d.imageUrl} alt={d.imageAlt ?? ''} width={d.imageWidth ?? undefined} height={d.imageHeight ?? undefined} /> : <Icon name={d.icon} className="recipe-cover-icon" />}
         <span class="recipe-protein recipe-protein-lg" aria-label={`${n.protein} grams of protein per serving`}>
           <b aria-hidden="true">{n.protein}<i>g</i></b>
           <small aria-hidden="true">protein a serving</small>
@@ -67,10 +78,12 @@ const macros = [
     <div class="wrap recipe-layout">
       <div class="recipe-main">
         <RecipeMethod client:visible servings={d.servings} ingredients={d.ingredients} steps={d.steps} />
-        <section class="prose recipe-notes" aria-labelledby="notes-title">
-          <h2 id="notes-title">Tilana’s notes</h2>
-          <Content />
-        </section>
+        {notesHtml && (
+          <section class="prose recipe-notes" aria-labelledby="notes-title">
+            <h2 id="notes-title">Tilana’s notes</h2>
+            <Fragment set:html={notesHtml} />
+          </section>
+        )}
       </div>
       <aside class="recipe-side">
         <section class="nutri card" aria-labelledby="nutri-title">
@@ -92,10 +105,10 @@ const macros = [
           <p>{d.proteinNote}</p>
           <a class="link-arrow" href={href('/kitchen#why-protein')}>Why protein matters <Icon name="arrow" /></a>
         </section>
-        {d.fromPost && d.fromPostTitle && (
-          <a class="from-post card lift" href={href(`/blog/${d.fromPost}`)}>
+        {d.fromPost && (
+          <a class="from-post card lift" href={href(`/blog/${d.fromPost.slug}`)}>
             <small>From the blog</small>
-            <strong>{d.fromPostTitle}</strong>
+            <strong>{d.fromPost.title}</strong>
             <span class="link-arrow">Read the post <Icon name="arrow" /></span>
           </a>
         )}
@@ -103,7 +116,7 @@ const macros = [
     </div>
   </article>
 
-  <section class="section wrap">
+  {others.length > 0 && <section class="section wrap">
     <div class="section-head split" data-reveal>
       <div>
         <p class="eyebrow">More from the kitchen</p>
@@ -112,5 +125,5 @@ const macros = [
       <a class="link-arrow" href={href('/kitchen')}>All recipes <Icon name="arrow" /></a>
     </div>
     <div class="recipe-grid snap-mobile">{others.map((r) => <RecipeCard recipe={toRecipeCard(r)} />)}</div>
-  </section>
+  </section>}
 </SiteLayout>

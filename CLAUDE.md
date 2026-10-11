@@ -39,8 +39,9 @@ website. Do not delete creative work when clearing caches.
   in `apps/web/src/site/`: `config.ts` (nav, email, WhatsApp), `data.ts`
   (programs, prices, quiz, FAQ), `layouts/SiteLayout.astro` (SEO, theme,
   header/footer, basket drawer, WhatsApp), `components/` (Astro + React
-  islands with Motion), `styles/` (its own light and "espresso" dark tokens)
-  and `content/kitchen/` (one Markdown file per recipe). Program slugs come
+  islands with Motion) and `styles/` (its own light and "espresso" dark
+  tokens). Blog posts and kitchen recipes come live from the admin
+  (`/api/public/blog-posts`, `/api/public/recipes`). Program slugs come
   from the admin (`beginner-volume-1`); see Programs below.
   Preserve its appearance, content, assets and public environment setup unless
   the user requests changes.
@@ -48,7 +49,8 @@ website. Do not delete creative work when clearing caches.
   on Tailwind CSS v4, Motion, TanStack Query. It serves every API the website
   calls (the website's `PUBLIC_API_BASE_URL` points at it) and every screen:
   overview, inquiries, blog list and Markdown editor (Tiptap), newsletter
-  subscribers and campaigns, programs and sales. Brand
+  subscribers and campaigns, kitchen recipes, programs, sales and website
+  visitors. Brand
   theme in `src/app/globals.css` (light + `.dark` espresso). API routes keep the
   old admin's URLs and `{ statusCode, statusMessage }` error shape; screens call them
   with `api()` from `src/lib/api.ts` (no server actions). `src/proxy.ts`

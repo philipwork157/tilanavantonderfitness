@@ -14,6 +14,7 @@
     "./checkout": "./src/checkout.ts",
     "./contact": "./src/contact.ts",
     "./customer-access": "./src/customer-access.ts",
+    "./kitchen": "./src/kitchen.ts",
     "./newsletter": "./src/newsletter.ts",
     "./newsletter.messages": "./src/newsletter.messages.ts",
     "./programs": "./src/programs.ts",

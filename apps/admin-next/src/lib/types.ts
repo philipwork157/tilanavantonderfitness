@@ -1,4 +1,5 @@
 /** Shapes returned by the admin API (dates arrive as ISO strings). */
+import type { RecipeIcon, RecipeIngredient, RecipeMeal, RecipeTone } from '@tilana/contracts/kitchen';
 
 export interface BlogPostSummary {
   id: number;
@@ -28,6 +29,55 @@ export interface AdminBlogPost {
   status: 'draft' | 'published';
   publishedAt: string | null;
   createdAt: string;
+  updatedAt: string;
+}
+
+/** A kitchen recipe in the admin list. */
+export interface RecipeSummary {
+  id: number;
+  title: string;
+  slug: string;
+  meal: RecipeMeal;
+  proteinG: number;
+  kcal: number;
+  prepMinutes: number;
+  cookMinutes: number;
+  tone: RecipeTone;
+  icon: RecipeIcon;
+  sample: boolean;
+  status: 'draft' | 'published';
+  imageUrl: string | null;
+  publishedAt: string | null;
+  updatedAt: string;
+}
+
+/** A kitchen recipe in the editor. */
+export interface AdminRecipe {
+  id: number;
+  slug: string;
+  title: string;
+  description: string;
+  meal: RecipeMeal;
+  prepMinutes: number;
+  cookMinutes: number;
+  servings: number;
+  kcal: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  proteinNote: string;
+  ingredients: RecipeIngredient[];
+  steps: string[];
+  tags: string[];
+  notesMarkdown: string;
+  tone: RecipeTone;
+  icon: RecipeIcon;
+  imageUrl: string | null;
+  imageAlt: string | null;
+  blogPostId: number | null;
+  sample: boolean;
+  status: 'draft' | 'published';
+  publishedAt: string | null;
   updatedAt: string;
 }
 

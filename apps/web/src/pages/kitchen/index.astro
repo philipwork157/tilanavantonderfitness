@@ -6,9 +6,13 @@ import KitchenExplorer from '@web/site/components/KitchenExplorer';
 import ProteinDay from '@web/site/components/ProteinDay';
 import NumbersCalculator from '@web/site/components/NumbersCalculator';
 import { href } from '@web/site/config';
-import { getRecipes, meals, toRecipeCard } from '@web/site/kitchen';
+import { loadRecipes, meals, setKitchenCacheHeaders, toRecipeCard } from '@web/site/kitchen';
 
-const cards = (await getRecipes()).map(toRecipeCard);
+// Rendered on request so recipes Tilana publishes in the admin appear without a rebuild.
+export const prerender = false;
+const { recipes, ok } = await loadRecipes();
+setKitchenCacheHeaders(Astro.response.headers);
+const cards = recipes.map(toRecipeCard);
 const usedMeals = meals.filter((m) => cards.some((c) => c.meal === m));
 const dayMeals = cards.map((c) => ({ slug: c.slug, title: c.title, protein: c.protein }));
 ---
@@ -20,8 +24,21 @@ const dayMeals = cards.map((c) => ({ slug: c.slug, title: c.title, protein: c.pr
   />
 
   <section class="section wrap kitchen-list">
-    <p class="note-sample">These first recipes are built from meals I mention on the blog. My own favourites, with photos, are on their way.</p>
-    <KitchenExplorer client:load recipes={cards} meals={[...usedMeals]} />
+    {recipes.some((recipe) => recipe.sample) && (
+      <p class="note-sample">These first recipes are built from meals I mention on the blog. My own favourites, with photos, are on their way.</p>
+    )}
+    {cards.length > 0 ? <KitchenExplorer client:load recipes={cards} meals={[...usedMeals]} /> : (
+      <div class="cta-band card prog-unavailable">
+        <div>
+          <p class="eyebrow">Recipes</p>
+          <h3>{ok ? 'New recipes are on the way.' : 'The recipes are taking a moment to load.'}</h3>
+          <p>{ok ? 'Have a look at the blog in the meantime.' : 'Please refresh the page in a minute.'}</p>
+        </div>
+        <div class="private-actions">
+          <a class="btn btn-primary" href={href('/blog')}>Read the blog <Icon name="arrow" /></a>
+        </div>
+      </div>
+    )}
   </section>
 
   <section class="section band" id="why-protein">

@@ -41,9 +41,18 @@ export function blogImagePublicUrl(path: string | null | undefined): string | nu
 }
 
 export async function uploadBlogImage(postId: number, image: ProcessedImage): Promise<string> {
+  return uploadWebsiteImage(`posts/${postId}`, image);
+}
+
+/** Kitchen recipe photos share the public bucket, under recipes/. */
+export async function uploadRecipeImage(recipeId: number, image: ProcessedImage): Promise<string> {
+  return uploadWebsiteImage(`recipes/${recipeId}`, image);
+}
+
+async function uploadWebsiteImage(folder: string, image: ProcessedImage): Promise<string> {
   const storage = storageClient();
   await ensureBucket(storage);
-  const path = `posts/${postId}/${randomUUID()}.webp`;
+  const path = `${folder}/${randomUUID()}.webp`;
   const { error } = await storage.storage.from(BUCKET).upload(path, image.data, {
     contentType: 'image/webp',
     cacheControl: '31536000',

@@ -127,6 +127,13 @@
       "when": 1791740328631,
       "tag": "0017_order_delivery_and_review",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791742405060,
+      "tag": "0018_kitchen_recipes",
+      "breakpoints": true
     }
   ]
 }

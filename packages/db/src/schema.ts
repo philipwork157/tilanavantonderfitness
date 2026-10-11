@@ -119,6 +119,62 @@ export const blogPosts = pgTable('blog_posts', {
   index('blog_posts_status_published_idx').on(table.status, table.publishedAt.desc()),
 ]).enableRLS();
 
+export const RECIPE_STATUSES = ['draft', 'published'] as const;
+
+/** One ingredient line; the amount is for the recipe's stated servings. */
+export interface RecipeIngredientData { qty?: number; unit?: string; item: string; note?: string }
+
+/**
+ * Kitchen recipes for the website's /kitchen pages. Nutrition is per serving.
+ * The photo lives in the public "blog-images" bucket under recipes/; without
+ * one the website draws `icon` on a `tone` coloured card.
+ */
+export const recipes = pgTable('recipes', {
+  id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  slug: text('slug').notNull().unique(),
+  title: text('title').notNull(),
+  description: text('description').notNull().default(''),
+  meal: text('meal').notNull().default('Dinner'),
+  prepMinutes: integer('prep_minutes').notNull().default(0),
+  cookMinutes: integer('cook_minutes').notNull().default(0),
+  servings: integer('servings').notNull().default(2),
+  kcal: integer('kcal').notNull().default(0),
+  proteinG: integer('protein_g').notNull().default(0),
+  carbsG: integer('carbs_g').notNull().default(0),
+  fatG: integer('fat_g').notNull().default(0),
+  // One or two sentences: why the protein in this meal matters (or how to add more).
+  proteinNote: text('protein_note').notNull().default(''),
+  ingredients: jsonb('ingredients').$type<RecipeIngredientData[]>().notNull().default(sql`'[]'::jsonb`),
+  steps: jsonb('steps').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  tags: jsonb('tags').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  // "Tilana's notes" under the method (Markdown).
+  notesMarkdown: text('notes_markdown').notNull().default(''),
+  tone: text('tone').notNull().default('sand'),
+  icon: text('icon').notNull().default('plate'),
+  imagePath: text('image_path'),
+  imageAlt: text('image_alt'),
+  imageWidth: integer('image_width'),
+  imageHeight: integer('image_height'),
+  // The blog post this recipe comes from (linked on the recipe page while that post is published).
+  blogPostId: bigint('blog_post_id', { mode: 'number' }).references(() => blogPosts.id, { onDelete: 'set null' }),
+  // A simple version of a meal from the blog, until Tilana adds her own recipe and photo.
+  sample: boolean('sample').notNull().default(false),
+  status: text('status', { enum: RECIPE_STATUSES }).notNull().default('draft'),
+  publishedAt: timestamp('published_at', { withTimezone: true }),
+  createdBy: bigint('created_by', { mode: 'number' }).references(() => users.id, { onDelete: 'set null' }),
+  ...timestamps,
+}, table => [
+  check('recipes_status_valid', sql`${table.status} in ('draft', 'published')`),
+  check('recipes_slug_format', sql`${table.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`),
+  check('recipes_published_has_date', sql`${table.status} <> 'published' or ${table.publishedAt} is not null`),
+  check('recipes_meal_valid', sql`${table.meal} in ('Breakfast', 'Lunch', 'Dinner', 'Snack', 'Training fuel')`),
+  check('recipes_tone_valid', sql`${table.tone} in ('terracotta', 'sage', 'sand', 'white', 'caramel')`),
+  check('recipes_icon_valid', sql`${table.icon} in ('plate', 'bowl', 'toast', 'egg', 'pot', 'steak')`),
+  check('recipes_servings_positive', sql`${table.servings} > 0`),
+  check('recipes_numbers_not_negative', sql`least(${table.prepMinutes}, ${table.cookMinutes}, ${table.kcal}, ${table.proteinG}, ${table.carbsG}, ${table.fatG}) >= 0`),
+  index('recipes_status_published_idx').on(table.status, table.publishedAt.desc()),
+]).enableRLS();
+
 export const NEWSLETTER_SUBSCRIBER_STATUSES = ['pending', 'subscribed', 'unsubscribed', 'bounced', 'complained'] as const;
 
 /**
@@ -393,6 +449,7 @@ export const orderItems = pgTable('order_items', {
 
 export type User = typeof users.$inferSelect;
 export type BlogPost = typeof blogPosts.$inferSelect;
+export type Recipe = typeof recipes.$inferSelect;
 export type Inquiry = typeof inquiries.$inferSelect;
 export type Role = typeof roles.$inferSelect;
 export type NewsletterSubscriber = typeof newsletterSubscribers.$inferSelect;
