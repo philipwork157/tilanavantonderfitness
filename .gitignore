@@ -2,10 +2,11 @@
 node_modules/
 .pnpm-store/
 
-# Astro, Nuxt, Nitro, and Turborepo output
+# Astro, Nuxt, Next.js, Nitro, and Turborepo output
 dist/
 .astro/
 .nuxt/
+.next/
 .output/
 .nitro/
 .turbo/
@@ -15,6 +16,7 @@ dist/
 .vite/
 .eslintcache
 *.tsbuildinfo
+/apps/admin-next/next-env.d.ts
 
 # Test and coverage output
 coverage/
@@ -42,6 +44,10 @@ yarn-error.log*
 # Generated local deliverables and scratch files
 /output/
 /tmp/
+
+# Local creative work and UI screenshots (keep on disk, not in Git)
+/tilana-content-work/
+/Claude outputs/
 
 # Operating-system and editor files
 .DS_Store
