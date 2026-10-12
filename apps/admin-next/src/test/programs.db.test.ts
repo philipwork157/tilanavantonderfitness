@@ -110,7 +110,7 @@ describe.skipIf(!url)('volumes and programs (database)', () => {
   });
 
   it('sends the sneak peek (pictures and "What\'s inside") to the website; pictures only while they match the PDF', async () => {
-    vi.stubEnv('SUPABASE_URL', 'https://project.supabase.co');
+    vi.stubEnv('R2_PUBLIC_URL', 'https://media.test/');
     const preview = {
       fileVersion: 1,
       pageCount: 16,
@@ -126,8 +126,8 @@ describe.skipIf(!url)('volumes and programs (database)', () => {
     expect(shown?.preview).toEqual({
       pageCount: 16,
       pages: [
-        { url: 'https://project.supabase.co/storage/v1/object/public/program-previews/programs/9/v1-abc/page-1.webp', page: 1, width: 640, height: 905, blurred: false },
-        { url: 'https://project.supabase.co/storage/v1/object/public/program-previews/programs/9/v1-abc/page-8-blurred.webp', page: 8, width: 640, height: 905, blurred: true },
+        { url: 'https://media.test/programs/9/v1-abc/page-1.webp', page: 1, width: 640, height: 905, blurred: false },
+        { url: 'https://media.test/programs/9/v1-abc/page-8-blurred.webp', page: 8, width: 640, height: 905, blurred: true },
       ],
     });
     expect(toAdminProgram(saved).preview).toMatchObject({ pageCount: 16, upToDate: true });

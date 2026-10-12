@@ -104,7 +104,7 @@ describe.skipIf(!url)('saving the sneak peek (database)', () => {
     const first = await makeProgramPreview(db, (await findProgram(db, row!.id))!, undefined, deps);
     expect(first).toMatchObject({ fileVersion: 1, pageCount: 5 });
     expect(first!.pages.map(page => page.page)).toEqual([1, 2, 3, 4]);
-    expect(first!.pages.every(page => stored.has(page.path) && page.path.startsWith(`programs/${row!.id}/v1-`))).toBe(true);
+    expect(first!.pages.every(page => stored.has(page.path) && page.path.startsWith(`program-previews/${row!.id}/v1-`))).toBe(true);
     expect((await findProgram(db, row!.id))!.preview).toEqual(first);
 
     // "Make again": new pictures under new names, the old ones are removed.

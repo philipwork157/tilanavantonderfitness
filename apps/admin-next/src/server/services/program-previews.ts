@@ -4,20 +4,17 @@ import { programs, type Database, type ProgramPreviewData } from '@tilana/db';
 import { and, eq } from 'drizzle-orm';
 import { logger } from '../logger';
 import { renderPdfPreview, type PdfPreview } from '../utils/pdf-preview';
+import { deleteMedia, mediaUrl, putMedia } from '../utils/media-storage';
 import { downloadProgramFile } from '../utils/program-files';
-import { publicStorageUrl, storageClient } from '../utils/storage';
 import type { ProgramInVolume } from './programs';
 
 /*
  * The sneak peek on the website is made from the program's PDF, never typed
  * in: the cover plus a few blurred inside pages, stored as public WebP images
- * (bucket `program-previews`). Only these pictures are public; the PDF stays
- * private in R2. A new PDF makes a new peek, and the website only shows a
- * peek made from the current PDF.
+ * in the public R2 bucket (media-storage.ts, under program-previews/). Only these
+ * pictures are public; the PDF stays in the private bucket. A new PDF makes a
+ * new peek, and the website only shows a peek made from the current PDF.
  */
-
-const BUCKET = 'program-previews';
-const ALLOWED_TYPES = ['image/webp'];
 
 /** Where the pictures go; swapped in tests. */
 export type PreviewStore = {
@@ -31,40 +28,18 @@ export type PreviewDeps = {
   download: (key: string) => Promise<Buffer>;
 };
 
-let bucketReady = false;
-
-async function ensureBucket() {
-  if (bucketReady) return;
-  const storage = storageClient().storage;
-  const { data } = await storage.getBucket(BUCKET);
-  if (!data) {
-    const { error } = await storage.createBucket(BUCKET, { public: true, fileSizeLimit: '2MB', allowedMimeTypes: ALLOWED_TYPES });
-    if (error && !/already exists/i.test(error.message)) throw error;
-  }
-  bucketReady = true;
-}
-
-const supabaseStore: PreviewStore = {
-  async upload(path, data) {
-    await ensureBucket();
-    const { error } = await storageClient().storage.from(BUCKET).upload(path, data, {
-      contentType: 'image/webp',
-      // Every peek gets new file names, so the pictures can be cached for good.
-      cacheControl: '31536000',
-      upsert: false,
-    });
-    if (error) throw new Error(`Preview image could not be stored: ${error.message}`);
-  },
-  async remove(paths) {
-    if (!paths.length) return;
-    const { error } = await storageClient().storage.from(BUCKET).remove(paths);
-    if (error) logger.warn({ count: paths.length, reason: error.message }, 'Could not delete old preview images');
-  },
+const mediaStore: PreviewStore = {
+  upload: (path, data) => putMedia(path, data, 'image/webp'),
+  remove: paths => deleteMedia(paths),
 };
 
-const defaultDeps: PreviewDeps = { store: supabaseStore, render: renderPdfPreview, download: downloadProgramFile };
+const defaultDeps: PreviewDeps = { store: mediaStore, render: renderPdfPreview, download: downloadProgramFile };
 
-export const previewImageUrl = (path: string) => publicStorageUrl(BUCKET, path);
+/** The peek's pages with their public addresses, or null when the media address is not set. */
+export function previewPagesWithUrls(pages: ProgramPreviewData['pages']) {
+  const withUrls = pages.map(({ path, ...page }) => ({ ...page, url: mediaUrl(path) }));
+  return withUrls.every((page): page is typeof page & { url: string } => page.url !== null) ? withUrls : null;
+}
 
 /** The peek made from the program's current PDF, or null (none yet, or made from an older PDF). */
 export function currentPreview(program: Pick<ProgramInVolume, 'preview' | 'fileVersion' | 'filePath'>): ProgramPreviewData | null {
@@ -73,7 +48,7 @@ export function currentPreview(program: Pick<ProgramInVolume, 'preview' | 'fileV
 }
 
 /** Remove a program's peek pictures, e.g. when the program is deleted. Best effort. */
-export async function removePreviewImages(preview: ProgramPreviewData | null, store: PreviewStore = supabaseStore) {
+export async function removePreviewImages(preview: ProgramPreviewData | null, store: PreviewStore = mediaStore) {
   if (!preview?.pages.length) return;
   try {
     await store.remove(preview.pages.map(page => page.path));
@@ -107,7 +82,7 @@ async function buildPreview(db: Database, program: ProgramInVolume, pdf: Buffer 
   const rendered = await deps.render(pdf ?? await deps.download(program.filePath));
 
   // New names every time: a replaced PDF never shows old cached pictures.
-  const folder = `programs/${program.id}/v${version}-${randomBytes(6).toString('hex')}`;
+  const folder = `program-previews/${program.id}/v${version}-${randomBytes(6).toString('hex')}`;
   const pages: ProgramPreviewData['pages'] = [];
   try {
     for (const image of rendered.images) {

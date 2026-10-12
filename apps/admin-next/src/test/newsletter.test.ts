@@ -15,7 +15,7 @@ const content: CampaignEmailContent = {
     excerpt: 'A practical look at protein.',
     category: 'Nourishment',
     url: 'https://tilanavantonder.co.za/blog/protein',
-    imageUrl: 'https://example.supabase.co/storage/v1/object/public/blog-images/email/posts/1/a.jpg',
+    imageUrl: 'https://media.test/email/posts/1/a.jpg',
     imageAlt: 'A bowl of food',
   },
 };

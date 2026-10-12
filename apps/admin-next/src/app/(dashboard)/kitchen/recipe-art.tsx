@@ -35,7 +35,7 @@ export function RecipeArt({ imageUrl, imageAlt, tone, icon, protein, className, 
   return (
     <div className={cn('relative grid place-items-center overflow-hidden', recipeTones[tone]?.className ?? recipeTones.sand.className, className)}>
       {imageUrl
-        // eslint-disable-next-line @next/next/no-img-element -- remote Supabase image chosen by the admin
+        // eslint-disable-next-line @next/next/no-img-element -- public R2 picture chosen by the admin
         ? <img src={imageUrl} alt={imageAlt ?? ''} loading="lazy" className="absolute inset-0 size-full object-cover" />
         : <Icon className={cn('opacity-70', size === 'sm' ? 'size-5' : 'size-14')} strokeWidth={1.25} aria-hidden />}
       {protein !== undefined && size === 'md' && (

@@ -28,8 +28,8 @@ describe('programs from the admin, shaped for the website', () => {
     const preview = {
       pageCount: 16,
       pages: [
-        { url: 'https://x.supabase.co/storage/v1/object/public/program-previews/p/page-1.webp', page: 1, width: 640, height: 905, blurred: false },
-        { url: 'https://x.supabase.co/storage/v1/object/public/program-previews/p/page-8-blurred.webp', page: 8, width: 640, height: 905, blurred: true },
+        { url: 'https://media.test/programs/p/page-1.webp', page: 1, width: 640, height: 905, blurred: false },
+        { url: 'https://media.test/programs/p/page-8-blurred.webp', page: 8, width: 640, height: 905, blurred: true },
       ],
     };
     expect(toSiteProgram(program({ preview })).preview).toEqual(preview);

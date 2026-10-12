@@ -37,8 +37,18 @@ Production differences from development:
 - `PAYSTACK_SECRET_KEY=sk_live_...` and `PAYSTACK_MODE=live`
 - `EMAIL_DEV_REDIRECT_TO=` (empty, so emails reach the real people)
 - `WEBSITE_URL=https://tilanavantonder.co.za` and `WEBSITE_ORIGINS=https://tilanavantonder.co.za,https://www.tilanavantonder.co.za`
-- the production Supabase, database, R2 bucket and Turnstile secret
+- the production Supabase, database, R2 buckets and Turnstile secret
+- `R2_PRIVATE_PROGRAM_BUCKET=tilanavantonder-prod-private`, `R2_PUBLIC_BUCKET=tilanavantonder-prod-public` and `R2_PUBLIC_URL=https://media.tilanavantonder.co.za`
 - `CRON_SECRET` can stay empty (the server checks orders itself)
+
+**Cloudflare R2 buckets (two per environment).** Never share one between dev and prod.
+
+| Bucket | Public | Holds |
+|---|---|---|
+| `tilanavantonder-<env>-private` | No | Program PDFs (`programs/`, older `volumes/`). Upload token: Object Read & Write; download token: Object Read |
+| `tilanavantonder-<env>-public` | Yes, through a custom domain (`media-dev.` / `media.tilanavantonder.co.za`, bucket Settings > Custom Domains; not `r2.dev`) | Blog covers `blog/`, recipe photos `kitchen/`, email copies `email/`, Peek inside pages `program-previews/`. One token: Object Read & Write on this bucket only |
+
+Moving to these buckets (once per environment): `pnpm storage:move --dry-run`, then `pnpm storage:move`, optionally with `--from-private <old bucket>`. It reads `apps/admin-next/.env.local`, copies the PDFs from the old private bucket, copies the pictures from Supabase Storage into the new folders and updates their paths in the database. It skips anything already moved and deletes nothing. `SUPABASE_SERVICE_ROLE_KEY` is no longer used and can be removed.
 
 Remove the old admin's settings: `fly secrets list -a <app>`, then `fly secrets unset NAME ... -a <app>` for every `NUXT_*` name.
 

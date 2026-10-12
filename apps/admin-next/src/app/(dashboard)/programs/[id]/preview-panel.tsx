@@ -61,7 +61,7 @@ export function PreviewPanel({ program, onProgram, children }: { program: AdminP
             {preview.pages.map((page) => (
               <li key={page.url} className="grid gap-1.5">
                 <div className="relative overflow-hidden rounded-lg border bg-muted shadow-xs" style={{ aspectRatio: `${page.width} / ${page.height}` }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element -- public Supabase image made from the PDF */}
+                  {/* eslint-disable-next-line @next/next/no-img-element -- public R2 picture made from the PDF */}
                   <img src={page.url} alt="" loading="lazy" className="size-full object-cover" />
                   {page.blurred && (
                     <span className="absolute inset-0 grid place-items-center" aria-hidden>

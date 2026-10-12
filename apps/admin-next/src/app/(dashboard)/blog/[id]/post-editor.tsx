@@ -295,7 +295,7 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
           <Panel title="Cover photo" titleId="cover-heading">
             <div className="grid aspect-[4/5] place-items-center overflow-hidden rounded-xl border bg-muted text-muted-foreground">
               {post.coverImageUrl
-                // eslint-disable-next-line @next/next/no-img-element -- remote Supabase image chosen by the admin
+                // eslint-disable-next-line @next/next/no-img-element -- public R2 picture chosen by the admin
                 ? <img src={post.coverImageUrl} alt={form.coverImageAlt} className="size-full object-cover" />
                 : <ImageIcon className="size-8" aria-hidden />}
             </div>

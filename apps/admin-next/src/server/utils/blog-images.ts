@@ -1,96 +1,54 @@
 import 'server-only';
 import { randomUUID } from 'node:crypto';
-import type { SupabaseClient } from '@supabase/supabase-js';
 import { emailImageFromCover, type ProcessedImage } from './image-processing';
-import { publicStorageUrl, storageClient } from './storage';
-import { HttpError } from '../http';
-import { logger } from '../logger';
+import { deleteMedia, getMedia, hasMedia, mediaUrl, putMedia } from './media-storage';
 
-const BUCKET = 'blog-images';
+/*
+ * Blog covers and Kitchen recipe photos, in the public R2 bucket
+ * (media-storage.ts): blog/<id>/<uuid>.webp and kitchen/<id>/<uuid>.webp.
+ */
+
 export const MAX_COVER_UPLOAD_BYTES = 10 * 1024 * 1024;
 
-let bucketReady = false;
-
-const ALLOWED_TYPES = ['image/webp', 'image/jpeg'];
-
-async function ensureBucket(storage: SupabaseClient) {
-  if (bucketReady) return;
-  const { data } = await storage.storage.getBucket(BUCKET);
-  if (!data) {
-    const { error } = await storage.storage.createBucket(BUCKET, {
-      public: true,
-      fileSizeLimit: '5MB',
-      allowedMimeTypes: ALLOWED_TYPES,
-    });
-    if (error && !/already exists/i.test(error.message)) throw error;
-  }
-  else if (!ALLOWED_TYPES.every(type => data.allowed_mime_types?.includes(type))) {
-    // Buckets made before newsletter emails only allowed WebP.
-    const { error } = await storage.storage.updateBucket(BUCKET, {
-      public: true,
-      fileSizeLimit: '5MB',
-      allowedMimeTypes: ALLOWED_TYPES,
-    });
-    if (error) throw error;
-  }
-  bucketReady = true;
-}
-
 export function blogImagePublicUrl(path: string | null | undefined): string | null {
-  return path ? publicStorageUrl(BUCKET, path) : null;
+  return mediaUrl(path);
 }
 
 export async function uploadBlogImage(postId: number, image: ProcessedImage): Promise<string> {
-  return uploadWebsiteImage(`posts/${postId}`, image);
+  return uploadWebsiteImage(`blog/${postId}`, image);
 }
 
-/** Kitchen recipe photos share the public bucket, under recipes/. */
+/** Kitchen recipe photos live next to the blog covers, under kitchen/. */
 export async function uploadRecipeImage(recipeId: number, image: ProcessedImage): Promise<string> {
-  return uploadWebsiteImage(`recipes/${recipeId}`, image);
+  return uploadWebsiteImage(`kitchen/${recipeId}`, image);
 }
 
 async function uploadWebsiteImage(folder: string, image: ProcessedImage): Promise<string> {
-  const storage = storageClient();
-  await ensureBucket(storage);
   const path = `${folder}/${randomUUID()}.webp`;
-  const { error } = await storage.storage.from(BUCKET).upload(path, image.data, {
-    contentType: 'image/webp',
-    cacheControl: '31536000',
-    upsert: false,
-  });
-  if (error) {
-    throw new HttpError(502, 'The image could not be stored. Please try again.');
-  }
+  await putMedia(path, image.data, 'image/webp');
   return path;
 }
 
-/** Best effort: a leftover file is harmless, so failures are only logged. */
+/** Removes a cover or photo, and its email copy if one was made. Best effort. */
 export async function deleteBlogImage(path: string | null | undefined) {
   if (!path) return;
-  const { error } = await storageClient().storage.from(BUCKET).remove([path]);
-  if (error) logger.warn({ path, reason: error.message }, 'Could not delete blog image');
+  await deleteMedia([path, emailImagePath(path)]);
 }
 
+/** Where the JPEG email copy of a cover lives: email/blog/12/<uuid>.jpg. */
+export const emailImagePath = (coverPath: string) => `email/${coverPath.replace(/\.webp$/i, '')}.jpg`;
+
 /**
- * Public URL of a JPEG copy of a cover photo for emails, made once and kept
- * next to it under email/. Returns null when there is no cover.
+ * Public URL of a JPEG copy of a cover photo for emails (many email apps do
+ * not show WebP), made once and kept under email/. Null when there is no cover.
  */
 export async function ensureEmailImage(coverPath: string | null | undefined): Promise<string | null> {
   if (!coverPath) return null;
-  const emailPath = `email/${coverPath.replace(/\.webp$/i, '')}.jpg`;
-  const storage = storageClient();
-  await ensureBucket(storage);
-  const bucket = storage.storage.from(BUCKET);
-
-  const { data: existing } = await bucket.list(emailPath.slice(0, emailPath.lastIndexOf('/')), {
-    search: emailPath.slice(emailPath.lastIndexOf('/') + 1),
-  });
-  if (!existing?.some(file => emailPath.endsWith(file.name))) {
-    const { data: source, error: downloadError } = await bucket.download(coverPath);
-    if (downloadError || !source) throw new Error('The cover photo could not be read for the email.');
-    const jpeg = await emailImageFromCover(Buffer.from(await source.arrayBuffer()));
-    const { error } = await bucket.upload(emailPath, jpeg, { contentType: 'image/jpeg', cacheControl: '31536000', upsert: true });
-    if (error) throw new Error('The email copy of the cover photo could not be stored.');
+  const emailPath = emailImagePath(coverPath);
+  if (!await hasMedia(emailPath)) {
+    const source = await getMedia(coverPath);
+    if (!source) throw new Error('The cover photo could not be read for the email.');
+    await putMedia(emailPath, await emailImageFromCover(source), 'image/jpeg');
   }
-  return blogImagePublicUrl(emailPath);
+  return mediaUrl(emailPath);
 }

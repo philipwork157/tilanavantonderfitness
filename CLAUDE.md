@@ -157,9 +157,14 @@ run migrations against a remote database without explicit authorization.
   only). Never render post text with raw HTML any other way.
 - Closing line and quote are separate fields; "With love, Tilana" and the
   "Please note" box are fixed in the website template, not stored per post.
-- Cover photos go to the public Supabase Storage bucket `blog-images`, written
-  only by the server with `SUPABASE_SERVICE_ROLE_KEY`. Uploads are
-  re-encoded to WebP with sharp (metadata stripped); SVG is rejected.
+- Cover photos (and Kitchen recipe photos) go to the public Cloudflare R2
+  bucket (`R2_PUBLIC_BUCKET`, e.g. `tilanavantonder-dev-public`, served on
+  `R2_PUBLIC_URL`) as `blog/<id>/<uuid>.webp` (`kitchen/<id>/...`), written
+  only by the server (`server/utils/media-storage.ts`). The database stores
+  paths, never addresses. Uploads are re-encoded to WebP with sharp (metadata
+  stripped); SVG is rejected. Email copies are JPEGs under `email/`.
+  `pnpm storage:move` moved everything from Supabase Storage (once per
+  environment).
 - The website is a Cloudflare Worker (`apps/web/wrangler.jsonc`). Every page
   is prebuilt except `/blog`, `/blog/<slug>` and `/sitemap-blog.xml`
   (`prerender = false`), which read `/api/public/blog-posts` live through
@@ -205,8 +210,8 @@ run migrations against a remote database without explicit authorization.
   checkout (`/api/public/program-volumes/<slug>`, the old catalogue URL and
   shape) and its anchor on `/program`. It is fixed while the program is on
   the website. Price changes and adding volumes or programs need the `admin` role.
-- PDFs live in a private Cloudflare R2 bucket (`R2_PRIVATE_PROGRAM_BUCKET`, one per
-  environment), reached through the S3 API with two scoped tokens: upload
+- PDFs live in the private Cloudflare R2 bucket (`R2_PRIVATE_PROGRAM_BUCKET`,
+  e.g. `tilanavantonder-dev-private`, one per environment), reached through the S3 API with two scoped tokens: upload
   (read & write) and download (read only). Server only, never a public URL.
   Uploads must start with `%PDF-` and end with `%%EOF`, max 15 MB; the SHA-256
   is stored. Keys are `programs/<id>/v<version>-<sha>.pdf` (older uploads
@@ -215,8 +220,8 @@ run migrations against a remote database without explicit authorization.
   (and by itself when the program page opens for an older PDF, or with "Make
   again") the admin draws the cover sharp plus about three inside pages
   blurred (`server/utils/pdf-preview.ts`: pdf.js + @napi-rs/canvas, sharp blur,
-  640 px WebP) and stores them in the public Supabase Storage bucket
-  `program-previews` (`server/services/program-previews.ts`). `programs.preview`
+  640 px WebP) and stores them in the public R2 bucket under
+  `program-previews/<id>/v<version>-<random>/` (`server/services/program-previews.ts`). `programs.preview`
   records which `file_version` they came from; the website only gets a peek
   made from the current PDF (`preview` in the public programs contract). Only
   these pictures are public; never upload unblurred inside pages. A failed peek

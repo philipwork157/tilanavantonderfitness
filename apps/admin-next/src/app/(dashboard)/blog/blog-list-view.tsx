@@ -87,7 +87,7 @@ export function BlogListView() {
                       <NavLink href={`/blog/${post.id}`} className="flex items-center gap-3 rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none" onClick={(e) => e.stopPropagation()}>
                         <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-lg border bg-muted text-muted-foreground">
                           {post.coverImageUrl
-                            // eslint-disable-next-line @next/next/no-img-element -- remote Supabase image, small thumbnail
+                            // eslint-disable-next-line @next/next/no-img-element -- public R2 picture, small thumbnail
                             ? <img src={post.coverImageUrl} alt="" loading="lazy" className="size-full object-cover" />
                             : <ImageIcon className="size-4" aria-hidden />}
                         </span>

@@ -11,7 +11,7 @@ export const CONTENT_POLICY = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://eu-assets.i.posthog.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.supabase.co",
+  "img-src 'self' data: blob: https://media.tilanavantonder.co.za https://media-dev.tilanavantonder.co.za",
   "font-src 'self' data:",
   "connect-src 'self' https://admin.tilanavantonder.co.za https://admin-dev.tilanavantonder.co.za https://eu.i.posthog.com https://eu-assets.i.posthog.com https://challenges.cloudflare.com",
   'frame-src https://challenges.cloudflare.com',

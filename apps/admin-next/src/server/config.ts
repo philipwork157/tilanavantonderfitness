@@ -9,8 +9,6 @@ export function serverConfig() {
   return {
     supabaseUrl: env.SUPABASE_URL ?? '',
     supabasePublishableKey: env.SUPABASE_PUBLISHABLE_KEY ?? '',
-    /** Server-only: blog image storage. Never expose to the browser. */
-    supabaseServiceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY ?? '',
     databaseUrl: env.DATABASE_URL ?? '',
     /** pino level (trace, debug, info, warn, error, silent); empty = default for the environment. */
     logLevel: env.LOG_LEVEL ?? '',
@@ -20,7 +18,7 @@ export function serverConfig() {
     emailDevRedirectTo: env.EMAIL_DEV_REDIRECT_TO ?? '',
     contactNotifyTo: env.CONTACT_NOTIFY_TO ?? '',
     /**
-     * Cloudflare R2 for private program PDFs. Two scoped API tokens, like the
+     * The private R2 bucket for program PDFs. Two scoped API tokens, like the
      * old admin: one may only write (uploads), one may only read (emails).
      */
     r2AccountId: env.R2_ACCOUNT_ID ?? '',
@@ -29,6 +27,15 @@ export function serverConfig() {
     r2UploadSecretAccessKey: env.R2_UPLOAD_SECRET_ACCESS_KEY ?? '',
     r2DownloadAccessKeyId: env.R2_DOWNLOAD_ACCESS_KEY_ID ?? '',
     r2DownloadSecretAccessKey: env.R2_DOWNLOAD_SECRET_ACCESS_KEY ?? '',
+    /**
+     * The public R2 bucket for the website's pictures (blog covers, recipe
+     * photos, program "Peek inside" pages), served on its own domain. One
+     * token with "Object Read & Write" on this bucket only.
+     */
+    r2PublicBucket: env.R2_PUBLIC_BUCKET ?? '',
+    r2PublicUrl: env.R2_PUBLIC_URL ?? '',
+    r2PublicAccessKeyId: env.R2_PUBLIC_ACCESS_KEY_ID ?? '',
+    r2PublicSecretAccessKey: env.R2_PUBLIC_SECRET_ACCESS_KEY ?? '',
     turnstileSecretKey: env.TURNSTILE_SECRET_KEY ?? '',
     /** Server-only Paystack secret key: sk_test_... in development, sk_live_... in production. */
     paystackSecretKey: env.PAYSTACK_SECRET_KEY ?? '',

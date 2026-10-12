@@ -3,7 +3,7 @@ import { and, asc, count, eq, isNotNull, like, max, ne, or } from 'drizzle-orm';
 import { slugify } from '@tilana/contracts/blog';
 import { orderItems, programs, volumes, type Database, type Program, type Volume } from '@tilana/db';
 import { publicUrl } from '../utils/public-url';
-import { currentPreview, previewImageUrl } from './program-previews';
+import { currentPreview, previewPagesWithUrls } from './program-previews';
 
 /*
  * Volumes hold programs: Volume 1 → Beginner, Nourish, ...
@@ -119,13 +119,7 @@ export function toAdminProgram(program: ProgramInVolume) {
     step: program.step,
     marker: program.marker,
     sortOrder: program.sortOrder,
-    preview: program.preview
-      ? {
-          pageCount: program.preview.pageCount,
-          upToDate: currentPreview(program) !== null,
-          pages: program.preview.pages.map(({ path, ...page }) => ({ ...page, url: previewImageUrl(path) })),
-        }
-      : null,
+    preview: adminPreview(program),
     isActive: program.isActive,
     priceCents: program.priceCents,
     label: programLabel(program.name, program.volume),
@@ -171,8 +165,15 @@ export async function listWebsitePrograms(db: Database): Promise<ProgramInVolume
 /** The sneak peek pictures, only when made from the current PDF. */
 function publicPreview(program: ProgramInVolume) {
   const preview = currentPreview(program);
-  return preview
-    ? { pageCount: preview.pageCount, pages: preview.pages.map(({ path, ...page }) => ({ ...page, url: previewImageUrl(path) })) }
+  const pages = preview && previewPagesWithUrls(preview.pages);
+  return preview && pages ? { pageCount: preview.pageCount, pages } : null;
+}
+
+/** The admin's view of the peek, also when it was made from an older PDF. */
+function adminPreview(program: ProgramInVolume) {
+  const pages = program.preview && previewPagesWithUrls(program.preview.pages);
+  return program.preview && pages
+    ? { pageCount: program.preview.pageCount, upToDate: currentPreview(program) !== null, pages }
     : null;
 }
 
