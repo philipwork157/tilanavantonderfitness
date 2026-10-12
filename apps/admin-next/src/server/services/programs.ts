@@ -2,6 +2,7 @@ import 'server-only';
 import { and, asc, count, eq, isNotNull, like, max, ne, or } from 'drizzle-orm';
 import { slugify } from '@tilana/contracts/blog';
 import { orderItems, programs, volumes, type Database, type Program, type Volume } from '@tilana/db';
+import { publicUrl } from '../utils/public-url';
 import { currentPreview, previewImageUrl } from './program-previews';
 
 /*
@@ -129,6 +130,8 @@ export function toAdminProgram(program: ProgramInVolume) {
     priceCents: program.priceCents,
     label: programLabel(program.name, program.volume),
     volume: { id: program.volume.id, number: program.volume.number, name: program.volume.name, isActive: program.volume.isActive },
+    /** The program on the website, while it is shown there. */
+    publicUrl: isOnWebsite(program, program.volume) ? publicUrl(`/program#${program.slug}`) : null,
     onWebsite: isOnWebsite(program, program.volume),
     offWebsiteReason: offWebsiteReason(program, program.volume),
     file: program.filePath

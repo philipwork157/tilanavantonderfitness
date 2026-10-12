@@ -1,14 +1,17 @@
 'use client';
 
-import { BLOG_CATEGORIES, slugify } from '@tilana/contracts/blog';
+import { BLOG_CATEGORIES } from '@tilana/contracts/blog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, EyeOff, Globe, ImageIcon, Loader2, Save, Send, Trash2, Upload } from 'lucide-react';
-import { useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { MarkdownEditor } from '@/components/markdown-editor';
+import { AutosaveStatus } from '@/components/autosave-status';
 import { BackLink } from '@/components/back-link';
 import { NavLink } from '@/components/nav-link';
 import { StatusBadge } from '@/components/status-badge';
+import { PublishChecklist } from '@/components/publish-checklist';
+import { ViewOnWebsite, WebAddress } from '@/components/web-address';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { api, ApiError } from '@/lib/api';
 import { useNavigate } from '@/lib/navigation-progress';
 import type { AdminBlogPost } from '@/lib/types';
+import { useAutosave } from '@/lib/use-autosave';
 import { useUnsavedGuard } from '@/lib/use-unsaved-guard';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -27,7 +31,6 @@ const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 function toForm(post: AdminBlogPost) {
   return {
     title: post.title,
-    slug: post.slug,
     excerpt: post.excerpt,
     category: post.category,
     bodyMarkdown: post.bodyMarkdown,
@@ -87,22 +90,46 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
   const dirty = JSON.stringify(form) !== savedJson;
   const isPublished = post.status === 'published';
   useUnsavedGuard(dirty);
+  // The latest form and saved marker, for code that runs after a request.
+  const formRef = useRef(form);
+  const savedRef = useRef(savedJson);
+  useEffect(() => {
+    formRef.current = form;
+    savedRef.current = savedJson;
+  });
 
   const set = <K extends keyof PostForm>(key: K, value: PostForm[K]) => setForm((current) => ({ ...current, [key]: value }));
 
-  function applyServerPost(next: AdminBlogPost) {
+  /**
+   * Takes the server's copy after a save. The form is only replaced when
+   * nothing was typed while the request ran (`sent` is what was sent);
+   * otherwise the newer typing stays and is saved next.
+   */
+  function applyServerPost(next: AdminBlogPost, sent: PostForm = formRef.current) {
     setPost(next);
-    const nextForm = toForm(next);
-    setForm(nextForm);
-    setSavedJson(JSON.stringify(nextForm));
+    if (JSON.stringify(formRef.current) === JSON.stringify(sent)) {
+      const nextForm = toForm(next);
+      setForm(nextForm);
+      setSavedJson(JSON.stringify(nextForm));
+    } else {
+      setSavedJson(JSON.stringify(sent));
+    }
     queryClient.setQueryData(['blog-post', next.id], { post: next });
     void queryClient.invalidateQueries({ queryKey: ['blog-posts'] });
   }
 
   async function saveNow(): Promise<AdminBlogPost> {
-    const result = await api<{ post: AdminBlogPost }>(`/api/blog-posts/${post.id}`, { method: 'PUT', body: JSON.stringify(toPayload(form)) });
-    applyServerPost(result.post);
+    await autosave.settle();
+    const snapshot = formRef.current;
+    const result = await api<{ post: AdminBlogPost }>(`/api/blog-posts/${post.id}`, { method: 'PUT', body: JSON.stringify(toPayload(snapshot)) });
+    applyServerPost(result.post, snapshot);
     return result.post;
+  }
+
+  /** Saves first when there is anything unsaved (after any running autosave). */
+  async function saveIfNeeded() {
+    await autosave.settle();
+    if (JSON.stringify(formRef.current) !== savedRef.current) await saveNow();
   }
 
   const save = useMutation({
@@ -113,7 +140,7 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
 
   const changeStatus = useMutation({
     mutationFn: async (status: 'draft' | 'published') => {
-      if (dirty) await saveNow();
+      await saveIfNeeded();
       return api<{ post: AdminBlogPost }>(`/api/blog-posts/${post.id}/status`, { method: 'POST', body: JSON.stringify({ status }) });
     },
     onSuccess: (result, status) => {
@@ -126,7 +153,8 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
   });
 
   const cover = useMutation({
-    mutationFn: (file: File | null) => {
+    mutationFn: async (file: File | null) => {
+      await autosave.settle();
       if (!file) return api<{ post: AdminBlogPost }>(`/api/blog-posts/${post.id}/cover`, { method: 'DELETE' });
       const body = new FormData();
       body.append('file', file);
@@ -155,7 +183,7 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
 
   const emailSubscribers = useMutation({
     mutationFn: async () => {
-      if (dirty) await saveNow();
+      await saveIfNeeded();
       return api<{ id: number }>('/api/newsletter-campaigns', { method: 'POST', body: JSON.stringify({ blogPostId: post.id }) });
     },
     onSuccess: ({ id }) => router.push(`/newsletter/${id}`),
@@ -163,7 +191,10 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
   });
 
   const remove = useMutation({
-    mutationFn: () => api(`/api/blog-posts/${post.id}`, { method: 'DELETE' }),
+    mutationFn: async () => {
+      await autosave.settle();
+      return api(`/api/blog-posts/${post.id}`, { method: 'DELETE' });
+    },
     onSuccess: () => {
       setSavedJson(JSON.stringify(form));
       void queryClient.invalidateQueries({ queryKey: ['blog-posts'] });
@@ -173,13 +204,29 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
     onError: (error) => toast.error('Not deleted', { description: message(error, 'Please try again.') }),
   });
 
-  const busy = save.isPending || changeStatus.isPending;
+  const busy = save.isPending || changeStatus.isPending || cover.isPending || emailSubscribers.isPending;
+
+  // Saves by itself a moment after typing stops. Only the saved marker moves,
+  // so whatever is being typed right now is never replaced.
+  const autosave = useAutosave({
+    current: JSON.stringify(form),
+    saved: savedJson,
+    enabled: !busy && !remove.isPending,
+    save: async () => {
+      const snapshot = form;
+      const result = await api<{ post: AdminBlogPost }>(`/api/blog-posts/${post.id}`, { method: 'PUT', body: JSON.stringify(toPayload(snapshot)) });
+      setPost(result.post);
+      setSavedJson(JSON.stringify(snapshot));
+      queryClient.setQueryData(['blog-post', result.post.id], { post: result.post });
+      void queryClient.invalidateQueries({ queryKey: ['blog-posts'] });
+    },
+  });
 
   return (
     <div className="mx-auto w-full max-w-6xl">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <BackLink href="/blog">All posts</BackLink>
-        {dirty && <span className="text-sm font-semibold text-status-warning">Unsaved changes</span>}
+        <AutosaveStatus status={autosave.status} error={autosave.error} />
       </div>
 
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -189,6 +236,7 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge label={isPublished ? 'Published' : 'Draft'} tone={isPublished ? 'success' : 'neutral'} className="max-sm:hidden" />
+          <ViewOnWebsite href={post.publicUrl} />
           <Button variant="outline" className="rounded-full bg-card" disabled={!dirty || busy} onClick={() => save.mutate()}>
             {save.isPending ? <Loader2 className="animate-spin" /> : <Save />} Save
           </Button>
@@ -236,6 +284,14 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
         </div>
 
         <aside className="grid gap-5">
+          {!isPublished && (
+            <PublishChecklist items={[
+              { label: 'A title', done: form.title.trim().length >= 3 },
+              { label: 'A short summary', done: form.excerpt.trim().length >= 10 },
+              { label: 'The post itself', done: form.bodyMarkdown.trim().length >= 50 },
+              ...(post.coverImageUrl ? [{ label: 'A description of the cover photo', done: form.coverImageAlt.trim().length > 0 }] : []),
+            ]} />
+          )}
           <Panel title="Cover photo" titleId="cover-heading">
             <div className="grid aspect-[4/5] place-items-center overflow-hidden rounded-xl border bg-muted text-muted-foreground">
               {post.coverImageUrl
@@ -268,15 +324,7 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
             <Field id="published-on" label="Publish date" hint={isPublished ? undefined : 'Leave empty to use the day you publish.'}>
               <Input id="published-on" type="date" value={form.publishedOn} onChange={(e) => set('publishedOn', e.target.value)} />
             </Field>
-            <Field id="slug" label="Web address" hint={isPublished ? 'Changing this breaks links people already shared.' : undefined}>
-              <div className="flex items-center rounded-md border bg-card focus-within:ring-2 focus-within:ring-ring/40">
-                <span className="pl-3 text-sm text-muted-foreground" aria-hidden>/blog/</span>
-                <Input id="slug" value={form.slug} onChange={(e) => set('slug', e.target.value)} maxLength={120} className="border-0 pl-1 shadow-none focus-visible:ring-0" />
-              </div>
-            </Field>
-            {form.slug !== slugify(form.title) && (
-              <Button variant="link" size="sm" className="justify-self-start px-0" onClick={() => set('slug', slugify(form.title))}>Match the title</Button>
-            )}
+            <WebAddress path={`/blog/${post.slug}`} live={isPublished} noun="post" />
           </Panel>
 
           {isPublished && (

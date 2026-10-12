@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, CircleAlert, Dumbbell, FileCheck2, Globe, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CircleAlert, Dumbbell, FileCheck2, Globe, Plus, Trash2 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -55,6 +55,37 @@ export function VolumeView({ id }: { id: number }) {
     },
   });
 
+  type VolumeData = { volume: AdminVolume; programs: AdminProgram[] };
+  /** Moves a program one place earlier or later; the list updates straight away. */
+  const reorder = useMutation({
+    mutationFn: (programIds: number[]) => api(`/api/volumes/${id}/order`, { method: 'POST', body: JSON.stringify({ programIds }) }),
+    onMutate: async (programIds) => {
+      await queryClient.cancelQueries({ queryKey: ['volume', id] });
+      const previous = queryClient.getQueryData<VolumeData>(['volume', id]);
+      if (previous) {
+        const byId = new Map(previous.programs.map((program) => [program.id, program]));
+        queryClient.setQueryData<VolumeData>(['volume', id], { ...previous, programs: programIds.map((programId) => byId.get(programId)).filter((program): program is AdminProgram => Boolean(program)) });
+      }
+      return { previous };
+    },
+    onError: (err, _ids, context) => {
+      if (context?.previous) queryClient.setQueryData(['volume', id], context.previous);
+      toast.error('Order not changed', { description: message(err, 'Please try again.') });
+    },
+    onSettled: () => { void queryClient.invalidateQueries({ queryKey: ['volume', id] }); },
+  });
+
+  const [announcement, setAnnouncement] = useState('');
+  function move(index: number, by: -1 | 1) {
+    const list = data?.programs ?? [];
+    const ids = list.map((program) => program.id);
+    const to = index + by;
+    if (reorder.isPending || to < 0 || to >= ids.length) return;
+    [ids[index], ids[to]] = [ids[to]!, ids[index]!];
+    setAnnouncement(`${list[index]!.name} is now ${to + 1} of ${ids.length} on the website.`);
+    reorder.mutate(ids);
+  }
+
   const remove = useMutation({
     mutationFn: () => api(`/api/volumes/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
@@ -95,7 +126,7 @@ export function VolumeView({ id }: { id: number }) {
       <PageHeader
         eyebrow="Programs"
         title={volume?.name ?? 'Volume'}
-        description="Every program here is on the website once it has a PDF, while this volume is switched on."
+        description="Every program here is on the website once it has a PDF, while this volume is switched on. Use the arrows to change their order on the website."
         actions={<><RefreshButton loading={isFetching} onClick={() => refetch()} />{addButton}</>}
       />
 
@@ -124,8 +155,11 @@ export function VolumeView({ id }: { id: number }) {
         </EmptyState>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <li className="sr-only" role="status">{announcement}</li>
           {isPending && Array.from({ length: 3 }, (_, i) => <li key={i}><Skeleton className="h-56 rounded-2xl" /></li>)}
-          {programs.map((program) => <ProgramCard key={program.id} program={program} />)}
+          {programs.map((program, index) => (
+            <ProgramCard key={program.id} program={program} position={index} count={programs.length} busy={reorder.isPending} onMove={(by) => move(index, by)} />
+          ))}
         </ul>
       )}
 
@@ -171,7 +205,9 @@ export function VolumeView({ id }: { id: number }) {
   );
 }
 
-function ProgramCard({ program }: { program: AdminProgram }) {
+function ProgramCard({ program, position, count, busy, onMove }: {
+  program: AdminProgram; position: number; count: number; busy: boolean; onMove: (by: -1 | 1) => void;
+}) {
   // The card opens the program; the switch sits in its own footer (a switch
   // inside a link would be invalid HTML and would open the page on click).
   return (
@@ -206,6 +242,18 @@ function ProgramCard({ program }: { program: AdminProgram }) {
         <span className="text-sm text-muted-foreground">Show on the website</span>
         <ProgramSwitch program={program} />
       </div>
+      {count > 1 && (
+        <div className="flex items-center justify-between gap-2 border-t px-3 py-1.5 text-xs text-muted-foreground">
+          {/* aria-disabled, not disabled: the pressed button keeps keyboard focus. */}
+          <Button type="button" variant="ghost" size="sm" className="h-8 aria-disabled:opacity-40" aria-disabled={busy || position === 0} onClick={() => { if (!busy && position > 0) onMove(-1); }} aria-label={`Show ${program.name} earlier on the website`}>
+            <ArrowLeft /> Earlier
+          </Button>
+          <span aria-hidden>{position + 1} of {count} on the website</span>
+          <Button type="button" variant="ghost" size="sm" className="h-8 aria-disabled:opacity-40" aria-disabled={busy || position === count - 1} onClick={() => { if (!busy && position < count - 1) onMove(1); }} aria-label={`Show ${program.name} later on the website`}>
+            Later <ArrowRight />
+          </Button>
+        </div>
+      )}
     </li>
   );
 }

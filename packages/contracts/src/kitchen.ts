@@ -41,7 +41,8 @@ const grams = z.number().int().min(0).max(500);
 /** Everything Tilana edits on a recipe (the photo is uploaded separately). */
 export const recipeInputSchema = z.object({
   title: z.string().trim().min(3, 'Add a title.').max(120),
-  slug: blogSlugSchema,
+  /** Ignored by the admin: the server makes the web address from the title. */
+  slug: blogSlugSchema.optional(),
   description: z.string().trim().max(240),
   meal: recipeMealSchema,
   prepMinutes: z.number().int().min(0).max(1440),

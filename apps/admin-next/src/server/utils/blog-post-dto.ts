@@ -1,6 +1,7 @@
 import 'server-only';
 import type { BlogPost } from '@tilana/db';
 import { blogImagePublicUrl } from './blog-images';
+import { publicUrl } from './public-url';
 
 /** Admin view of a post: database row plus the public cover URL. */
 export function toAdminBlogPost(post: BlogPost) {
@@ -19,6 +20,8 @@ export function toAdminBlogPost(post: BlogPost) {
     quoteText: post.quoteText,
     quoteCitation: post.quoteCitation,
     status: post.status,
+    /** The post on the website, while it is published. */
+    publicUrl: post.status === 'published' ? publicUrl(`/blog/${post.slug}`) : null,
     publishedAt: post.publishedAt,
     createdAt: post.createdAt,
     updatedAt: post.updatedAt,

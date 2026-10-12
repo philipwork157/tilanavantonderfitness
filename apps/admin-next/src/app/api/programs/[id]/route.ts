@@ -1,12 +1,12 @@
 import { programInputSchema } from '@tilana/contracts/admin-programs';
 import { hasAnyRole, programs } from '@tilana/db';
-import { and, eq, ne } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { requireAdmin, requireRole } from '@/server/auth/admin';
 import { isSameOrigin } from '@/server/auth/admin-access';
 import { getDatabase } from '@/server/db';
 import { handle, HttpError, readJson, routeId, sameOriginOnly, type IdContext } from '@/server/http';
 import { removePreviewImages } from '@/server/services/program-previews';
-import { findProgram, isOnWebsite, isProgramInAnyOrder, toAdminProgram } from '@/server/services/programs';
+import { findProgram, isOnWebsite, isProgramInAnyOrder, toAdminProgram, uniqueProgramSlug } from '@/server/services/programs';
 
 export const GET = handle(async (_request: Request, context: IdContext) => {
   await requireAdmin();
@@ -33,16 +33,14 @@ export const PUT = handle(async (request: Request, context: IdContext) => {
   if (input.priceCents !== existing.priceCents && !hasAnyRole(admin.roles, ['admin'])) {
     throw new HttpError(403, 'Only admins can change prices.');
   }
-  if (input.slug !== existing.slug) {
-    // The slug is in people's baskets and links while the program is on the website.
-    if (isOnWebsite(existing, existing.volume)) {
-      throw new HttpError(409, 'The web address cannot change while the program is on the website.');
-    }
-    const [clash] = await db.select({ id: programs.id }).from(programs).where(and(eq(programs.slug, input.slug), ne(programs.id, id)));
-    if (clash) throw new HttpError(409, 'Another program already uses this web address.');
-  }
+  // The web address follows a new name only while nobody can have it yet: never
+  // once the program is on the website or in an order (baskets, links, receipts).
+  const renamed = input.name.trim() !== existing.name.trim();
+  const slug = renamed && !isOnWebsite(existing, existing.volume) && !(await isProgramInAnyOrder(db, id))
+    ? await uniqueProgramSlug(db, input.name, existing.volume.number, id)
+    : existing.slug;
 
-  await db.update(programs).set({ ...input, updatedBy: admin.id }).where(eq(programs.id, id));
+  await db.update(programs).set({ ...input, slug, updatedBy: admin.id }).where(eq(programs.id, id));
   return Response.json({ program: toAdminProgram((await findProgram(db, id))!) });
 });
 

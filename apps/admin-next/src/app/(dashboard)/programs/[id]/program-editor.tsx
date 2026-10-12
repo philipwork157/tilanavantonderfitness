@@ -1,14 +1,15 @@
 'use client';
 
 import { MAX_HIGHLIGHTS, PROGRAM_ILLUSTRATIONS, PROGRAM_TONES } from '@tilana/contracts/admin-programs';
-import { slugify } from '@tilana/contracts/blog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Globe, Loader2, Save, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { AutosaveStatus } from '@/components/autosave-status';
 import { BackLink } from '@/components/back-link';
 import { NavLink } from '@/components/nav-link';
 import { StatusBadge } from '@/components/status-badge';
+import { ViewOnWebsite } from '@/components/web-address';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,7 @@ import { api, ApiError } from '@/lib/api';
 import { useNavigate } from '@/lib/navigation-progress';
 import { formatRand, illustrationLabels, parseRand, toneClass, toneLabels } from '@/lib/programs';
 import type { AdminProgram } from '@/lib/types';
+import { useAutosave } from '@/lib/use-autosave';
 import { useUnsavedGuard } from '@/lib/use-unsaved-guard';
 import { cn } from '@/lib/utils';
 import { Field, Panel } from './editor-parts';
@@ -32,7 +34,6 @@ const message = (error: unknown, fallback: string) => (error instanceof ApiError
 function toForm(program: AdminProgram) {
   return {
     name: program.name,
-    slug: program.slug,
     title: program.title,
     summary: program.summary,
     description: program.description,
@@ -44,7 +45,6 @@ function toForm(program: AdminProgram) {
     series: program.series,
     step: program.step,
     marker: program.marker,
-    sortOrder: String(program.sortOrder),
     price: formatRand(program.priceCents).replace(/^R/, '').replace(/\s/g, ''),
   };
 }
@@ -57,7 +57,6 @@ function toPayload({ price, ...form }: ProgramForm) {
     tags: form.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
     highlights: form.highlights.map((line) => line.trim()).filter(Boolean),
     step: form.series === 'strength' ? form.step ?? 1 : null,
-    sortOrder: Math.max(0, Math.round(Number(form.sortOrder) || 0)),
   };
 }
 
@@ -95,9 +94,13 @@ function EditorForm({ program }: { program: AdminProgram }) {
   const [savedJson, setSavedJson] = useState(() => JSON.stringify(toForm(program)));
   const [deleteOpen, setDeleteOpen] = useState(false);
   const dirty = JSON.stringify(form) !== savedJson;
-  const slugLocked = program.onWebsite;
   const priceCents = parseRand(form.price);
   useUnsavedGuard(dirty);
+  // The latest form, for code that runs after a request.
+  const formRef = useRef(form);
+  useEffect(() => {
+    formRef.current = form;
+  });
 
   const set = <K extends keyof ProgramForm>(key: K, value: ProgramForm[K]) => setForm((current) => ({ ...current, [key]: value }));
 
@@ -108,16 +111,23 @@ function EditorForm({ program }: { program: AdminProgram }) {
     void queryClient.invalidateQueries({ queryKey: ['volumes'] });
   }
 
-  function applyServerProgram(next: AdminProgram) {
+  /** Takes the server's copy after Save, unless something was typed while it ran. */
+  function applyServerProgram(next: AdminProgram, sent: ProgramForm) {
     applyFile(next);
-    const nextForm = toForm(next);
-    setForm(nextForm);
-    setSavedJson(JSON.stringify(nextForm));
+    if (JSON.stringify(formRef.current) === JSON.stringify(sent)) {
+      const nextForm = toForm(next);
+      setForm(nextForm);
+      setSavedJson(JSON.stringify(nextForm));
+    } else {
+      setSavedJson(JSON.stringify(sent));
+    }
   }
 
   async function saveNow() {
-    const result = await api<{ program: AdminProgram }>(`/api/programs/${program.id}`, { method: 'PUT', body: JSON.stringify(toPayload(form)) });
-    applyServerProgram(result.program);
+    await autosave.settle();
+    const snapshot = formRef.current;
+    const result = await api<{ program: AdminProgram }>(`/api/programs/${program.id}`, { method: 'PUT', body: JSON.stringify(toPayload(snapshot)) });
+    applyServerProgram(result.program, snapshot);
   }
 
   const save = useMutation({
@@ -127,7 +137,10 @@ function EditorForm({ program }: { program: AdminProgram }) {
   });
 
   const remove = useMutation({
-    mutationFn: () => api(`/api/programs/${program.id}`, { method: 'DELETE' }),
+    mutationFn: async () => {
+      await autosave.settle();
+      return api(`/api/programs/${program.id}`, { method: 'DELETE' });
+    },
     onSuccess: () => {
       setSavedJson(JSON.stringify(form));
       void queryClient.invalidateQueries({ queryKey: ['volume', program.volume.id] });
@@ -136,6 +149,20 @@ function EditorForm({ program }: { program: AdminProgram }) {
       router.push(`/programs/volumes/${program.volume.id}`);
     },
     onError: (error) => toast.error('Not deleted', { description: message(error, 'Please try again.') }),
+  });
+
+  // Saves by itself a moment after typing stops (not while the price is
+  // unreadable). Only the saved marker moves, so typing is never replaced.
+  const autosave = useAutosave({
+    current: JSON.stringify(form),
+    saved: savedJson,
+    enabled: priceCents !== null && !save.isPending && !remove.isPending,
+    save: async () => {
+      const snapshot = form;
+      const result = await api<{ program: AdminProgram }>(`/api/programs/${program.id}`, { method: 'PUT', body: JSON.stringify(toPayload(snapshot)) });
+      applyFile(result.program);
+      setSavedJson(JSON.stringify(snapshot));
+    },
   });
 
 
@@ -155,11 +182,12 @@ function EditorForm({ program }: { program: AdminProgram }) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <ViewOnWebsite href={program.publicUrl} />
           <div className="flex items-center gap-3 rounded-full border bg-card py-1.5 pr-4 pl-4">
             <span className="text-sm text-muted-foreground">Show on the website</span>
             <ProgramSwitch program={program} />
           </div>
-          {dirty && <span className="text-sm font-semibold text-status-warning">Unsaved changes</span>}
+          <AutosaveStatus status={autosave.status} error={autosave.error} />
           <Button className="rounded-full" disabled={!dirty || priceCents === null || save.isPending} onClick={() => save.mutate()}>
             {save.isPending ? <Loader2 className="animate-spin" /> : <Save />} Save
           </Button>
@@ -268,18 +296,6 @@ function EditorForm({ program }: { program: AdminProgram }) {
             <Field id="marker" label="Label on the colour panel" hint="Short, e.g. “Start here” or “Pelvic floor”.">
               <Input id="marker" value={form.marker} onChange={(e) => set('marker', e.target.value)} maxLength={40} />
             </Field>
-            <Field id="sort" label="Order" hint="Lower numbers come first on the website.">
-              <Input id="sort" type="number" min={0} max={10000} value={form.sortOrder} onChange={(e) => set('sortOrder', e.target.value)} />
-            </Field>
-          </Panel>
-
-          <Panel title="Web address" titleId="slug-heading" hint={slugLocked ? 'Fixed while the program is on the website, so links and baskets keep working.' : 'Used in links, the basket and checkout.'}>
-            <Field id="slug" label="Address">
-              <Input id="slug" value={form.slug} onChange={(e) => set('slug', e.target.value)} maxLength={60} disabled={slugLocked} />
-            </Field>
-            {!slugLocked && form.slug !== slugify(form.name) && (
-              <Button variant="link" size="sm" className="justify-self-start px-0" onClick={() => set('slug', slugify(form.name))}>Match the name</Button>
-            )}
           </Panel>
 
           <Panel title="Delete" titleId="delete-heading" hint="Only for programs nobody has bought. Sold programs stay so past buyers can get their PDFs again: switch them off instead. Uploaded PDFs stay in storage." danger>

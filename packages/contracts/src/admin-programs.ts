@@ -23,7 +23,8 @@ const priceCentsSchema = z.number().int().min(100, 'The price must be at least R
 /** Everything Tilana edits on a program. Its PDF is uploaded separately. */
 export const programInputSchema = z.object({
   name: z.string().trim().min(2, 'Add a name.').max(60),
-  slug: programSlugSchema,
+  /** Ignored by the admin: the server makes the web address from the name. */
+  slug: programSlugSchema.optional(),
   title: line(120),
   summary: line(240),
   description: line(1200),
@@ -36,7 +37,8 @@ export const programInputSchema = z.object({
   series: z.enum(PROGRAM_SERIES),
   step: z.number().int().min(1).max(3).nullable(),
   marker: line(40),
-  sortOrder: z.number().int().min(0).max(10_000),
+  /** Left out by the editor: the order is set with the arrows on the volume page. */
+  sortOrder: z.number().int().min(0).max(10_000).optional(),
   priceCents: priceCentsSchema,
 }).superRefine((value, context) => {
   if (value.series === 'strength' && value.step === null) {
@@ -68,3 +70,8 @@ export type UpdateVolumeRequest = z.infer<typeof updateVolumeRequestSchema>;
 
 /** A program's own website switch (its volume must be on and it needs a PDF too). */
 export const programWebsiteRequestSchema = z.object({ isActive: z.boolean() });
+
+/** The programs of one volume in the order the website shows them (first first). */
+export const programOrderRequestSchema = z.object({
+  programIds: z.array(z.number().int().positive()).min(1).max(200),
+});

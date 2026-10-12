@@ -27,8 +27,10 @@ const optionalText = (max: number) => z.string().trim().max(max).transform(value
 /** Everything Tilana edits on a post. Text is stored as typed; the website escapes it. */
 export const blogPostInputSchema = z.object({
   title: z.string().trim().min(3, 'Add a title.').max(160),
-  slug: blogSlugSchema,
-  excerpt: z.string().trim().min(10, 'Add a short summary.').max(300),
+  /** Ignored by the admin: the server makes the web address from the title. */
+  slug: blogSlugSchema.optional(),
+  // Drafts may be saved half-written; publishing checks for a summary (publishProblems).
+  excerpt: z.string().trim().max(300),
   category: blogCategorySchema,
   bodyMarkdown: z.string().max(100_000),
   coverImageAlt: optionalText(250),

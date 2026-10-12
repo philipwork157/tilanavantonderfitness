@@ -27,6 +27,7 @@ export interface AdminBlogPost {
   quoteText: string | null;
   quoteCitation: string | null;
   status: 'draft' | 'published';
+  publicUrl: string | null;
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -77,6 +78,7 @@ export interface AdminRecipe {
   blogPostId: number | null;
   sample: boolean;
   status: 'draft' | 'published';
+  publicUrl: string | null;
   publishedAt: string | null;
   updatedAt: string;
 }
@@ -199,6 +201,8 @@ export interface AdminProgram {
   volume: Pick<AdminVolume, 'id' | 'number' | 'name' | 'isActive'>;
   isActive: boolean;
   onWebsite: boolean;
+  /** The program on the website, while it is shown there. */
+  publicUrl: string | null;
   /** Why it is not on the website, when it is not. */
   offWebsiteReason: string | null;
   file: { name: string; sizeBytes: number; version: number; uploadedAt: string } | null;

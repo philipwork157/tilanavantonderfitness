@@ -4,6 +4,7 @@ import { blogPosts, recipes, type Database, type Recipe } from '@tilana/db';
 import { slugify, type BlogStatus } from '@tilana/contracts/blog';
 import type { PublicRecipe, RecipeIcon, RecipeMeal, RecipeTone } from '@tilana/contracts/kitchen';
 import { blogImagePublicUrl } from '../utils/blog-images';
+import { publicUrl } from '../utils/public-url';
 
 /*
  * Kitchen recipes. Tilana edits them in the admin; the website's /kitchen
@@ -72,6 +73,8 @@ export function toAdminRecipe(recipe: Recipe) {
     blogPostId: recipe.blogPostId,
     sample: recipe.sample,
     status: recipe.status,
+    /** The recipe on the website, while it is published. */
+    publicUrl: recipe.status === 'published' ? publicUrl(`/kitchen/${recipe.slug}`) : null,
     publishedAt: recipe.publishedAt,
     updatedAt: recipe.updatedAt,
   };

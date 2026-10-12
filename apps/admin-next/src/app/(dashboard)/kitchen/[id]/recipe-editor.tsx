@@ -1,6 +1,5 @@
 'use client';
 
-import { slugify } from '@tilana/contracts/blog';
 import {
   MAX_RECIPE_INGREDIENTS, MAX_RECIPE_STEPS, MAX_RECIPE_TAGS, RECIPE_ICONS, RECIPE_MEALS, RECIPE_TONES,
   type RecipeMeal,
@@ -9,13 +8,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowDown, ArrowLeft, ArrowUp, EyeOff, Globe, Loader2, Plus, Save, Trash2, TriangleAlert, Upload, X,
 } from 'lucide-react';
-import { useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { toast } from 'sonner';
+import { AutosaveStatus } from '@/components/autosave-status';
 import { BackLink } from '@/components/back-link';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { MarkdownEditor } from '@/components/markdown-editor';
 import { NavLink } from '@/components/nav-link';
 import { StatusBadge } from '@/components/status-badge';
+import { PublishChecklist } from '@/components/publish-checklist';
+import { ViewOnWebsite, WebAddress } from '@/components/web-address';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,6 +28,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { api, ApiError } from '@/lib/api';
 import { useNavigate } from '@/lib/navigation-progress';
 import type { AdminRecipe, BlogPostSummary } from '@/lib/types';
+import { useAutosave } from '@/lib/use-autosave';
 import { useUnsavedGuard } from '@/lib/use-unsaved-guard';
 import { cn } from '@/lib/utils';
 import { RecipeArt, recipeIcons, recipeTones } from '../recipe-art';
@@ -45,7 +48,6 @@ interface StepRow { key: string; text: string }
 function toForm(recipe: AdminRecipe) {
   return {
     title: recipe.title,
-    slug: recipe.slug,
     description: recipe.description,
     meal: recipe.meal,
     prepMinutes: String(recipe.prepMinutes),
@@ -89,7 +91,6 @@ const whole = (value: string) => {
 function toPayload(form: RecipeForm) {
   return {
     title: form.title,
-    slug: form.slug,
     description: form.description,
     meal: form.meal,
     prepMinutes: whole(form.prepMinutes),
@@ -163,6 +164,13 @@ function EditorForm({ initial }: { initial: AdminRecipe }) {
   const dirty = comparable(form) !== saved;
   const isPublished = recipe.status === 'published';
   useUnsavedGuard(dirty);
+  // The latest form and saved marker, for code that runs after a request.
+  const formRef = useRef(form);
+  const savedRef = useRef(saved);
+  useEffect(() => {
+    formRef.current = form;
+    savedRef.current = saved;
+  });
 
   const posts = useQuery({
     queryKey: ['blog-posts'],
@@ -171,19 +179,36 @@ function EditorForm({ initial }: { initial: AdminRecipe }) {
 
   const set = <K extends keyof RecipeForm>(key: K, value: RecipeForm[K]) => setForm((current) => ({ ...current, [key]: value }));
 
-  function applyServerRecipe(next: AdminRecipe) {
+  /**
+   * Takes the server's copy after a save. The form is only replaced when
+   * nothing was typed while the request ran (`sent` is what was sent);
+   * otherwise the newer typing stays and is saved next.
+   */
+  function applyServerRecipe(next: AdminRecipe, sent: RecipeForm = formRef.current) {
     setRecipe(next);
-    const nextForm = toForm(next);
-    setForm(nextForm);
-    setSaved(comparable(nextForm));
+    if (comparable(formRef.current) === comparable(sent)) {
+      const nextForm = toForm(next);
+      setForm(nextForm);
+      setSaved(comparable(nextForm));
+    } else {
+      setSaved(comparable(sent));
+    }
     queryClient.setQueryData(['recipe', next.id], { recipe: next });
     void queryClient.invalidateQueries({ queryKey: ['recipes'] });
   }
 
   async function saveNow(): Promise<AdminRecipe> {
-    const result = await api<{ recipe: AdminRecipe }>(`/api/recipes/${recipe.id}`, { method: 'PUT', body: JSON.stringify(toPayload(form)) });
-    applyServerRecipe(result.recipe);
+    await autosave.settle();
+    const snapshot = formRef.current;
+    const result = await api<{ recipe: AdminRecipe }>(`/api/recipes/${recipe.id}`, { method: 'PUT', body: JSON.stringify(toPayload(snapshot)) });
+    applyServerRecipe(result.recipe, snapshot);
     return result.recipe;
+  }
+
+  /** Saves first when there is anything unsaved (after any running autosave). */
+  async function saveIfNeeded() {
+    await autosave.settle();
+    if (comparable(formRef.current) !== savedRef.current) await saveNow();
   }
 
   const save = useMutation({
@@ -194,7 +219,7 @@ function EditorForm({ initial }: { initial: AdminRecipe }) {
 
   const changeStatus = useMutation({
     mutationFn: async (status: 'draft' | 'published') => {
-      if (dirty) await saveNow();
+      await saveIfNeeded();
       return api<{ recipe: AdminRecipe }>(`/api/recipes/${recipe.id}/status`, { method: 'POST', body: JSON.stringify({ status }) });
     },
     onSuccess: (result, status) => {
@@ -207,7 +232,8 @@ function EditorForm({ initial }: { initial: AdminRecipe }) {
   });
 
   const photo = useMutation({
-    mutationFn: (file: File | null) => {
+    mutationFn: async (file: File | null) => {
+      await autosave.settle();
       if (!file) return api<{ recipe: AdminRecipe }>(`/api/recipes/${recipe.id}/image`, { method: 'DELETE' });
       const body = new FormData();
       body.append('file', file);
@@ -235,7 +261,10 @@ function EditorForm({ initial }: { initial: AdminRecipe }) {
   }
 
   const remove = useMutation({
-    mutationFn: () => api(`/api/recipes/${recipe.id}`, { method: 'DELETE' }),
+    mutationFn: async () => {
+      await autosave.settle();
+      return api(`/api/recipes/${recipe.id}`, { method: 'DELETE' });
+    },
     onSuccess: () => {
       setSaved(comparable(form));
       void queryClient.invalidateQueries({ queryKey: ['recipes'] });
@@ -245,14 +274,30 @@ function EditorForm({ initial }: { initial: AdminRecipe }) {
     onError: (error) => toast.error('Not deleted', { description: message(error, 'Please try again.') }),
   });
 
-  const busy = save.isPending || changeStatus.isPending;
+  const busy = save.isPending || changeStatus.isPending || photo.isPending;
+
+  // Saves by itself a moment after typing stops. Only the saved marker moves,
+  // so whatever is being typed right now is never replaced.
+  const autosave = useAutosave({
+    current: comparable(form),
+    saved,
+    enabled: !busy && !remove.isPending,
+    save: async () => {
+      const snapshot = form;
+      const result = await api<{ recipe: AdminRecipe }>(`/api/recipes/${recipe.id}`, { method: 'PUT', body: JSON.stringify(toPayload(snapshot)) });
+      setRecipe(result.recipe);
+      setSaved(comparable(snapshot));
+      queryClient.setQueryData(['recipe', result.recipe.id], { recipe: result.recipe });
+      void queryClient.invalidateQueries({ queryKey: ['recipes'] });
+    },
+  });
   const servings = Math.max(1, whole(form.servings));
 
   return (
     <div className="w-full">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <BackLink href="/kitchen">All recipes</BackLink>
-        {dirty && <span className="text-sm font-semibold text-status-warning">Unsaved changes</span>}
+        <AutosaveStatus status={autosave.status} error={autosave.error} />
       </div>
 
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -262,6 +307,7 @@ function EditorForm({ initial }: { initial: AdminRecipe }) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge label={isPublished ? 'On the website' : 'Draft'} tone={isPublished ? 'success' : 'neutral'} className="max-sm:hidden" />
+          <ViewOnWebsite href={recipe.publicUrl} />
           <Button variant="outline" className="rounded-full bg-card" disabled={!dirty || busy} onClick={() => save.mutate()}>
             {save.isPending ? <Loader2 className="animate-spin" /> : <Save />} Save
           </Button>
@@ -302,6 +348,17 @@ function EditorForm({ initial }: { initial: AdminRecipe }) {
         </div>
 
         <aside className="grid min-w-0 gap-5">
+          {!isPublished && (
+            <PublishChecklist items={[
+              { label: 'A recipe name', done: form.title.trim().length >= 3 },
+              { label: 'A short description', done: form.description.trim().length >= 10 },
+              { label: 'At least one ingredient', done: form.ingredients.some((row) => row.item.trim()) },
+              { label: 'At least one step in the method', done: form.steps.some((step) => step.text.trim()) },
+              { label: 'Nutrition per serving', done: whole(form.kcal) > 0 && whole(form.proteinG) + whole(form.carbsG) + whole(form.fatG) > 0 },
+              { label: 'The protein part', done: form.proteinNote.trim().length >= 10 },
+              ...(recipe.imageUrl ? [{ label: 'A description of the photo', done: form.imageAlt.trim().length > 0 }] : []),
+            ]} />
+          )}
           <Panel title="Card" titleId="card-heading" hint="How the recipe looks on the Kitchen page.">
             <div className="overflow-hidden rounded-2xl border-2 border-foreground">
               <RecipeArt imageUrl={recipe.imageUrl} imageAlt={form.imageAlt} tone={form.tone} icon={form.icon} protein={whole(form.proteinG)} className="aspect-[4/3]" />
@@ -395,15 +452,7 @@ function EditorForm({ initial }: { initial: AdminRecipe }) {
             <Field id="published-on" label="Publish date" hint={isPublished ? 'Newest recipes are shown first.' : 'Leave empty to use the day you publish.'}>
               <Input id="published-on" type="date" value={form.publishedOn} onChange={(e) => set('publishedOn', e.target.value)} />
             </Field>
-            <Field id="slug" label="Web address" hint={isPublished ? 'Changing this breaks links people already shared.' : undefined}>
-              <div className="flex items-center rounded-md border bg-card focus-within:ring-2 focus-within:ring-ring/40">
-                <span className="pl-3 text-sm text-muted-foreground" aria-hidden>/kitchen/</span>
-                <Input id="slug" value={form.slug} onChange={(e) => set('slug', e.target.value)} maxLength={120} className="border-0 pl-1 shadow-none focus-visible:ring-0" />
-              </div>
-            </Field>
-            {form.slug !== slugify(form.title) && (
-              <Button variant="link" size="sm" className="justify-self-start px-0" onClick={() => set('slug', slugify(form.title))}>Match the name</Button>
-            )}
+            <WebAddress path={`/kitchen/${recipe.slug}`} live={isPublished} noun="recipe" />
           </Panel>
 
           <Panel title="Delete" titleId="delete-heading" hint="Removes the recipe and its photo for good." danger>

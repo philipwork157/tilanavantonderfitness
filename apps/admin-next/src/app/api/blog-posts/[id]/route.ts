@@ -1,11 +1,11 @@
 import { blogPostInputSchema } from '@tilana/contracts/blog';
 import { blogPosts } from '@tilana/db';
-import { and, eq, ne } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { requireAdmin } from '@/server/auth/admin';
 import { isSameOrigin } from '@/server/auth/admin-access';
 import { getDatabase } from '@/server/db';
 import { handle, HttpError, readJson, routeId, sameOriginOnly, type IdContext } from '@/server/http';
-import { findBlogPost, publishProblems } from '@/server/services/blog-posts';
+import { findBlogPost, publishProblems, uniqueSlug } from '@/server/services/blog-posts';
 import { deleteBlogImage } from '@/server/utils/blog-images';
 import { toAdminBlogPost } from '@/server/utils/blog-post-dto';
 
@@ -24,16 +24,20 @@ export const PUT = handle(async (request: Request, context: IdContext) => {
   const parsed = blogPostInputSchema.safeParse(await readJson(request));
   if (!parsed.success) {
     const first = parsed.error.issues[0];
-    throw new HttpError(400, first ? `${first.path.join('.') || 'Post'}: ${first.message}` : 'Please check the post.');
+    throw new HttpError(400, first?.message ?? 'Please check the post.');
   }
   const input = parsed.data;
   const db = getDatabase();
   const existing = await findBlogPost(db, id);
   if (!existing) throw new HttpError(404, 'Post not found.');
 
-  const [clash] = await db.select({ id: blogPosts.id }).from(blogPosts)
-    .where(and(eq(blogPosts.slug, input.slug), ne(blogPosts.id, id)));
-  if (clash) throw new HttpError(409, 'Another post already uses this web address.');
+  // The web address follows a new title only while the post has never been on
+  // the website (no publish date yet); after that it stays fixed so links people
+  // shared, and links in newsletters already sent, keep working.
+  const renamed = input.title.trim() !== existing.title.trim();
+  const slug = renamed && existing.status === 'draft' && !existing.publishedAt
+    ? await uniqueSlug(db, input.title, id)
+    : existing.slug;
 
   if (existing.status === 'published') {
     const problems = publishProblems({ ...existing, ...input });
@@ -42,6 +46,7 @@ export const PUT = handle(async (request: Request, context: IdContext) => {
 
   const [post] = await db.update(blogPosts).set({
     ...input,
+    slug,
     // A published post always keeps a date; drafts may leave it empty.
     publishedAt: input.publishedAt ?? (existing.status === 'published' ? existing.publishedAt : null),
   }).where(eq(blogPosts.id, id)).returning();
