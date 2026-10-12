@@ -16,6 +16,7 @@ export const privacySections = [
       'If you join the newsletter, the website collects your email address, consent date, signup source, confirmation status and the applicable privacy-policy version. Newsletter subscription is voluntary and uses a confirmation email before marketing messages are sent.',
       'If you buy one or more programs, the checkout collects your name, email address, optional phone number, the programs you selected, and the order, payment and email delivery status. Card and bank details are entered directly into Paystack and are not stored by this website.',
       'Purchased programs are delivered as PDF files attached to an email sent to the address you entered at checkout. You do not need an account. If you ask for your programs to be sent again, the website uses your email address to find your paid orders.',
+      'Each program PDF you buy is personalised with your name, order number and purchase date, to discourage unauthorised sharing. Your email address and phone number are not printed on it.',
       'Please do not send diagnoses, medical records, identity numbers, detailed injury information, pregnancy complications or other sensitive health information through the public contact form.',
       'The website uses Cloudflare Web Analytics to understand aggregate visits and website performance. Cloudflare Web Analytics does not use cookies, local storage or fingerprinting to identify or track individual visitors.',
       'The website also uses PostHog to understand how it is used, for example which pages are viewed and how many people add a program to the basket, start the checkout or complete a purchase. PostHog is set up without cookies or local storage: it counts visits with a temporary code that is worked out on PostHog’s servers from your IP address and browser details and changes every day, so a visit cannot be followed from one day to the next. It does not record your screen or what you type into forms, nobody is identified by name or email address, your IP address is not kept with the analytics, and links in emails and payment references are removed from page addresses before anything is sent.',
@@ -212,6 +213,7 @@ export const termsSections = [
     title: 'Your licence to use the programme',
     body: [
       'You may download, print and use the programme for your own personal training. The programme remains the intellectual property of Tilana van Tonder.',
+      'Each copy is personalised for its buyer: your name, order number and purchase date are printed on its pages, and the order number is also stored in the file, so a shared copy can be traced to its order.',
       'You may not share, resell, upload, publish or copy the programme for other people, or use it to train clients, without written permission.',
     ],
   },

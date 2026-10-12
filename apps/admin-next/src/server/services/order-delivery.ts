@@ -1,11 +1,12 @@
 import 'server-only';
-import { orders, programs, type Database } from '@tilana/db';
+import { orderItems, orders, programs, type Database } from '@tilana/db';
 import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { serverConfig } from '../config';
 import { logger } from '../logger';
 import { sendEmail } from '../utils/email';
 import type { EmailAttachment, OutgoingEmail } from '../utils/email-routing';
 import { websiteUrl } from '../utils/newsletter';
+import { stampProgramPdf, type StampDetails } from '../utils/pdf-stamp';
 import { downloadProgramFile } from '../utils/program-files';
 import { orderItemsFor } from './orders';
 import { programDeliveryEmail } from './program-emails';
@@ -18,12 +19,17 @@ import { orderAlertEmail, saleNotificationEmail } from './sale-emails';
  */
 const MAX_ATTACHMENT_BYTES_PER_EMAIL = 15 * 1024 * 1024;
 
+/** Personalising adds a little to each PDF (fonts, the stamp); allowed for when grouping. */
+const STAMP_ALLOWANCE_BYTES = 256 * 1024;
+
 export interface DeliveryDependencies {
   send: (email: OutgoingEmail) => Promise<unknown>;
   download: (key: string) => Promise<Buffer>;
+  /** Makes the buyer's own copy; pdf-stamp.ts unless a test swaps it. */
+  stamp?: (pdf: Buffer, details: StampDetails) => Promise<{ data: Buffer; sha256: string }>;
 }
 
-const defaults: DeliveryDependencies = { send: sendEmail, download: downloadProgramFile };
+const defaults: DeliveryDependencies = { send: sendEmail, download: downloadProgramFile, stamp: stampProgramPdf };
 
 /** Splits attachments into emails that stay under the size limit. */
 export function groupAttachments<T>(files: T[], sizeOf: (file: T) => number, limit = MAX_ATTACHMENT_BYTES_PER_EMAIL): T[][] {
@@ -66,14 +72,30 @@ async function emailPrograms(db: Database, order: PaidOrder, to: string, deps: D
     const wanted = items.map((item) => {
       const file = files.find(row => row.id === item.programId);
       if (!file?.filePath || !file.fileName) throw new Error(`No PDF for ${item.label}.`);
-      return { label: item.label, filePath: file.filePath, fileName: file.fileName, size: file.fileSizeBytes ?? 0 };
+      return { itemId: item.id, label: item.label, filePath: file.filePath, fileName: file.fileName, size: (file.fileSizeBytes ?? 0) + STAMP_ALLOWANCE_BYTES };
     });
+    // Every copy carries the buyer's name, order number and purchase date.
+    const details: StampDetails = {
+      name: `${order.firstName} ${order.lastName}`.trim(),
+      orderNumber: order.orderNumber,
+      purchasedAt: order.paidAt ?? order.createdAt,
+    };
     const replyTo = serverConfig().contactNotifyTo || undefined;
     for (const group of groupAttachments(wanted, file => file.size)) {
       const attachments: EmailAttachment[] = [];
+      const fingerprints: { itemId: number; sha256: string }[] = [];
       for (const file of group) {
-        const data = await deps.download(file.filePath);
-        attachments.push({ fileName: file.fileName, contentType: 'application/pdf', data });
+        const clean = await deps.download(file.filePath);
+        try {
+          const copy = await (deps.stamp ?? stampProgramPdf)(clean, details);
+          attachments.push({ fileName: file.fileName, contentType: 'application/pdf', data: copy.data });
+          fingerprints.push({ itemId: file.itemId, sha256: copy.sha256 });
+        }
+        catch (error) {
+          // Uploads are checked, so this should not happen; the buyer still gets their program.
+          logger.error({ err: error, orderNumber: order.orderNumber, program: file.label }, 'Program PDF sent without the personal stamp');
+          attachments.push({ fileName: file.fileName, contentType: 'application/pdf', data: clean });
+        }
       }
       const result = await deps.send(programDeliveryEmail(to, {
         firstName: order.firstName,
@@ -84,6 +106,9 @@ async function emailPrograms(db: Database, order: PaidOrder, to: string, deps: D
       }, attachments, { replyTo }));
       const id = messageIdOf(result);
       if (id) messageIds.push(id);
+      for (const { itemId, sha256 } of fingerprints) {
+        await db.update(orderItems).set({ deliveredSha256: sha256 }).where(eq(orderItems.id, itemId));
+      }
     }
     return { items, delivered: true, failure: null, messageIds };
   } catch (error) {

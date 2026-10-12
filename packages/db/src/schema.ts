@@ -440,6 +440,9 @@ export const orderItems = pgTable('order_items', {
   // "Beginner · Volume 1"
   label: text('label').notNull(),
   priceCents: integer('price_cents').notNull(),
+  // SHA-256 of the buyer's personalised PDF as last emailed (server/utils/pdf-stamp.ts),
+  // so a copy found online can be matched to its order. Null until sent.
+  deliveredSha256: text('delivered_sha256'),
   ...timestamps,
 }, table => [
   check('order_items_price_valid', sql`${table.priceCents} > 0`),

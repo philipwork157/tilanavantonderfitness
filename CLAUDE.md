@@ -216,6 +216,14 @@ run migrations against a remote database without explicit authorization.
   Uploads must start with `%PDF-` and end with `%%EOF`, max 15 MB; the SHA-256
   is stored. Keys are `programs/<id>/v<version>-<sha>.pdf` (older uploads
   `volumes/<id>/...`). Replacing a PDF bumps `file_version` and keeps the old file.
+- Buyers get a personalised copy (`server/utils/pdf-stamp.ts`, pdf-lib with
+  Montserrat from `apps/admin-next/assets/fonts`): a footer on every page
+  (name, order number, purchase date), a "Personal copy" seal on the cover,
+  the order number hidden in the file properties (`TVTOrder`, keywords) and as
+  invisible text on every page. Same order = same bytes; the SHA-256 is saved
+  in `order_items.delivered_sha256`. Uploads must be stampable (no password);
+  if stamping ever fails at a sale, the clean PDF is still sent and logged.
+  The clean PDF in R2 is never changed, and the email address is never printed.
 - "Peek inside" on `/program` is made from the PDF, never typed in: on upload
   (and by itself when the program page opens for an older PDF, or with "Make
   again") the admin draws the cover sharp plus about three inside pages

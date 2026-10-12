@@ -8,6 +8,7 @@ import { handle, HttpError, routeId, sameOriginOnly, type IdContext } from '@/se
 import { logger } from '@/server/logger';
 import { makeProgramPreview } from '@/server/services/program-previews';
 import { findProgram, programLabel, toAdminProgram } from '@/server/services/programs';
+import { checkStampable, PdfStampError } from '@/server/utils/pdf-stamp';
 import { downloadProgramFile, inspectPdf, PdfRejectedError, programFileName, uploadProgramFile } from '@/server/utils/program-files';
 
 /** Upload or replace the program's PDF (multipart field "file"). Admins only: it is what buyers receive. */
@@ -29,8 +30,10 @@ export const POST = handle(async (request: Request, context: IdContext) => {
   let sha256: string;
   try {
     ({ sha256 } = inspectPdf(data));
+    // Every buyer gets a personalised copy, so refuse now what can't be personalised.
+    await checkStampable(data);
   } catch (error) {
-    if (error instanceof PdfRejectedError) throw new HttpError(400, error.message);
+    if (error instanceof PdfRejectedError || error instanceof PdfStampError) throw new HttpError(400, error.message);
     throw error;
   }
 

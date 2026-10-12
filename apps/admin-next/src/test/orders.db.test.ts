@@ -1,8 +1,9 @@
 /** Database tests for checkout, payment confirmation and delivery. Need TEST_DATABASE_URL. */
-import { createHmac, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { eq, inArray, like } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import { PDFDocument } from 'pdf-lib';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createDatabase, orderItems, orders, programs, volumes, type Database, type Volume } from '@tilana/db';
 import type { BasketCheckoutRequest } from '@tilana/contracts/checkout';
@@ -18,6 +19,7 @@ import type { OutgoingEmail } from '@/server/utils/email-routing';
 import type { VerifiedPayment } from '@/server/utils/paystack';
 
 const url = process.env.TEST_DATABASE_URL;
+const sha256 = (data: Buffer) => createHash('sha256').update(data).digest('hex');
 const pdf = (n: number) => ({ filePath: `programs/${n}/v1-abc.pdf`, fileName: `Tilana van Tonder - P${n}.pdf`, fileSizeBytes: 10, fileSha256: 'c'.repeat(64), fileVersion: 1, fileUploadedAt: new Date() });
 
 describe.skipIf(!url)('orders (database)', () => {
@@ -132,6 +134,44 @@ describe.skipIf(!url)('orders (database)', () => {
     expect(sent[0]!.attachments?.map(file => file.fileName)).toEqual(['Tilana van Tonder - P1.pdf', 'Tilana van Tonder - P2.pdf']);
     expect(sent[1]!.subject).toContain('New sale');
     expect((await findOrderBy(db, 'reference', reference))).toMatchObject({ deliveryStatus: 'sent', deliveryError: null });
+    vi.unstubAllEnvs();
+  });
+
+  it('sends each buyer a personalised copy and keeps its fingerprint; a resend is identical', async () => {
+    vi.stubEnv('WEBSITE_URL', 'https://site.test');
+    const doc = await PDFDocument.create();
+    doc.addPage([595, 842]);
+    const clean = Buffer.from(await doc.save());
+    const { reference } = await startCheckout(db, request(), deps());
+    const order = (await findOrderBy(db, 'reference', reference))!;
+    await applyVerifiedPayment(db, order, success(order));
+    const sent: OutgoingEmail[] = [];
+    const mail = { send: async (email: OutgoingEmail) => void sent.push(email), download: async () => clean };
+    await deliverOrder(db, order.id, mail);
+
+    const attached = Buffer.from(sent[0]!.attachments![0]!.data);
+    expect(attached.equals(clean)).toBe(false);
+    const copy = await PDFDocument.load(attached, { updateMetadata: false });
+    expect(copy.getKeywords()).toContain(`tvt-order:${order.orderNumber}`);
+    const items = await db.select().from(orderItems).where(eq(orderItems.orderId, order.id));
+    expect(items.map(item => item.deliveredSha256)).toEqual([sha256(attached), expect.stringMatching(/^[0-9a-f]{64}$/)]);
+
+    sent.length = 0;
+    await resendOrder(db, order.orderNumber, {}, mail);
+    expect(sha256(Buffer.from(sent[0]!.attachments![0]!.data))).toBe(items[0]!.deliveredSha256);
+    vi.unstubAllEnvs();
+  });
+
+  it('still sends the program when a PDF cannot be personalised', async () => {
+    vi.stubEnv('WEBSITE_URL', 'https://site.test');
+    const { reference } = await startCheckout(db, request(), deps());
+    const order = (await findOrderBy(db, 'reference', reference))!;
+    await applyVerifiedPayment(db, order, success(order));
+    const sent: OutgoingEmail[] = [];
+    const broken = Buffer.from('%PDF-1.7 %%EOF');
+    await deliverOrder(db, order.id, { send: async (email) => void sent.push(email), download: async () => broken });
+    expect(Buffer.from(sent[0]!.attachments![0]!.data).equals(broken)).toBe(true);
+    expect(await findOrderBy(db, 'reference', reference)).toMatchObject({ deliveryStatus: 'sent' });
     vi.unstubAllEnvs();
   });
 

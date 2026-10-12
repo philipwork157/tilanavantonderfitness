@@ -8,11 +8,13 @@ import { programDeliveryEmail } from '@/server/services/program-emails';
 import { findProgram, programLabel } from '@/server/services/programs';
 import { sendEmail } from '@/server/utils/email';
 import { newsletterTestRecipients, websiteUrl } from '@/server/utils/newsletter';
+import { PdfStampError, stampProgramPdf } from '@/server/utils/pdf-stamp';
 import { downloadProgramFile } from '@/server/utils/program-files';
 
 /**
  * Sends the exact email customers will receive for this program, with the
- * real PDF attached, to the test recipients (the developer in development).
+ * real PDF attached and personalised like a buyer's copy (with the admin's
+ * name and order number TEST), to the test recipients.
  */
 export const POST = handle(async (request: Request, context: IdContext) => {
   sameOriginOnly(request, isSameOrigin);
@@ -24,7 +26,12 @@ export const POST = handle(async (request: Request, context: IdContext) => {
   const recipients = newsletterTestRecipients();
   if (!recipients.length) throw new HttpError(503, 'Set NEWSLETTER_TEST_TO to receive test emails.');
   const site = websiteUrl();
-  const data = await downloadProgramFile(program.filePath);
+  const name = [admin.firstName, admin.lastName].filter(Boolean).join(' ') || 'Test Buyer';
+  const { data } = await stampProgramPdf(await downloadProgramFile(program.filePath), { name, orderNumber: 'TEST', purchasedAt: new Date() })
+    .catch((error: unknown) => {
+      if (error instanceof PdfStampError) throw new HttpError(400, error.message);
+      throw error;
+    });
   const attachment = { fileName: program.fileName, contentType: 'application/pdf', data: new Uint8Array(data) };
   const replyTo = serverConfig().contactNotifyTo || undefined;
 
