@@ -37,7 +37,7 @@ export const GET: APIRoute = async ({ site: siteUrl }) => {
     `- [About Tilana](${link('/about')}): her story and approach`,
     `- [Blog](${link('/blog')}): articles on strength, movement, nourishment and motherhood`,
     `- [Kitchen](${link('/kitchen')}): recipes with protein, calories and steps`,
-    `- [Contact](${link('/contact')}): questions, private training and business details`,
+    `- [Contact](${link('/contact')}): questions and private training`,
   ];
 
   if (programs.length) {
@@ -72,8 +72,6 @@ export const GET: APIRoute = async ({ site: siteUrl }) => {
     '## Contact',
     '',
     `- Email: ${site.email}`,
-    `- Phone and WhatsApp: ${site.phone}`,
-    `- Address: ${site.address}`,
     '',
   );
 
