@@ -6,7 +6,7 @@ import { ArrowLeft, EyeOff, Globe, ImageIcon, Loader2, Save, Send, Trash2, Uploa
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { MarkdownEditor } from '@/components/markdown-editor';
-import { AutosaveStatus } from '@/components/autosave-status';
+import { SaveStatus } from '@/components/save-status';
 import { BackLink } from '@/components/back-link';
 import { NavLink } from '@/components/nav-link';
 import { StatusBadge } from '@/components/status-badge';
@@ -22,7 +22,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { api, ApiError } from '@/lib/api';
 import { useNavigate } from '@/lib/navigation-progress';
 import type { AdminBlogPost } from '@/lib/types';
-import { useAutosave } from '@/lib/use-autosave';
 import { useUnsavedGuard } from '@/lib/use-unsaved-guard';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -103,7 +102,7 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
   /**
    * Takes the server's copy after a save. The form is only replaced when
    * nothing was typed while the request ran (`sent` is what was sent);
-   * otherwise the newer typing stays and is saved next.
+   * otherwise the newer typing stays, still unsaved.
    */
   function applyServerPost(next: AdminBlogPost, sent: PostForm = formRef.current) {
     setPost(next);
@@ -119,16 +118,14 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
   }
 
   async function saveNow(): Promise<AdminBlogPost> {
-    await autosave.settle();
     const snapshot = formRef.current;
     const result = await api<{ post: AdminBlogPost }>(`/api/blog-posts/${post.id}`, { method: 'PUT', body: JSON.stringify(toPayload(snapshot)) });
     applyServerPost(result.post, snapshot);
     return result.post;
   }
 
-  /** Saves first when there is anything unsaved (after any running autosave). */
+  /** Saves first when there is anything unsaved. */
   async function saveIfNeeded() {
-    await autosave.settle();
     if (JSON.stringify(formRef.current) !== savedRef.current) await saveNow();
   }
 
@@ -154,7 +151,6 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
 
   const cover = useMutation({
     mutationFn: async (file: File | null) => {
-      await autosave.settle();
       if (!file) return api<{ post: AdminBlogPost }>(`/api/blog-posts/${post.id}/cover`, { method: 'DELETE' });
       const body = new FormData();
       body.append('file', file);
@@ -192,7 +188,6 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
 
   const remove = useMutation({
     mutationFn: async () => {
-      await autosave.settle();
       return api(`/api/blog-posts/${post.id}`, { method: 'DELETE' });
     },
     onSuccess: () => {
@@ -206,27 +201,12 @@ function EditorForm({ initial }: { initial: AdminBlogPost }) {
 
   const busy = save.isPending || changeStatus.isPending || cover.isPending || emailSubscribers.isPending;
 
-  // Saves by itself a moment after typing stops. Only the saved marker moves,
-  // so whatever is being typed right now is never replaced.
-  const autosave = useAutosave({
-    current: JSON.stringify(form),
-    saved: savedJson,
-    enabled: !busy && !remove.isPending,
-    save: async () => {
-      const snapshot = form;
-      const result = await api<{ post: AdminBlogPost }>(`/api/blog-posts/${post.id}`, { method: 'PUT', body: JSON.stringify(toPayload(snapshot)) });
-      setPost(result.post);
-      setSavedJson(JSON.stringify(snapshot));
-      queryClient.setQueryData(['blog-post', result.post.id], { post: result.post });
-      void queryClient.invalidateQueries({ queryKey: ['blog-posts'] });
-    },
-  });
 
   return (
     <div className="mx-auto w-full max-w-6xl">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <BackLink href="/blog">All posts</BackLink>
-        <AutosaveStatus status={autosave.status} error={autosave.error} />
+        <SaveStatus dirty={dirty} saving={save.isPending} />
       </div>
 
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">

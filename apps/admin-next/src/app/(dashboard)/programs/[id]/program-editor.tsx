@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Globe, Loader2, Save, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { AutosaveStatus } from '@/components/autosave-status';
+import { SaveStatus } from '@/components/save-status';
 import { BackLink } from '@/components/back-link';
 import { NavLink } from '@/components/nav-link';
 import { StatusBadge } from '@/components/status-badge';
@@ -20,7 +20,6 @@ import { api, ApiError } from '@/lib/api';
 import { useNavigate } from '@/lib/navigation-progress';
 import { formatRand, illustrationLabels, parseRand, toneClass, toneLabels } from '@/lib/programs';
 import type { AdminProgram } from '@/lib/types';
-import { useAutosave } from '@/lib/use-autosave';
 import { useUnsavedGuard } from '@/lib/use-unsaved-guard';
 import { cn } from '@/lib/utils';
 import { Field, Panel } from './editor-parts';
@@ -124,7 +123,6 @@ function EditorForm({ program }: { program: AdminProgram }) {
   }
 
   async function saveNow() {
-    await autosave.settle();
     const snapshot = formRef.current;
     const result = await api<{ program: AdminProgram }>(`/api/programs/${program.id}`, { method: 'PUT', body: JSON.stringify(toPayload(snapshot)) });
     applyServerProgram(result.program, snapshot);
@@ -138,7 +136,6 @@ function EditorForm({ program }: { program: AdminProgram }) {
 
   const remove = useMutation({
     mutationFn: async () => {
-      await autosave.settle();
       return api(`/api/programs/${program.id}`, { method: 'DELETE' });
     },
     onSuccess: () => {
@@ -151,19 +148,6 @@ function EditorForm({ program }: { program: AdminProgram }) {
     onError: (error) => toast.error('Not deleted', { description: message(error, 'Please try again.') }),
   });
 
-  // Saves by itself a moment after typing stops (not while the price is
-  // unreadable). Only the saved marker moves, so typing is never replaced.
-  const autosave = useAutosave({
-    current: JSON.stringify(form),
-    saved: savedJson,
-    enabled: priceCents !== null && !save.isPending && !remove.isPending,
-    save: async () => {
-      const snapshot = form;
-      const result = await api<{ program: AdminProgram }>(`/api/programs/${program.id}`, { method: 'PUT', body: JSON.stringify(toPayload(snapshot)) });
-      applyFile(result.program);
-      setSavedJson(JSON.stringify(snapshot));
-    },
-  });
 
 
   return (
@@ -187,7 +171,7 @@ function EditorForm({ program }: { program: AdminProgram }) {
             <span className="text-sm text-muted-foreground">Show on the website</span>
             <ProgramSwitch program={program} />
           </div>
-          <AutosaveStatus status={autosave.status} error={autosave.error} />
+          <SaveStatus dirty={dirty} saving={save.isPending} />
           <Button className="rounded-full" disabled={!dirty || priceCents === null || save.isPending} onClick={() => save.mutate()}>
             {save.isPending ? <Loader2 className="animate-spin" /> : <Save />} Save
           </Button>

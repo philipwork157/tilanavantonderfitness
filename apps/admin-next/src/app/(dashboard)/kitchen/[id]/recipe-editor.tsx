@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { AutosaveStatus } from '@/components/autosave-status';
+import { SaveStatus } from '@/components/save-status';
 import { BackLink } from '@/components/back-link';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { MarkdownEditor } from '@/components/markdown-editor';
@@ -28,7 +28,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { api, ApiError } from '@/lib/api';
 import { useNavigate } from '@/lib/navigation-progress';
 import type { AdminRecipe, BlogPostSummary } from '@/lib/types';
-import { useAutosave } from '@/lib/use-autosave';
 import { useUnsavedGuard } from '@/lib/use-unsaved-guard';
 import { cn } from '@/lib/utils';
 import { RecipeArt, recipeIcons, recipeTones } from '../recipe-art';
@@ -182,7 +181,7 @@ function EditorForm({ initial }: { initial: AdminRecipe }) {
   /**
    * Takes the server's copy after a save. The form is only replaced when
    * nothing was typed while the request ran (`sent` is what was sent);
-   * otherwise the newer typing stays and is saved next.
+   * otherwise the newer typing stays, still unsaved.
    */
   function applyServerRecipe(next: AdminRecipe, sent: RecipeForm = formRef.current) {
     setRecipe(next);
@@ -198,16 +197,14 @@ function EditorForm({ initial }: { initial: AdminRecipe }) {
   }
 
   async function saveNow(): Promise<AdminRecipe> {
-    await autosave.settle();
     const snapshot = formRef.current;
     const result = await api<{ recipe: AdminRecipe }>(`/api/recipes/${recipe.id}`, { method: 'PUT', body: JSON.stringify(toPayload(snapshot)) });
     applyServerRecipe(result.recipe, snapshot);
     return result.recipe;
   }
 
-  /** Saves first when there is anything unsaved (after any running autosave). */
+  /** Saves first when there is anything unsaved. */
   async function saveIfNeeded() {
-    await autosave.settle();
     if (comparable(formRef.current) !== savedRef.current) await saveNow();
   }
 
@@ -233,7 +230,6 @@ function EditorForm({ initial }: { initial: AdminRecipe }) {
 
   const photo = useMutation({
     mutationFn: async (file: File | null) => {
-      await autosave.settle();
       if (!file) return api<{ recipe: AdminRecipe }>(`/api/recipes/${recipe.id}/image`, { method: 'DELETE' });
       const body = new FormData();
       body.append('file', file);
@@ -262,7 +258,6 @@ function EditorForm({ initial }: { initial: AdminRecipe }) {
 
   const remove = useMutation({
     mutationFn: async () => {
-      await autosave.settle();
       return api(`/api/recipes/${recipe.id}`, { method: 'DELETE' });
     },
     onSuccess: () => {
@@ -276,28 +271,13 @@ function EditorForm({ initial }: { initial: AdminRecipe }) {
 
   const busy = save.isPending || changeStatus.isPending || photo.isPending;
 
-  // Saves by itself a moment after typing stops. Only the saved marker moves,
-  // so whatever is being typed right now is never replaced.
-  const autosave = useAutosave({
-    current: comparable(form),
-    saved,
-    enabled: !busy && !remove.isPending,
-    save: async () => {
-      const snapshot = form;
-      const result = await api<{ recipe: AdminRecipe }>(`/api/recipes/${recipe.id}`, { method: 'PUT', body: JSON.stringify(toPayload(snapshot)) });
-      setRecipe(result.recipe);
-      setSaved(comparable(snapshot));
-      queryClient.setQueryData(['recipe', result.recipe.id], { recipe: result.recipe });
-      void queryClient.invalidateQueries({ queryKey: ['recipes'] });
-    },
-  });
   const servings = Math.max(1, whole(form.servings));
 
   return (
     <div className="w-full">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <BackLink href="/kitchen">All recipes</BackLink>
-        <AutosaveStatus status={autosave.status} error={autosave.error} />
+        <SaveStatus dirty={dirty} saving={save.isPending} />
       </div>
 
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
