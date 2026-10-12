@@ -12,7 +12,7 @@ Two apps, two environments, all from GitHub Actions.
 Each deploy runs, in order:
 
 1. **Quality checks** (`quality.yml`): lint, types and all tests, with a throwaway Postgres for the admin's database tests.
-2. **Admin**: Fly's builders build the root `Dockerfile` first (so a broken build never touches the database), then the database migrations run (`pnpm db:migrate`), then that image is released. Production starts the new machine and waits for its health check (`/api/health`) before stopping the old one (blue-green), so a release causes no downtime.
+2. **Admin**: `flyctl deploy` builds the root `Dockerfile` on Fly's builders and releases it. Database migrations are **not** part of the deploy: when a release includes new migrations, run them by hand first (`pnpm --filter @tilana/db db:migrate` with that environment's `DATABASE_URL`). Production starts the new machine and waits for its health check (`/api/health`) before stopping the old one (blue-green), so a release causes no downtime.
 3. **Website**: `pnpm --filter @tilana/web build`, then `wrangler deploy` of the Worker in `apps/web/dist/server`. It goes last because the website reads programs and prices from the admin.
 
 Production can also deploy only the admin or only the website (the "What to deploy" choice).
@@ -80,7 +80,6 @@ Create two environments (Settings > Environments): `development` and `production
 | Name | Value |
 |---|---|
 | `FLY_API_TOKEN_DEV`, `FLY_API_TOKEN_PROD` | The deploy tokens from step 1 |
-| `DATABASE_URL_DEV`, `DATABASE_URL_PROD` | Supabase connection string for migrations. Use the **session pooler** string (Supabase > Connect), because GitHub's runners cannot reach the direct IPv6 address |
 | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | From step 2 |
 
 **Variables** (public values, they end up in the browser)
@@ -96,5 +95,5 @@ The admin addresses (`PUBLIC_API_BASE_URL`) are fixed in the workflows; the old 
 
 - Work on `dev`; pushing deploys development.
 - When development looks right, merge `dev` into `main` and run **Deploy (production)**.
-- A failed migration stops the deploy before anything is replaced.
+- Run new database migrations by hand before deploying the code that needs them.
 - Roll back the admin: `fly releases -a <app>`, then `fly deploy --image <previous image> -a <app>`. Roll back the website: Workers & Pages > the Worker > Deployments > Rollback.

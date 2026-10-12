@@ -1,8 +1,8 @@
 name: Deploy (production)
 
 # Manual only: Actions > Deploy (production) > Run workflow, on the main branch,
-# typing "deploy" to confirm. Runs the checks, then the admin (image build,
-# database migrations, then the Fly.io release), then the website (Cloudflare Worker).
+# typing "deploy" to confirm. Runs the checks, then the admin (Fly.io), then the
+# website (Cloudflare Worker). Database migrations are run by hand beforehand.
 #   Admin:   https://admin.tilanavantonder.co.za  (fly.prod.toml)
 #   Website: https://tilanavantonder.co.za, Cloudflare Worker "tilanavantonder-website-prod"
 # One-time setup (secrets, variables, domains): docs/deploy.md
@@ -66,33 +66,15 @@ jobs:
         uses: actions/checkout@v7
       - name: Check secrets
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}
         run: |
-          test -n "$DATABASE_URL" || { echo '::error::Add the DATABASE_URL_PROD secret (see docs/deploy.md).'; exit 1; }
           test -n "$FLY_API_TOKEN" || { echo '::error::Add the FLY_API_TOKEN_PROD secret (see docs/deploy.md).'; exit 1; }
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-      - name: Set up Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: pnpm
-      - name: Install database tools
-        run: pnpm install --frozen-lockfile --filter "@tilana/db..."
       - name: Set up flyctl
         uses: superfly/flyctl-actions/setup-flyctl@1.5
-      # Build first: if the image does not build, the database is left untouched.
-      - name: Build the admin image
-        run: flyctl deploy --config fly.prod.toml --remote-only --build-only --push --image-label "$GITHUB_SHA"
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}
-      - name: Database migrations
-        run: pnpm db:migrate
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
+      # Database migrations are not part of the deploy: run them by hand first
+      # (pnpm --filter @tilana/db db:migrate) when a release includes new ones.
       - name: Deploy to Fly.io
-        run: flyctl deploy --config fly.prod.toml --image "registry.fly.io/tilanavantonder-admin-prod:$GITHUB_SHA"
+        run: flyctl deploy --config fly.prod.toml --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}
 

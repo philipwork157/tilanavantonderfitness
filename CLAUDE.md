@@ -124,7 +124,8 @@ Use `pnpm dev:stop` before replacing managed development processes.
 
 GitHub Actions deploy both apps; see `docs/deploy.md`. A push to `dev` deploys
 development; production is a manual run on `main` (type "deploy"). Order: quality
-checks, admin (database migrations, then Fly.io from the root `Dockerfile`,
+checks, admin (Fly.io from the root `Dockerfile`; migrations are run by hand,
+not by the pipeline;
 `fly.toml` / `fly.prod.toml`, Frankfurt), then the website (Cloudflare Worker
 from `apps/web/dist/server`). Settings live in Fly secrets and GitHub
 secrets/variables, never in the repository. Do not deploy, change secrets or
