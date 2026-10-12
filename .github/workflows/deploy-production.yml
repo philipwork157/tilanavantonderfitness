@@ -1,8 +1,8 @@
 name: Deploy (production)
 
 # Manual only: Actions > Deploy (production) > Run workflow, on the main branch,
-# typing "deploy" to confirm. Runs the checks, then the admin (database
-# migrations + Fly.io), then the website (Cloudflare Worker).
+# typing "deploy" to confirm. Runs the checks, then the admin (image build,
+# database migrations, then the Fly.io release), then the website (Cloudflare Worker).
 #   Admin:   https://admin.tilanavantonder.co.za  (fly.prod.toml)
 #   Website: https://tilanavantonder.co.za, Cloudflare Worker "tilanavantonder-website-prod"
 # One-time setup (secrets, variables, domains): docs/deploy.md
@@ -80,14 +80,19 @@ jobs:
           cache: pnpm
       - name: Install database tools
         run: pnpm install --frozen-lockfile --filter "@tilana/db..."
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@1.5
+      # Build first: if the image does not build, the database is left untouched.
+      - name: Build the admin image
+        run: flyctl deploy --config fly.prod.toml --remote-only --build-only --push --image-label "$GITHUB_SHA"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}
       - name: Database migrations
         run: pnpm db:migrate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
-      - name: Set up flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@1.5
       - name: Deploy to Fly.io
-        run: flyctl deploy --config fly.prod.toml --remote-only
+        run: flyctl deploy --config fly.prod.toml --image "registry.fly.io/tilanavantonder-admin-prod:$GITHUB_SHA"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}
 
@@ -104,7 +109,6 @@ jobs:
     environment: production
     permissions:
       contents: read
-      deployments: write
     env:
       DEPLOYMENT_ENVIRONMENT: production
       CLOUDFLARE_ENV: production

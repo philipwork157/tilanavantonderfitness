@@ -12,7 +12,7 @@ Two apps, two environments, all from GitHub Actions.
 Each deploy runs, in order:
 
 1. **Quality checks** (`quality.yml`): lint, types and all tests, with a throwaway Postgres for the admin's database tests.
-2. **Admin**: database migrations (`pnpm db:migrate`), then `flyctl deploy` builds the root `Dockerfile` on Fly's builders and replaces the running machine once its health check (`/api/health`) passes.
+2. **Admin**: Fly's builders build the root `Dockerfile` first (so a broken build never touches the database), then the database migrations run (`pnpm db:migrate`), then that image is released. Production starts the new machine and waits for its health check (`/api/health`) before stopping the old one (blue-green), so a release causes no downtime.
 3. **Website**: `pnpm --filter @tilana/web build`, then `wrangler deploy` of the Worker in `apps/web/dist/server`. It goes last because the website reads programs and prices from the admin.
 
 Production can also deploy only the admin or only the website (the "What to deploy" choice).

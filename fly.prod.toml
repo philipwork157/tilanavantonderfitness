@@ -4,6 +4,15 @@
 # Settings come from Fly secrets (see apps/admin-next/.env.example and docs/deploy.md).
 app = "tilanavantonder-admin-prod"
 primary_region = "fra" # Frankfurt, next to Supabase
+# Give PDF emails and newsletter sends time to finish when a new release replaces the machine.
+kill_timeout = "30s"
+# A little swap so a big PDF preview (pdf.js + canvas + sharp) never runs out of memory.
+swap_size_mb = 512
+
+[deploy]
+  # Start the new machine and wait for its health check before stopping the old one,
+  # so a release never takes the admin (and the website's programs) offline.
+  strategy = "bluegreen"
 
 [build]
   dockerfile = "Dockerfile"
