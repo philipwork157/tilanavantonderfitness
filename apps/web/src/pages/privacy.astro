@@ -5,7 +5,7 @@ import { site } from '@web/site/config';
 ---
 <LegalPage pageTitle="Privacy Policy" description="How Tilana van Tonder collects, uses, stores, and protects personal information submitted through this website." summary={privacySummary} sections={privacySections}>
   <li data-reveal>
-    <span class="n">10</span>
+    <span class="n">{String(privacySections.length + 1).padStart(2, '0')}</span>
     <div>
       <h2>Questions, complaints and policy changes</h2>
       <p>Contact <a href={`mailto:${site.email}`}>{site.email}</a> first if you have a privacy question or request. You may also lodge a complaint with South Africa's Information Regulator through its official complaints service.</p>

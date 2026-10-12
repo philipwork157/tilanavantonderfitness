@@ -5,7 +5,7 @@ import { site } from '@web/site/config';
 ---
 <LegalPage pageTitle="Refund & Cancellation Policy" description="Refund and cancellation policy for once-off digital programme purchases." summary={refundSummary} sections={refundSections}>
   <li data-reveal>
-    <span class="n">08</span>
+    <span class="n">{String(refundSections.length + 1).padStart(2, '0')}</span>
     <div>
       <h2>Start a request</h2>
       <p>Email <a href={`mailto:${site.email}?subject=Refund%20request`}>{site.email}</a> and keep your order or Paystack reference available so the payment can be located safely.</p>

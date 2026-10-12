@@ -11,6 +11,10 @@ export const site = {
   name: 'Tilana van Tonder',
   email: 'tilanavantonder@gmail.com',
   whatsapp: '27728803734',
+  /** Seller details the law (ECT Act s43) and Paystack ask a shop to show. */
+  phone: '+27 72 880 3734',
+  address: 'Ternberry Village, Cleveland 31, Cape Town, Western Cape, 7580, South Africa',
+  url: 'https://tilanavantonder.co.za',
   tagline: 'Move better. Feel stronger. Live healthier.',
   description:
     'Practical strength programs, movement education, nutrition guidance, and sustainable healthy habits for women and men, by Tilana van Tonder.',

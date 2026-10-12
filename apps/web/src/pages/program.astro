@@ -11,6 +11,7 @@ import { checkoutEnabled, href } from '@web/site/config';
 import { programDisclaimer, programFaqs } from '@web/site/data';
 import { loadSitePrograms, setProgramCacheHeaders } from '@web/utils/programs';
 import { productName } from '@web/site/programs';
+import { faqStructuredData, programsStructuredData } from '@web/site/structured-data';
 
 // Rendered on request so programs published in the admin appear without a rebuild.
 export const prerender = false;
@@ -28,8 +29,24 @@ const peekPrograms: PeekProgram[] = [...strength, ...focus].flatMap((p) => {
 const description = names.length > 1
   ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}: once-off digital programs by Tilana van Tonder.`
   : 'Once-off digital strength, pelvic-floor and nutrition programs by Tilana van Tonder.';
+// What search and AI answer engines read: the page, each program with its price, and the buying FAQs.
+const pageUrl = new URL('/program', Astro.site).href;
+const personId = new URL('/#person', Astro.site).href;
+const structuredData = [
+  {
+    '@type': 'WebPage',
+    '@id': `${pageUrl}#webpage`,
+    url: pageUrl,
+    name: 'Programs & Pricing | Tilana van Tonder',
+    description,
+    isPartOf: { '@id': new URL('/#website', Astro.site).href },
+    about: { '@id': personId },
+  },
+  ...(programs.length ? [programsStructuredData([...strength, ...focus], pageUrl, personId, new URL('/og.png', Astro.site).href)] : []),
+  faqStructuredData(programFaqs, pageUrl),
+];
 ---
-<SiteLayout title="Programs & Pricing" current="program" description={description} programs={programs}>
+<SiteLayout title="Programs & Pricing" current="program" description={description} programs={programs} structuredData={structuredData}>
   <PageHero
     eyebrow="Programs for real life"
     lines={['Find your', '*next step.*']}

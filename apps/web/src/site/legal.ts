@@ -116,7 +116,8 @@ export const refundSections = [
     title: 'How to request a refund',
     body: [
       `Email ${site.email} with your full name, purchase email address, programme name, order number or Paystack reference, purchase date, and a short explanation of the request. Do not send card numbers, bank login details or one-time PINs.`,
-      'We will acknowledge the request and may ask for information reasonably needed to locate the transaction or understand the problem. Decisions are based on the purchase and delivery records, this policy and applicable law.',
+      'We will acknowledge your request within 2 working days and may ask for information reasonably needed to locate the transaction or understand the problem. You will receive a decision within 5 working days of us having that information. Decisions are based on the purchase and delivery records, this policy and applicable law.',
+      'An approved refund is processed through Paystack within 2 working days of the decision.',
     ],
   },
   {
@@ -129,8 +130,8 @@ export const refundSections = [
   {
     title: 'Contact and business details',
     body: [
-      `Seller: ${site.name}, sole proprietor. Email: ${site.email}. Business address: Ternberry Village, Cleveland 31, Cape Town, Western Cape, 7580, South Africa.`,
-      'Please contact us first if you have a question or complaint about a purchase. We will try to resolve it fairly and keep a written record of the outcome.',
+      `Seller: ${site.name}, sole proprietor. Email: ${site.email}. Phone and WhatsApp: ${site.phone}. Business address: ${site.address}. Website: ${site.url}.`,
+      'Please contact us first if you have a question or complaint about a purchase, before disputing the payment with your bank. We will try to resolve it fairly and keep a written record of the outcome.',
     ],
   },
 ] as const;
@@ -163,9 +164,10 @@ export const refundSummary = {
     'PDF emailed straight after payment',
     'Missing or faulty files fixed first',
     'Duplicate charges investigated',
+    'Replies within 2 working days',
     'Statutory rights remain protected',
   ],
-  effective: '7 October 2026',
+  effective: '12 October 2026',
 };
 
 /** Terms of sale and use (Electronic Communications and Transactions Act, section 43 details included). */
@@ -173,7 +175,7 @@ export const termsSections = [
   {
     title: 'Who you are buying from',
     body: [
-      `Programmes on this website are sold by ${site.name}, a sole proprietor trading in South Africa. Email: ${site.email}. Physical and postal address: Ternberry Village, Cleveland 31, Cape Town, Western Cape, 7580, South Africa.`,
+      `Programmes on this website (${site.url}) are sold by ${site.name}, a sole proprietor trading in South Africa. Email: ${site.email}. Phone and WhatsApp: ${site.phone}. Physical address, also for legal notices: ${site.address}.`,
       'These terms apply to every purchase on this website and to using the website itself. By buying a programme you confirm that you have read them, together with the refund and cancellation policy and the privacy policy.',
     ],
   },
@@ -188,7 +190,7 @@ export const termsSections = [
     title: 'Prices and payment',
     body: [
       'Prices are shown in South African rand (ZAR) and are the full amount you pay for the programme. The total for your basket is shown before you pay.',
-      'Payments are processed by Paystack, a licensed payment provider. Card and bank details are entered on Paystack’s secure payment page and never reach this website. Paystack uses encryption and industry security standards to protect payments.',
+      'Payments are processed by Paystack, a licensed payment provider. You can pay by card (Visa or Mastercard) or with any other payment method shown on Paystack’s payment page. Card and bank details are entered on Paystack’s secure payment page and never reach this website. Paystack uses encryption and industry security standards to protect payments.',
       'An order is only complete once Paystack confirms the payment. If a price on the website is clearly wrong, the order may be cancelled and fully refunded before the programme is sent.',
     ],
   },
@@ -197,6 +199,7 @@ export const termsSections = [
     body: [
       'Your programme is emailed to the address you enter at checkout as soon as Paystack confirms your payment, with the PDF attached. Please check the address carefully before paying.',
       `If nothing has arrived within an hour, check your spam or promotions folder, then email ${site.email} with your order number and the programme will be sent again.`,
+      'The email also shows your order number and the programmes you bought. Please keep it, together with your Paystack payment confirmation, as your record of the purchase. We keep a record of every order and can confirm its details on request.',
     ],
   },
   {
@@ -257,6 +260,6 @@ export const termsSummary = {
     'General education, not medical advice',
     'Your consumer rights stay protected',
   ],
-  effective: '11 October 2026',
+  effective: '12 October 2026',
 };
 

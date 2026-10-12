@@ -18,6 +18,20 @@ import { contactInterests } from '@web/site/data';
       <h2 class="h2">A personal reply, <em>without the pressure.</em></h2>
       <p class="lede">Email is the simplest way to reach me. Please do not send diagnoses, medical records, or other sensitive health information.</p>
       <a class="contact-mail" href={`mailto:${site.email}`}><Icon name="mail" />{site.email}</a>
+      <dl class="contact-details">
+        <div>
+          <dt>Phone and WhatsApp</dt>
+          <dd><a href={`tel:+${site.whatsapp}`}>{site.phone}</a></dd>
+        </div>
+        <div>
+          <dt>Business address</dt>
+          <dd>{site.name}<br />{site.address}</dd>
+        </div>
+        <div>
+          <dt>Buying a program</dt>
+          <dd><a href={href('/terms')}>Terms of sale</a> · <a href={href('/refund-policy')}>Refund policy</a> · <a href={href('/privacy')}>Privacy policy</a></dd>
+        </div>
+      </dl>
       <div class="note card tone-sage">
         <strong>Not a clinical service</strong>
         <p>For medical concerns, pain, leaking, pelvic pressure, birth complications, or emergencies, contact an appropriately qualified healthcare professional.</p>

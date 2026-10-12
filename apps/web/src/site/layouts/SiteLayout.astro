@@ -19,6 +19,7 @@ import WhatsAppChat from '../components/WhatsAppChat';
 import { checkoutEnabled, href, site, type NavKey } from '../config';
 import { toProducts, type Program } from '../programs';
 import { isLiveSite } from '@web/utils/site-environment';
+import { canonicalPath } from '@web/utils/sitemap';
 
 interface Props {
   title: string;
@@ -59,7 +60,8 @@ const robots = isLiveSite ? pageRobots : 'noindex, nofollow';
 const products = programs?.length ? toProducts(programs) : undefined;
 
 const pageTitle = title === site.name ? title : `${title} | ${site.name}`;
-const canonical = new URL(Astro.url.pathname, Astro.site);
+// The page's one address: prebuilt pages are files (about.html) served at /about.
+const canonical = new URL(canonicalPath(Astro.url.pathname), Astro.site);
 const socialImage = image ? new URL(image, Astro.site) : null;
 const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 const websiteId = new URL('/#website', Astro.site).href;

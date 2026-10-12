@@ -178,6 +178,10 @@
 .contact-side .h2 { font-size: clamp(2rem, 4vw, 3.3rem); }
 .contact-mail { display: inline-flex; align-items: center; gap: 0.6rem; margin: 1.8rem 0 1rem; font-size: clamp(1rem, 1.6vw, 1.2rem); font-weight: 800; color: var(--accent-text); text-underline-offset: 5px; overflow-wrap: anywhere; }
 .contact-mail svg { width: 1.4rem; height: 1.4rem; flex: none; }
+.contact-details { display: grid; gap: 1rem; margin: 0.4rem 0 0; }
+.contact-details dt { margin-bottom: 0.2rem; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-soft); }
+.contact-details dd { margin: 0; font-size: 0.95rem; line-height: 1.6; overflow-wrap: anywhere; }
+.contact-details a { color: var(--accent-text); font-weight: 700; text-underline-offset: 4px; }
 .contact-side .note { margin-top: 2rem; padding: 1.3rem 1.4rem; }
 .contact-side .note strong { display: block; margin-bottom: 0.4rem; font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; }
 .contact-side .note p { margin: 0; font-size: 0.88rem; line-height: 1.65; }
@@ -215,6 +219,14 @@
   .hero-visual { width: min(78%, 21rem); margin: 1.5rem auto 0; }
   .story-side, .legal-summary { position: static; }
   .story-photos { height: 20rem; }
+  /* Home hero on narrow screens: the stickers frame the photo instead of
+     covering Tilana. The marathon note is pinned in the empty top-right corner
+     (opposite the spinning badge); the motto hangs off the bottom edge. */
+  .hero-visual { margin-bottom: 2rem; }
+  .hero-visual .sticker { padding: 0.55rem 0.8rem; font-size: 0.76rem; box-shadow: 4px 4px 0 var(--hard-shadow); }
+  .hero-visual .sticker strong { font-size: 1rem; }
+  .hero-visual .sticker-a { top: -0.4rem; right: -1.6rem; rotate: 7deg; }
+  .hero-visual .sticker-b { top: auto; bottom: -1.9rem; left: 0; right: 0; width: max-content; margin-inline: auto; rotate: -3deg; }
   .post-feature { grid-template-columns: minmax(0, 1fr); }
   .post-feature .post-cover { min-height: 0; aspect-ratio: 4 / 3; border-right: 0; border-bottom: 2px solid var(--line); }
   .values-grid { grid-template-columns: minmax(0, 1fr); }
@@ -227,8 +239,7 @@
   /* Home program cards stack on phones, so keep each one short. */
   .prog-card .prog-art { width: min(100%, 11rem); margin-block: -0.4rem 0.2rem; }
   .prog-card .prog-body { padding: 1.1rem 1.2rem 1.2rem; }
-  .sticker-a { right: -0.8rem; }
-  .sticker-b { left: -0.8rem; }
+  .hero-visual .sticker-a { right: -0.9rem; }
   .spin-badge { left: -1.2rem; width: 7.4rem; }
   .about-portrait .sticker-b { left: -0.8rem; }
   .disclaimer { grid-template-columns: minmax(0, 1fr); }
