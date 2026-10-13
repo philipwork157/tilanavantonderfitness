@@ -35,6 +35,12 @@ export const POST = websiteRoute(async (request) => {
 
   const { mode } = paystackSettings();
   const site = websiteUrl();
+  // Safety lock: the live website never takes payments with test keys, because
+  // Paystack's public test cards would then "pay" and receive the PDFs free.
+  if (mode === 'test' && isLiveWebsite(site)) {
+    logger.error('Checkout refused: test Paystack keys on the live website');
+    throw new HttpError(503, 'Online checkout is not open yet. Please get in touch instead.');
+  }
   // Paystack sends buyers back to this address after paying; a wrong one strands them.
   if (!isDevelopment && (!site.startsWith('https://') || /localhost|127\.0\.0\.1/.test(site))) {
     logger.error('WEBSITE_URL must be the public https website address for checkout');
@@ -57,3 +63,9 @@ export const POST = websiteRoute(async (request) => {
 });
 
 export const OPTIONS = websitePreflight;
+
+/** The public website, as opposed to the development copy. */
+function isLiveWebsite(site: string): boolean {
+  const host = new URL(site).hostname;
+  return host === 'tilanavantonder.co.za' || host === 'www.tilanavantonder.co.za';
+}

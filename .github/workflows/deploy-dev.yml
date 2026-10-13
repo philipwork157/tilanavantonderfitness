@@ -62,6 +62,9 @@ jobs:
       PUBLIC_POSTHOG_HOST: https://eu.i.posthog.com
       # Visits to the development website show under "My testing" in the admin.
       PUBLIC_SITE_ENVIRONMENT: development
+      # Online buying: "true" or "false" (a variable on the GitHub environment).
+      # Empty: on for development, off for the live website until switched on.
+      PUBLIC_CHECKOUT_ENABLED: ${{ vars.PUBLIC_CHECKOUT_ENABLED }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7

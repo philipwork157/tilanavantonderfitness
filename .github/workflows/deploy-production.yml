@@ -99,6 +99,9 @@ jobs:
       PUBLIC_POSTHOG_KEY: ${{ vars.PUBLIC_POSTHOG_KEY }}
       PUBLIC_POSTHOG_HOST: https://eu.i.posthog.com
       PUBLIC_SITE_ENVIRONMENT: production
+      # Online buying: "true" or "false" (a variable on the GitHub environment).
+      # Empty: on for development, off for the live website until switched on.
+      PUBLIC_CHECKOUT_ENABLED: ${{ vars.PUBLIC_CHECKOUT_ENABLED }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7

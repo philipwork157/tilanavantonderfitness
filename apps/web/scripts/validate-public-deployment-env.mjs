@@ -55,6 +55,15 @@ if (!String(process.env.PUBLIC_POSTHOG_KEY ?? '').trim()) {
   console.warn('::warning::PUBLIC_POSTHOG_KEY is empty, so this website will not record any visits.');
 }
 
+// Online buying (src/site/config.ts): "true", "false", or empty for the
+// default (on for development, off for the live website).
+const checkout = String(process.env.PUBLIC_CHECKOUT_ENABLED ?? '').trim().toLowerCase();
+if (checkout && checkout !== 'true' && checkout !== 'false') {
+  errors.push('PUBLIC_CHECKOUT_ENABLED must be "true", "false" or empty.');
+}
+const checkoutOn = checkout === 'true' || (!checkout && deployment !== 'production');
+console.log(`Online checkout (Add to basket, basket, /checkout): ${checkoutOn ? 'ON' : 'OFF'}`);
+
 if (errors.length) {
   console.error(`Invalid ${deployment || 'public'} deployment configuration:`);
   for (const error of errors) console.error(`- ${error}`);

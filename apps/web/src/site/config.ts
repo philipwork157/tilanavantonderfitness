@@ -1,4 +1,6 @@
 // Website settings shared by every page.
+import { SITE_ENVIRONMENT } from '@web/utils/site-environment';
+
 export const BASE = '';
 
 /** Builds an internal link: href('/about') → '/about'. */
@@ -23,11 +25,25 @@ export const site = {
 } as const;
 
 /**
- * Online checkout: "Add to basket" buttons, the basket drawer and the Paystack
- * checkout page. Set to false to fall back to the live site's behaviour, where
- * every program button opens the contact form with that program chosen.
+ * Whether online buying is on, from PUBLIC_CHECKOUT_ENABLED ("true" or
+ * "false"). When it is not set: on for the development website (and locally),
+ * off for the live website, so the live site only sells once it is switched on
+ * on purpose (after Paystack approves the business).
  */
-export const checkoutEnabled = true;
+export function checkoutSetting(value: unknown, environment: 'production' | 'development'): boolean {
+  const setting = String(value ?? '').trim().toLowerCase();
+  if (setting === 'true') return true;
+  if (setting === 'false') return false;
+  return environment !== 'production';
+}
+
+/**
+ * Online checkout: "Add to basket" buttons, the basket drawer and the Paystack
+ * checkout page. When off, every program button opens the contact form with
+ * that program chosen, and /checkout says online checkout is coming soon. The
+ * rest of the site (programs, prices, sneak peeks, quiz) stays the same.
+ */
+export const checkoutEnabled = checkoutSetting(import.meta.env.PUBLIC_CHECKOUT_ENABLED, SITE_ENVIRONMENT);
 
 /** Contact link for a program, with the program chosen and a first line of the message. */
 export function programContactHref(program: { key: string; label: string }): string {

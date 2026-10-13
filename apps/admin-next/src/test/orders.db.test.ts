@@ -175,6 +175,26 @@ describe.skipIf(!url)('orders (database)', () => {
     vi.unstubAllEnvs();
   });
 
+  it('never takes payments with test keys on the live website', async () => {
+    vi.stubEnv('DATABASE_URL', url!);
+    vi.stubEnv('PAYSTACK_SECRET_KEY', 'sk_test_live_site');
+    vi.stubEnv('PAYSTACK_MODE', 'test');
+    vi.stubEnv('WEBSITE_URL', 'https://tilanavantonder.co.za');
+    vi.stubEnv('WEBSITE_ORIGINS', 'https://tilanavantonder.co.za');
+    const paystack = vi.fn();
+    vi.stubGlobal('fetch', paystack);
+    const response = await startBasket(new Request('http://admin.test/api/checkout/paystack/basket', {
+      method: 'POST',
+      headers: { origin: 'https://tilanavantonder.co.za', 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.77' },
+      body: JSON.stringify(request()),
+    }));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ statusMessage: 'Online checkout is not open yet. Please get in touch instead.' });
+    expect(paystack).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
   it('records a failed delivery instead of losing it', async () => {
     vi.stubEnv('WEBSITE_URL', 'https://site.test');
     const { reference } = await startCheckout(db, request(), deps());

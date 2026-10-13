@@ -98,6 +98,7 @@ Create two environments (Settings > Environments): `development` and `production
 |---|---|
 | `PUBLIC_TURNSTILE_SITE_KEY_DEV`, `PUBLIC_TURNSTILE_SITE_KEY_PROD` | Turnstile site keys (if they already exist as secrets, those keep working) |
 | `PUBLIC_POSTHOG_KEY` | The PostHog project token (`phc_...`). Empty = no analytics |
+| `PUBLIC_CHECKOUT_ENABLED` | Variable on the GitHub **environment** (development / production). `true` shows Add to basket, the basket and checkout; `false` hides them (program buttons open the contact form). Empty: on for development, **off for the live website**. Set it to `true` on production only after Paystack has approved the business and the live keys are on Fly; the admin refuses checkouts with test keys on the live website anyway |
 
 The admin addresses (`PUBLIC_API_BASE_URL`) are fixed in the workflows; the old `PUBLIC_API_BASE_URL_*` secrets are no longer used and can be deleted.
 
