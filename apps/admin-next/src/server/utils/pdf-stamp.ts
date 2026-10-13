@@ -3,16 +3,16 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import fontkit from '@pdf-lib/fontkit';
-import { degrees, EncryptedPDFError, PDFDict, PDFDocument, PDFName, PDFString, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
+import { degrees, EncryptedPDFError, PDFDict, PDFDocument, PDFName, PDFString, rgb, setCharacterSpacing, type PDFFont, type PDFPage } from 'pdf-lib';
 
 /*
  * Every buyer gets their own copy of a program PDF. The clean PDF in the
  * private bucket is never changed; the copy is stamped just before it is
  * emailed, so a shared copy can be traced back to its order:
  *
- *  - Visible: a footer on every page ("Licensed to Jane Smith · Order
- *    TV-7K4Q9P · 12 October 2026 · Personal use only") and a "Personal copy"
- *    seal on the cover.
+ *  - Visible: a line under the page's own footer on every page ("PERSONAL
+ *    COPY FOR JANE SMITH / ORDER TV-7K4Q9P / 12 OCTOBER 2026 / PLEASE DO NOT
+ *    SHARE") and a small tilted "Personal copy" seal top-right on the cover.
  *  - Hidden: the order number in the file's properties (subject, keywords and
  *    a TVTOrder entry) and as invisible text on every page, which survive
  *    cropping or covering the footer.
@@ -36,10 +36,13 @@ export class PdfStampError extends Error {}
 /** The marker hidden on every page and in the file properties. */
 export const hiddenMarker = (orderNumber: string) => `tvt-order:${orderNumber}`;
 
-const INK = rgb(0.42, 0.27, 0.18); // dark caramel
-const PAPER = rgb(0.988, 0.957, 0.933); // cream
-const FOOTER_MARGIN = 9; // points from the bottom edge to the footer band
-const SIDE_MARGIN = 18;
+// Colours from the programs' own design: terracotta (rules, accents) and cream paper.
+const TERRACOTTA = rgb(0.70, 0.42, 0.30);
+const INK = rgb(0.47, 0.27, 0.18);
+const PAPER = rgb(0.992, 0.961, 0.937);
+const FOOTER_BASELINE = 13; // points above the bottom edge, below the page's own footer
+const SIDE_MARGIN = 24;
+const LETTER_SPACING = 0.55; // like the programs' small spaced capitals
 
 let fonts: Promise<{ regular: Uint8Array; semibold: Uint8Array }> | undefined;
 function fontFiles() {
@@ -97,65 +100,77 @@ function viewOf(page: PDFPage) {
 
 type View = ReturnType<typeof viewOf>;
 
-function text(page: PDFPage, view: View, value: string, x: number, y: number, font: PDFFont, size: number, options: { opacity?: number; color?: ReturnType<typeof rgb> } = {}) {
-  page.drawText(value, { ...view.at(x, y), rotate: view.rotate, font, size, color: options.color ?? INK, opacity: options.opacity ?? 1 });
+type DrawOptions = { opacity?: number; color?: ReturnType<typeof rgb>; spacing?: number; angle?: number };
+
+/** Width of text including letter spacing. */
+const widthOf = (value: string, font: PDFFont, size: number, spacing = 0) =>
+  font.widthOfTextAtSize(value, size) + spacing * Math.max(0, [...value].length - 1);
+
+/** Draws text at view position (x, y); `angle` tilts it (degrees, counter-clockwise). */
+function text(page: PDFPage, view: View, value: string, x: number, y: number, font: PDFFont, size: number, options: DrawOptions = {}) {
+  const spacing = options.spacing ?? 0;
+  if (spacing) page.pushOperators(setCharacterSpacing(spacing));
+  page.drawText(value, {
+    ...view.at(x, y),
+    rotate: degrees(view.rotate.angle + (options.angle ?? 0)),
+    font,
+    size,
+    color: options.color ?? INK,
+    opacity: options.opacity ?? 1,
+  });
+  if (spacing) page.pushOperators(setCharacterSpacing(0));
 }
 
-/** A light band with one centred line, so it reads on any background. */
+/**
+ * One line of small spaced capitals, centred under the page's own footer, in
+ * the programs' style: "PERSONAL COPY FOR JANE SMITH / ORDER TV-7K4Q9P / ...".
+ * The longest wording that fits the page is used.
+ */
 function drawFooter(page: PDFPage, view: View, lines: string[], font: PDFFont) {
   const available = view.width - SIDE_MARGIN * 2;
-  let size = 6.5;
-  let line = lines[0]!;
-  // Smaller first, then the shorter wording, then shorten the name.
+  let size = 5.6;
+  let line = lines[lines.length - 1]!;
   pick: for (const candidate of lines) {
-    for (size = 6.5; size >= 5; size -= 0.5) {
-      if (font.widthOfTextAtSize(candidate, size) <= available) {
+    for (size = 5.6; size >= 4.6; size -= 0.2) {
+      if (widthOf(candidate, font, size, LETTER_SPACING) <= available) {
         line = candidate;
         break pick;
       }
     }
   }
-  if (font.widthOfTextAtSize(line, size) > available) {
-    size = 5;
-    line = fit(lines[lines.length - 1]!, font, size, available);
-  }
-  const width = font.widthOfTextAtSize(line, size);
-  const padX = 5;
-  const bandHeight = size + 5;
-  const left = (view.width - width) / 2;
-  const corner = view.at(left - padX, FOOTER_MARGIN);
-  page.drawRectangle({
-    ...corner,
-    width: width + padX * 2,
-    height: bandHeight,
-    rotate: view.rotate,
-    color: PAPER,
-    opacity: 0.82,
-  });
-  text(page, view, line, left, FOOTER_MARGIN + (bandHeight - size) / 2 + size * 0.18, font, size);
+  if (widthOf(line, font, size, LETTER_SPACING) > available) line = fit(line, font, size, available - LETTER_SPACING * line.length);
+  const width = widthOf(line, font, size, LETTER_SPACING);
+  text(page, view, line, (view.width - width) / 2, FOOTER_BASELINE, font, size, { color: TERRACOTTA, spacing: LETTER_SPACING });
 }
 
-/** The round "Personal copy" seal, bottom-right of the cover, above the footer. */
+/**
+ * A small rubber-stamp seal in the empty top-right corner of the cover,
+ * slightly tilted like the "Volume" seals on the website: double ring,
+ * "PERSONAL COPY", the buyer's name and the purchase date.
+ */
 function drawSeal(page: PDFPage, view: View, name: string, date: string, fonts: { regular: PDFFont; semibold: PDFFont }) {
-  const radius = Math.min(40, view.width * 0.09);
-  const cx = view.width - radius - 22;
-  const cy = FOOTER_MARGIN + 18 + radius;
+  const radius = Math.max(22, Math.min(31, view.width * 0.052));
+  const cx = view.width - radius - 26;
+  const cy = view.height - radius - 22;
+  const tilt = -9;
+  const turn = (tilt * Math.PI) / 180;
+  // A point `dx, dy` from the centre, turned with the seal.
+  const from = (dx: number, dy: number) => ({ x: cx + dx * Math.cos(turn) - dy * Math.sin(turn), y: cy + dx * Math.sin(turn) + dy * Math.cos(turn) });
+  const centred = (value: string, dy: number, font: PDFFont, size: number, options: DrawOptions = {}) => {
+    const start = from(-widthOf(value, font, size, options.spacing) / 2, dy);
+    text(page, view, value, start.x, start.y, font, size, { ...options, angle: tilt });
+  };
+
   const centre = view.at(cx, cy);
-  page.drawCircle({ ...centre, size: radius, color: PAPER, opacity: 0.94, borderColor: INK, borderWidth: 1.1 });
-  page.drawCircle({ ...centre, size: radius - 3.2, borderColor: INK, borderWidth: 0.4, borderOpacity: 0.7 });
+  page.drawCircle({ ...centre, size: radius, color: PAPER, opacity: 0.92, borderColor: TERRACOTTA, borderWidth: 1.2 });
+  page.drawCircle({ ...centre, size: radius - 2.6, borderColor: TERRACOTTA, borderWidth: 0.45 });
 
-  const inner = radius * 1.55;
-  const label = 'PERSONAL COPY';
-  const labelSize = radius * 0.15;
-  text(page, view, label, cx - fonts.semibold.widthOfTextAtSize(label, labelSize) / 2, cy + radius * 0.3, fonts.semibold, labelSize);
-
-  let nameSize = radius * 0.24;
-  while (nameSize > radius * 0.15 && fonts.semibold.widthOfTextAtSize(name, nameSize) > inner) nameSize -= 0.25;
-  const shownName = fit(name, fonts.semibold, nameSize, inner);
-  text(page, view, shownName, cx - fonts.semibold.widthOfTextAtSize(shownName, nameSize) / 2, cy - nameSize * 0.35, fonts.semibold, nameSize);
-
-  const dateSize = radius * 0.14;
-  text(page, view, date, cx - fonts.regular.widthOfTextAtSize(date, dateSize) / 2, cy - radius * 0.48, fonts.regular, dateSize);
+  const inner = radius * 1.42;
+  centred('PERSONAL COPY', radius * 0.3, fonts.semibold, radius * 0.125, { color: TERRACOTTA, spacing: radius * 0.012 });
+  let nameSize = radius * 0.25;
+  while (nameSize > radius * 0.15 && fonts.semibold.widthOfTextAtSize(name, nameSize) > inner) nameSize -= 0.2;
+  centred(fit(name, fonts.semibold, nameSize, inner), -nameSize * 0.32, fonts.semibold, nameSize, { color: INK });
+  centred(date.toUpperCase(), -radius * 0.44, fonts.regular, radius * 0.105, { color: TERRACOTTA, spacing: radius * 0.008 });
 }
 
 /** Opens the PDF the way stamping needs it; password-protected files are refused. */
@@ -196,12 +211,13 @@ async function stamp(pdf: Uint8Array, details: StampDetails): Promise<{ data: Bu
   const name = printable(details.name, regular);
   const order = printable(details.orderNumber, regular);
   const date = purchaseDate(details.purchasedAt);
-  const owner = name ? `Licensed to ${name}` : 'Personal copy';
+  const owner = (name ? `Personal copy for ${name}` : 'Personal copy').toUpperCase();
+  const when = date.toUpperCase();
   // Longest first; the footer uses the first that fits the page.
   const lines = [
-    `${owner} · Order ${order} · ${date} · Personal use only, please do not share`,
-    `${owner} · Order ${order} · ${date} · Personal use only`,
-    `${owner} · Order ${order} · ${date}`,
+    `${owner} / ORDER ${order} / ${when} / PLEASE DO NOT SHARE`,
+    `${owner} / ORDER ${order} / ${when}`,
+    `${owner} / ORDER ${order}`,
   ];
   const marker = hiddenMarker(details.orderNumber);
 

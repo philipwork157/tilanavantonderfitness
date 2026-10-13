@@ -39,11 +39,11 @@ describe('personalised program PDFs', () => {
     const texts = await pageTexts(data);
     expect(texts).toHaveLength(3);
     for (const page of texts) {
-      expect(page).toContain('Licensed to Jane Smith · Order TV-7K4Q9P · 12 October 2026');
+      expect(page).toContain('PERSONAL COPY FOR JANE SMITH / ORDER TV-7K4Q9P / 12 OCTOBER 2026');
       expect(page).toContain('tvt-order:TV-7K4Q9P');
     }
-    expect(texts[0]).toContain('PERSONAL COPY');
-    expect(texts[1]).not.toContain('PERSONAL COPY');
+    expect(texts[0]).toContain('Jane Smith'); // the seal on the cover
+    expect(texts[1]).not.toContain('Jane Smith');
   });
 
   it('hides the order number in the file properties too', async () => {
@@ -68,9 +68,9 @@ describe('personalised program PDFs', () => {
   it('copes with names the font cannot draw and with no name at all', async () => {
     const pdf = await samplePdf();
     const mixed = await pageTexts((await stampProgramPdf(pdf, { ...buyer, name: 'Zoë Nomvula Müller 张伟' })).data);
-    expect(mixed[0]).toContain('Licensed to Zoë Nomvula Müller · Order TV-7K4Q9P');
+    expect(mixed[0]).toContain('PERSONAL COPY FOR ZOË NOMVULA MÜLLER / ORDER TV-7K4Q9P');
     const none = await pageTexts((await stampProgramPdf(pdf, { ...buyer, name: '张伟' })).data);
-    expect(none[1]).toContain('Personal copy · Order TV-7K4Q9P');
+    expect(none[1]).toContain('PERSONAL COPY / ORDER TV-7K4Q9P');
   });
 
   it('dates the purchase in South African time', () => {

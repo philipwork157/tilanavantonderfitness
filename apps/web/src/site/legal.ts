@@ -151,7 +151,7 @@ export const privacySummary = {
     'No sale of personal information',
     'No health records through the public form',
   ],
-  effective: '9 October 2026',
+  effective: '13 October 2026',
 };
 
 export const refundSummary = {
@@ -262,6 +262,6 @@ export const termsSummary = {
     'General education, not medical advice',
     'Your consumer rights stay protected',
   ],
-  effective: '12 October 2026',
+  effective: '13 October 2026',
 };
 
