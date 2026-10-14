@@ -37,7 +37,7 @@ const confirmApiUrl = publicApiUrl('/api/newsletter/confirm');
         if (title) title.textContent = ok ? 'You’re on the list.' : 'That link is no longer valid.';
         if (body) {
           body.textContent = ok
-            ? 'Thank you for confirming. Thoughtful training guidance and programme updates will arrive occasionally.'
+            ? 'Thank you for confirming. Thoughtful training guidance and program updates will arrive occasionally.'
             : 'Confirmation links expire after 48 hours. Please return to the website and subscribe again to receive a new link.';
         }
         document.title = (ok ? 'Subscription confirmed' : 'Confirmation link expired') + ' | Tilana van Tonder';

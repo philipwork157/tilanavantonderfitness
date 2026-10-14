@@ -3,7 +3,7 @@ import LegalPage from '@web/site/components/LegalPage.astro';
 import { refundSections, refundSummary } from '@web/site/legal';
 import { site } from '@web/site/config';
 ---
-<LegalPage pageTitle="Refund & Cancellation Policy" description="Refund and cancellation policy for once-off digital programme purchases." summary={refundSummary} sections={refundSections}>
+<LegalPage pageTitle="Refund & Cancellation Policy" description="Refund and cancellation policy for once-off digital program purchases." summary={refundSummary} sections={refundSections}>
   <li data-reveal>
     <span class="n">{String(refundSections.length + 1).padStart(2, '0')}</span>
     <div>

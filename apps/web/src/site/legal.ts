@@ -5,7 +5,7 @@ export const privacySections = [
   {
     title: 'Who is responsible for your information?',
     body: [
-      `Tilana van Tonder is the responsible party for the personal information described in this policy. Privacy questions and requests can be sent to ${site.email}.`,
+      `Tilana van Tonder is the responsible party for the personal information described in this policy. Privacy questions and requests can be sent to ${site.email}, or by post to ${site.address}.`,
       'This website and its services are operated from South Africa and this policy is intended to support the requirements of the Protection of Personal Information Act 4 of 2013 (POPIA).',
     ],
   },
@@ -20,7 +20,7 @@ export const privacySections = [
       'Please do not send diagnoses, medical records, identity numbers, detailed injury information, pregnancy complications or other sensitive health information through the public contact form.',
       'The website uses Cloudflare Web Analytics to understand aggregate visits and website performance. Cloudflare Web Analytics does not use cookies, local storage or fingerprinting to identify or track individual visitors.',
       'The website also uses PostHog to understand how it is used, for example which pages are viewed and how many people add a program to the basket, start the checkout or complete a purchase. PostHog is set up without cookies or local storage: it counts visits with a temporary code that is worked out on PostHog’s servers from your IP address and browser details and changes every day, so a visit cannot be followed from one day to the next. It does not record your screen or what you type into forms, nobody is identified by name or email address, your IP address is not kept with the analytics, and links in emails and payment references are removed from page addresses before anything is sent.',
-      'The website also stores a light-or-dark theme preference in your browser. The hosting provider may process standard technical information such as an IP address, browser information and security logs to deliver and protect the site.',
+      'The website stores a few things in your own browser, never sent anywhere for tracking: your light-or-dark theme preference, the programs in your basket, a payment reference for a checkout you started, without your name or contact details (so the payment is matched to the right order when you return from Paystack), and whether you closed the WhatsApp greeting. You can clear them at any time in your browser settings. The hosting provider may process standard technical information such as an IP address, browser information and security logs to deliver and protect the site.',
     ],
   },
   {
@@ -67,6 +67,7 @@ export const privacySections = [
     title: 'Your choices and rights',
     body: [
       `You may ask whether Tilana holds personal information about you, request access to it, ask for inaccurate information to be corrected, request deletion where retention is no longer authorised, withdraw consent where processing relies on consent, or object to certain processing. Send a request to ${site.email}; reasonable identity verification may be required before information is released or changed.`,
+      'If you are not satisfied with how a privacy request or concern was handled, you have the right to lodge a complaint with the Information Regulator of South Africa (inforegulator.org.za).',
     ],
   },
   {
@@ -81,28 +82,28 @@ export const refundSections = [
   {
     title: 'What this policy covers',
     body: [
-      'This policy applies to once-off purchases of digital programmes sold by Tilana van Tonder through this website. Each programme is a PDF document with general educational content. They are not subscriptions and do not renew automatically.',
+      'This policy applies to once-off purchases of digital programs sold by Tilana van Tonder through this website. Each program is a PDF document with general educational content. They are not subscriptions and do not renew automatically.',
       'Nothing in this policy limits any right or remedy that cannot lawfully be excluded under South African consumer law.',
     ],
   },
   {
-    title: 'How programmes are delivered',
+    title: 'How programs are delivered',
     body: [
-      'As soon as Paystack confirms your payment, your programme is emailed to the address you entered at checkout, with the PDF attached. If you bought more than one programme, they may arrive together or in separate emails.',
-      'If the email has not arrived within an hour, please check your spam or promotions folder first. You can ask for your programmes to be sent again from the checkout page, or email us and we will resend them.',
+      'As soon as Paystack confirms your payment, your program is emailed to the address you entered at checkout, with the PDF attached. If you bought more than one program, they may arrive together or in separate emails.',
+      `If the email has not arrived within an hour, please check your spam or promotions folder first. If it is not there, email ${site.email} with your order number and we will send your programs again.`,
     ],
   },
   {
     title: 'Changing your mind',
     body: [
-      'Because the programme is a digital file that is delivered to you immediately after payment and cannot be returned, a change-of-mind refund is not normally available once the email with your programme has been sent, except where the law requires one.',
-      `If you believe you are entitled to cancel, please email ${site.email} within 7 calendar days of purchase with the purchase email address, order number and programme name, and we will respond fairly and in line with the law.`,
+      'Because the program is a digital file that is delivered to you immediately after payment and cannot be returned, a change-of-mind refund is not normally available once the email with your program has been sent, except where the law requires one.',
+      `If you believe you are entitled to cancel, please email ${site.email} within 7 calendar days of purchase with the purchase email address, order number and program name, and we will respond fairly and in line with the law.`,
     ],
   },
   {
     title: 'When a refund will be considered',
     body: [
-      'Please contact us if you were charged more than once for the same intended purchase, paid the wrong amount because of a website error, did not receive your programme after a successful payment, or received a file that is materially different from its description, is damaged or cannot reasonably be opened.',
+      'Please contact us if you were charged more than once for the same intended purchase, paid the wrong amount because of a website error, did not receive your program after a successful payment, or received a file that is materially different from its description, is damaged or cannot reasonably be opened.',
       'We will first try to fix the problem, for example by sending the correct or a working file. If it cannot be resolved within a reasonable time, an appropriate full or partial refund will be offered. A partial refund will be agreed with you before it is processed.',
     ],
   },
@@ -110,13 +111,13 @@ export const refundSections = [
     title: 'Cancellations and failed payments',
     body: [
       'There is no recurring membership to cancel. You may leave checkout before completing payment without creating an ongoing payment obligation.',
-      'A pending, failed or abandoned payment is not treated as a completed purchase and no programme is sent. If your bank shows a debit but the website does not confirm payment, please do not pay again. Contact us with the Paystack reference so the transaction can be investigated first.',
+      'A pending, failed or abandoned payment is not treated as a completed purchase and no program is sent. If your bank shows a debit but the website does not confirm payment, please do not pay again. Contact us with the Paystack reference so the transaction can be investigated first.',
     ],
   },
   {
     title: 'How to request a refund',
     body: [
-      `Email ${site.email} with your full name, purchase email address, programme name, order number or Paystack reference, purchase date, and a short explanation of the request. Do not send card numbers, bank login details or one-time PINs.`,
+      `Email ${site.email} with your full name, purchase email address, program name, order number or Paystack reference, purchase date, and a short explanation of the request. Do not send card numbers, bank login details or one-time PINs.`,
       'We will acknowledge your request within 2 working days and may ask for information reasonably needed to locate the transaction or understand the problem. You will receive a decision within 5 working days of us having that information. Decisions are based on the purchase and delivery records, this policy and applicable law.',
       'An approved refund is processed through Paystack within 2 working days of the decision.',
     ],
@@ -125,7 +126,7 @@ export const refundSections = [
     title: 'How refunds are paid',
     body: [
       'Approved refunds are returned through Paystack to the original payment method. Paystack advises that customers can generally expect a processed refund within 3 to 10 working days, although the customer bank may affect the final timing.',
-      'Programmes are for your own personal use. If you receive a full refund, please delete the programme files you received for that order.',
+      'Programs are for your own personal use. If you receive a full refund, please delete the program files you received for that order.',
     ],
   },
   {
@@ -151,14 +152,14 @@ export const privacySummary = {
     'No sale of personal information',
     'No health records through the public form',
   ],
-  effective: '13 October 2026',
+  effective: '14 October 2026',
 };
 
 export const refundSummary = {
   eyebrow: 'Purchasing with confidence',
   title: 'Refunds,',
   script: 'explained clearly.',
-  intro: 'How delivery, cancellations, duplicate payments and refund requests are handled for digital programme purchases.',
+  intro: 'How delivery, cancellations, duplicate payments and refund requests are handled for digital program purchases.',
   heading: 'A fair, clear process.',
   points: [
     'Once-off digital purchases',
@@ -168,7 +169,7 @@ export const refundSummary = {
     'Replies within 2 working days',
     'Statutory rights remain protected',
   ],
-  effective: '12 October 2026',
+  effective: '14 October 2026',
 };
 
 /** Terms of sale and use (Electronic Communications and Transactions Act, section 43 details included). */
@@ -176,52 +177,53 @@ export const termsSections = [
   {
     title: 'Who you are buying from',
     body: [
-      `Programmes on this website (${site.url}) are sold by ${site.name}, a sole proprietor trading in South Africa. Email: ${site.email}. Phone and WhatsApp: ${site.phone}. Physical address, also for legal notices: ${site.address}.`,
-      'These terms apply to every purchase on this website and to using the website itself. By buying a programme you confirm that you have read them, together with the refund and cancellation policy and the privacy policy.',
+      `Programs on this website (${site.url}) are sold by ${site.name}, a sole proprietor trading in South Africa. Email: ${site.email}. Phone and WhatsApp: ${site.phone}. Physical address, also for legal notices: ${site.address}.`,
+      'These terms apply to every purchase on this website and to using the website itself. By buying a program you confirm that you have read them, together with the refund and cancellation policy and the privacy policy.',
+      'You must be 18 or older to buy a program.',
     ],
   },
   {
     title: 'What you are buying',
     body: [
-      'Each programme is a digital training guide in PDF format. The programme page describes what it contains, and the sneak peek shows sample pages. Nothing physical is posted to you.',
-      'Programmes are once-off purchases. There is no subscription, no recurring charge and no account to create.',
+      'Each program is a digital training guide in PDF format. The program page describes what it contains, and the sneak peek shows sample pages. Nothing physical is posted to you.',
+      'Programs are once-off purchases. There is no subscription, no recurring charge and no account to create.',
     ],
   },
   {
     title: 'Prices and payment',
     body: [
-      'Prices are shown in South African rand (ZAR) and are the full amount you pay for the programme. The total for your basket is shown before you pay.',
+      'Prices are shown in South African rand (ZAR) and are the full amount you pay for the program. Tilana van Tonder is not registered for VAT, so no VAT is charged. The total for your basket is shown before you pay.',
       'Payments are processed by Paystack, a licensed payment provider. You can pay by card (Visa or Mastercard) or with any other payment method shown on Paystack’s payment page. Card and bank details are entered on Paystack’s secure payment page and never reach this website. Paystack uses encryption and industry security standards to protect payments.',
-      'An order is only complete once Paystack confirms the payment. If a price on the website is clearly wrong, the order may be cancelled and fully refunded before the programme is sent.',
+      'An order is only complete once Paystack confirms the payment. If a price on the website is clearly wrong, the order may be cancelled and fully refunded before the program is sent.',
     ],
   },
   {
     title: 'Delivery',
     body: [
-      'Your programme is emailed to the address you enter at checkout as soon as Paystack confirms your payment, with the PDF attached. Please check the address carefully before paying.',
-      `If nothing has arrived within an hour, check your spam or promotions folder, then email ${site.email} with your order number and the programme will be sent again.`,
-      'The email also shows your order number and the programmes you bought. Please keep it, together with your Paystack payment confirmation, as your record of the purchase. We keep a record of every order and can confirm its details on request.',
+      'Your program is emailed to the address you enter at checkout as soon as Paystack confirms your payment, with the PDF attached. Please check the address carefully before paying.',
+      `If nothing has arrived within an hour, check your spam or promotions folder, then email ${site.email} with your order number and the program will be sent again.`,
+      'The email also shows your order number and the programs you bought. Please keep it, together with your Paystack payment confirmation, as your record of the purchase. We keep a record of every order and can confirm its details on request.',
     ],
   },
   {
     title: 'Cancellations and refunds',
     body: [
-      'Because the programme is a digital file delivered immediately, your rights to cancel and receive a refund are set out in the refund and cancellation policy, which forms part of these terms. Nothing in these terms takes away rights you have under the Consumer Protection Act or the Electronic Communications and Transactions Act.',
+      'Because the program is a digital file delivered immediately, your rights to cancel and receive a refund are set out in the refund and cancellation policy, which forms part of these terms. Nothing in these terms takes away rights you have under the Consumer Protection Act or the Electronic Communications and Transactions Act.',
     ],
   },
   {
-    title: 'Your licence to use the programme',
+    title: 'Your licence to use the program',
     body: [
-      'You may download, print and use the programme for your own personal training. The programme remains the intellectual property of Tilana van Tonder.',
+      'You may download, print and use the program for your own personal training. The program remains the intellectual property of Tilana van Tonder.',
       'Each copy is personalised for its buyer: your name, order number and purchase date are printed on its pages, and the order number is also stored in the file, so a shared copy can be traced to its order.',
-      'You may not share, resell, upload, publish or copy the programme for other people, or use it to train clients, without written permission.',
+      'You may not share, resell, upload, publish or copy the program for other people, or use it to train clients, without written permission.',
     ],
   },
   {
     title: 'Health and safety',
     body: [
-      'The programmes and website content provide general fitness and lifestyle education. They are not medical advice, a diagnosis or a treatment plan, and they do not replace private training or care from a qualified health professional who knows your history.',
-      'Please speak to your doctor before starting a new exercise programme, especially if you are pregnant, injured, recovering from illness or have a medical condition. Stop exercising and get medical help if you feel pain, dizziness or shortness of breath.',
+      'The programs and website content provide general fitness and lifestyle education. They are not medical advice, a diagnosis or a treatment plan, and they do not replace private training or care from a qualified health professional who knows your history.',
+      'Please speak to your doctor before starting a new exercise program, especially if you are pregnant, injured, recovering from illness or have a medical condition. Stop exercising and get medical help if you feel pain, dizziness or shortness of breath.',
       'You train at your own pace and within your own limits. To the extent the law allows, Tilana van Tonder is not responsible for injury or loss caused by exercises done incorrectly or against this advice.',
     ],
   },
@@ -235,7 +237,7 @@ export const termsSections = [
   {
     title: 'Privacy',
     body: [
-      'Personal information you share when buying a programme, subscribing or making an enquiry is handled as described in the privacy policy.',
+      'Personal information you share when buying a program, subscribing or making an enquiry is handled as described in the privacy policy.',
     ],
   },
   {
@@ -249,19 +251,19 @@ export const termsSections = [
 ] as const;
 
 export const termsSummary = {
-  eyebrow: 'Buying a programme',
+  eyebrow: 'Buying a program',
   title: 'Terms of sale,',
   script: 'in plain words.',
-  intro: 'Who you are buying from, what you get, how payment and delivery work, and how to use your programme safely.',
+  intro: 'Who you are buying from, what you get, how payment and delivery work, and how to use your program safely.',
   heading: 'Simple and fair.',
   points: [
-    'Once-off digital PDF programmes',
-    'Prices in rand, paid securely through Paystack',
+    'Once-off digital PDF programs',
+    'Prices in rand, no VAT, paid securely through Paystack',
     'Emailed straight after payment',
     'For your own personal use',
     'General education, not medical advice',
     'Your consumer rights stay protected',
   ],
-  effective: '13 October 2026',
+  effective: '14 October 2026',
 };
 

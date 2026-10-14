@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type SubmitEvent } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import Icon from './Icon';
 
-const GREETING = ['Hi there 👋', 'Have a question about training or one of my programmes? I’m here to help, send me a WhatsApp!'];
+const GREETING = ['Hi there 👋', 'Have a question about training or one of my programs? I’m here to help, send me a WhatsApp!'];
 const INITIAL = 'Hi Tilana, I’d like to find out more about your training options.';
 const QUICK = [
   { label: 'Which program should I start with?', text: 'Hi Tilana, which program should I start with?' },

@@ -99,7 +99,7 @@ export function confirmationEmail(to: string, confirmUrl: string, websiteUrl: st
 <tr><td style="padding:32px 32px 8px">
 <p style="margin:0 0 10px;font-family:${fonts.body};font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:${colors.caramel}">One last step</p>
 <h1 style="margin:0 0 20px;font-family:${fonts.heading};font-size:30px;font-weight:400;line-height:1.2;color:${colors.ink}">Confirm your subscription</h1>
-<p style="${text}">Please confirm that you would like to receive occasional emails from Tilana with new blog posts, training guidance and programme updates.</p>
+<p style="${text}">Please confirm that you would like to receive occasional emails from Tilana with new blog posts, training guidance and program updates.</p>
 </td></tr>
 <tr><td style="padding:0 32px 28px">${button(confirmUrl, 'Yes, subscribe me')}</td></tr>
 <tr><td style="padding:0 32px 32px;font-family:${fonts.body};font-size:13px;line-height:1.6;color:${colors.caramel}">This link expires in 48 hours. If you did not sign up, simply ignore this email and you will not hear from us.</td></tr>
