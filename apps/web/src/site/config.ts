@@ -11,11 +11,10 @@ export function href(path: string): string {
 
 export const site = {
   name: 'Tilana van Tonder',
+  /** Shown on the contact page only. No phone number or home address anywhere on the website. */
   email: 'tilanavantonder@gmail.com',
+  /** Used only by the WhatsApp button's link; never printed on a page. */
   whatsapp: '27728803734',
-  /** Seller details the law (ECT Act s43) and Paystack ask a shop to show. */
-  phone: '+27 72 880 3734',
-  address: 'Ternberry Village, Cleveland 31, Cape Town, Western Cape, 7580, South Africa',
   url: 'https://tilanavantonder.co.za',
   tagline: 'Move better. Feel stronger. Live healthier.',
   description:

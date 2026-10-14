@@ -404,6 +404,15 @@ Never use em dashes (—) anywhere on the website: copy, data, labels, alt text,
 meta descriptions or code comments in `apps/web`. Use a comma, colon, full stop
 or brackets instead. En dashes in number ranges (1–3 days) are fine.
 
+Personal contact details stay off the website (Philip's decision). Never show
+Tilana's phone number, the home address or any postal address on any page,
+policy, llms.txt, structured data, header, footer or menu. The email address
+appears only on the contact page (`/contact`); everywhere else, including the
+privacy policy, refund policy and terms of sale, points people to the contact
+page instead. The phone number lives only in the WhatsApp button's link
+(`site.whatsapp`), never printed. Do not add them back for Paystack or the ECT
+Act without asking Philip first.
+
 Preserve unrelated changes. Do not commit, push, deploy, reset databases or remove
 remote resources without explicit authorization. After repository changes,
 include a ready-to-copy Conventional Commit message:

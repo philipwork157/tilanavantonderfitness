@@ -6,7 +6,7 @@ import Icon from './Icon';
 type Link = { label: string; href: string; current: boolean };
 
 /** Full-screen menu for phones and tablets. */
-export default function MobileMenu({ links, homeHref, contactHref, email }: { links: Link[]; homeHref: string; contactHref: string; email: string }) {
+export default function MobileMenu({ links, homeHref, contactHref }: { links: Link[]; homeHref: string; contactHref: string }) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -68,7 +68,6 @@ export default function MobileMenu({ links, homeHref, contactHref, email }: { li
               </nav>
               <motion.div className="mm-foot" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }}>
                 <a className="btn btn-primary btn-block" href={contactHref}>Get in touch</a>
-                <p>{email}</p>
               </motion.div>
             </motion.div>
           )}

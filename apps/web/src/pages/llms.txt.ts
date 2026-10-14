@@ -71,7 +71,7 @@ export const GET: APIRoute = async ({ site: siteUrl }) => {
     '',
     '## Contact',
     '',
-    `- Email: ${site.email}`,
+    `- [Contact form](${link('/contact')})`,
     '',
   );
 

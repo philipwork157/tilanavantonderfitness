@@ -1,5 +1,5 @@
 ---
-import { checkoutEnabled, href, navigation, site, type NavKey } from '../config';
+import { checkoutEnabled, href, navigation, type NavKey } from '../config';
 import ThemeToggle from './ThemeToggle.astro';
 import BasketButton from './shop/BasketButton';
 import MobileMenu from './MobileMenu';
@@ -18,7 +18,7 @@ const links = navigation.map((n) => ({ label: n.label, href: href(n.path), curre
       <ThemeToggle />
       {checkoutEnabled && <BasketButton client:load />}
       {current !== 'contact' && <a class="btn btn-primary btn-sm header-cta" href={href('/contact')}>Get in touch</a>}
-      <MobileMenu client:idle links={links} homeHref={href('/')} contactHref={href('/contact')} email={site.email} />
+      <MobileMenu client:idle links={links} homeHref={href('/')} contactHref={href('/contact')} />
     </div>
   </div>
 </header>

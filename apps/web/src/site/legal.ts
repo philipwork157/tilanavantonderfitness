@@ -5,7 +5,7 @@ export const privacySections = [
   {
     title: 'Who is responsible for your information?',
     body: [
-      `Tilana van Tonder is the responsible party for the personal information described in this policy. Privacy questions and requests can be sent to ${site.email}, or by post to ${site.address}.`,
+      `Tilana van Tonder is the responsible party for the personal information described in this policy. Privacy questions and requests can be sent through ${site.url}/contact.`,
       'This website and its services are operated from South Africa and this policy is intended to support the requirements of the Protection of Personal Information Act 4 of 2013 (POPIA).',
     ],
   },
@@ -26,7 +26,7 @@ export const privacySections = [
   {
     title: 'How does the contact form work?',
     body: [
-      `The contact form submits your enquiry to a protected server endpoint. After validation and anti-spam checks, the enquiry is stored in the private administration database and Tilana may receive an email notification at ${site.email}.`,
+      `The contact form submits your enquiry to a protected server endpoint. After validation and anti-spam checks, the enquiry is stored in the private administration database and Tilana may receive an email notification.`,
     ],
   },
   {
@@ -66,8 +66,7 @@ export const privacySections = [
   {
     title: 'Your choices and rights',
     body: [
-      `You may ask whether Tilana holds personal information about you, request access to it, ask for inaccurate information to be corrected, request deletion where retention is no longer authorised, withdraw consent where processing relies on consent, or object to certain processing. Send a request to ${site.email}; reasonable identity verification may be required before information is released or changed.`,
-      'If you are not satisfied with how a privacy request or concern was handled, you have the right to lodge a complaint with the Information Regulator of South Africa (inforegulator.org.za).',
+      `You may ask whether Tilana holds personal information about you, request access to it, ask for inaccurate information to be corrected, request deletion where retention is no longer authorised, withdraw consent where processing relies on consent, or object to certain processing. Send a request through the contact page; reasonable identity verification may be required before information is released or changed.`,
     ],
   },
   {
@@ -90,14 +89,14 @@ export const refundSections = [
     title: 'How programs are delivered',
     body: [
       'As soon as Paystack confirms your payment, your program is emailed to the address you entered at checkout, with the PDF attached. If you bought more than one program, they may arrive together or in separate emails.',
-      `If the email has not arrived within an hour, please check your spam or promotions folder first. If it is not there, email ${site.email} with your order number and we will send your programs again.`,
+      `If the email has not arrived within an hour, please check your spam or promotions folder first. If it is not there, send a message through the contact page with your order number and we will send your programs again.`,
     ],
   },
   {
     title: 'Changing your mind',
     body: [
       'Because the program is a digital file that is delivered to you immediately after payment and cannot be returned, a change-of-mind refund is not normally available once the email with your program has been sent, except where the law requires one.',
-      `If you believe you are entitled to cancel, please email ${site.email} within 7 calendar days of purchase with the purchase email address, order number and program name, and we will respond fairly and in line with the law.`,
+      `If you believe you are entitled to cancel, please send a message through the contact page within 7 calendar days of purchase with the purchase email address, order number and program name, and we will respond fairly and in line with the law.`,
     ],
   },
   {
@@ -117,7 +116,7 @@ export const refundSections = [
   {
     title: 'How to request a refund',
     body: [
-      `Email ${site.email} with your full name, purchase email address, program name, order number or Paystack reference, purchase date, and a short explanation of the request. Do not send card numbers, bank login details or one-time PINs.`,
+      `Send a message through the contact page with your full name, purchase email address, program name, order number or Paystack reference, purchase date, and a short explanation of the request. Do not send card numbers, bank login details or one-time PINs.`,
       'We will acknowledge your request within 2 working days and may ask for information reasonably needed to locate the transaction or understand the problem. You will receive a decision within 5 working days of us having that information. Decisions are based on the purchase and delivery records, this policy and applicable law.',
       'An approved refund is processed through Paystack within 2 working days of the decision.',
     ],
@@ -132,7 +131,7 @@ export const refundSections = [
   {
     title: 'Contact and business details',
     body: [
-      `Seller: ${site.name}, sole proprietor. Email: ${site.email}. Phone and WhatsApp: ${site.phone}. Business address: ${site.address}. Website: ${site.url}.`,
+      `Seller: ${site.name}, a sole proprietor trading in South Africa. Contact: ${site.url}/contact. Website: ${site.url}.`,
       'Please contact us first if you have a question or complaint about a purchase, before disputing the payment with your bank. We will try to resolve it fairly and keep a written record of the outcome.',
     ],
   },
@@ -177,7 +176,7 @@ export const termsSections = [
   {
     title: 'Who you are buying from',
     body: [
-      `Programs on this website (${site.url}) are sold by ${site.name}, a sole proprietor trading in South Africa. Email: ${site.email}. Phone and WhatsApp: ${site.phone}. Physical address, also for legal notices: ${site.address}.`,
+      `Programs on this website (${site.url}) are sold by ${site.name}, a sole proprietor trading in South Africa. You can reach us through the contact page at ${site.url}/contact.`,
       'These terms apply to every purchase on this website and to using the website itself. By buying a program you confirm that you have read them, together with the refund and cancellation policy and the privacy policy.',
       'You must be 18 or older to buy a program.',
     ],
@@ -201,7 +200,7 @@ export const termsSections = [
     title: 'Delivery',
     body: [
       'Your program is emailed to the address you enter at checkout as soon as Paystack confirms your payment, with the PDF attached. Please check the address carefully before paying.',
-      `If nothing has arrived within an hour, check your spam or promotions folder, then email ${site.email} with your order number and the program will be sent again.`,
+      `If nothing has arrived within an hour, check your spam or promotions folder, then send a message through the contact page with your order number and the program will be sent again.`,
       'The email also shows your order number and the programs you bought. Please keep it, together with your Paystack payment confirmation, as your record of the purchase. We keep a record of every order and can confirm its details on request.',
     ],
   },
@@ -244,7 +243,7 @@ export const termsSections = [
     title: 'Law, complaints and changes',
     body: [
       'These terms are governed by the laws of the Republic of South Africa.',
-      `Please contact ${site.email} first with any question or complaint, and we will try to resolve it fairly. You may also approach the National Consumer Commission or another consumer protection body.`,
+      `Please get in touch through the contact page first with any question or complaint, and we will try to resolve it fairly. You may also approach the National Consumer Commission or another consumer protection body.`,
       'These terms may be updated from time to time. The version shown on this page when you buy applies to that purchase.',
     ],
   },

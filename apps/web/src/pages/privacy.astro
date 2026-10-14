@@ -1,14 +1,14 @@
 ---
 import LegalPage from '@web/site/components/LegalPage.astro';
 import { privacySections, privacySummary } from '@web/site/legal';
-import { site } from '@web/site/config';
+import { href } from '@web/site/config';
 ---
 <LegalPage pageTitle="Privacy Policy" description="How Tilana van Tonder collects, uses, stores, and protects personal information submitted through this website." summary={privacySummary} sections={privacySections}>
   <li data-reveal>
     <span class="n">{String(privacySections.length + 1).padStart(2, '0')}</span>
     <div>
       <h2>Questions, complaints and policy changes</h2>
-      <p>Contact <a href={`mailto:${site.email}`}>{site.email}</a> first if you have a privacy question or request. You may also lodge a complaint with South Africa's Information Regulator through its official complaints service.</p>
+      <p>Get in touch through the <a href={href('/contact')}>contact page</a> first if you have a privacy question or request. You may also lodge a complaint with South Africa's Information Regulator through its official complaints service.</p>
       <p><a href="https://inforegulator.org.za/complaints/" target="_blank" rel="noreferrer">Information Regulator complaints guidance</a></p>
     </div>
   </li>
