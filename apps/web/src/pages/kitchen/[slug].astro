@@ -69,12 +69,6 @@ const structuredData = [
       </figure>
     </header>
 
-    {d.sample && (
-      <div class="wrap">
-        <p class="sample-banner"><Icon name="spark" />A simple version of a meal I mention on the blog. My own recipe and photos are on their way.</p>
-      </div>
-    )}
-
     <div class="wrap recipe-layout">
       <div class="recipe-main">
         <RecipeMethod client:visible servings={d.servings} ingredients={d.ingredients} steps={d.steps} />

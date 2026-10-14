@@ -24,9 +24,6 @@ const dayMeals = cards.map((c) => ({ slug: c.slug, title: c.title, protein: c.pr
   />
 
   <section class="section wrap kitchen-list">
-    {recipes.some((recipe) => recipe.sample) && (
-      <p class="note-sample">These first recipes are built from meals I mention on the blog. My own favourites, with photos, are on their way.</p>
-    )}
     {cards.length > 0 ? <KitchenExplorer client:load recipes={cards} meals={[...usedMeals]} /> : (
       <div class="cta-band card prog-unavailable">
         <div>

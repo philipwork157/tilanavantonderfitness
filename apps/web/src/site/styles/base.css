@@ -89,7 +89,6 @@ html.theme-switching::view-transition-old(root), html.theme-switching::view-tran
 .section-head.split { display: flex; align-items: flex-end; justify-content: space-between; gap: 2rem; max-width: none; }
 .section-head.split .lede { max-width: 26rem; margin: 0; }
 .band { background: var(--bg-2); border-block: 2px solid var(--line); }
-.note-sample { display: inline-block; margin-top: 1rem; padding: 0.35rem 0.7rem; border: 1px dashed var(--accent-text); border-radius: 0.4rem; color: var(--accent-text); font-size: 0.72rem; }
 
 /* ── Buttons ── */
 .btn {
