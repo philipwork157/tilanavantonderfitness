@@ -25,12 +25,15 @@ export default function WhatsAppChat({ phone, avatar }: { phone: string; avatar:
   const wrapRef = useRef<HTMLDivElement>(null);
   const [tucked, setTucked] = useState(false);
 
-  // Checks what sits under the round button (its centre and eight points just
-  // inside its edge) on scroll and resize, at most once per frame, and once more
-  // after scrolling settles so content that animates into place is caught too.
-  // The wrapper's box is used because it never moves when the button tucks.
+  // Checks what sits under the round button (its centre and eight points
+  // inside its edge) once scrolling or resizing has stopped for a moment, and
+  // once more a little later so content that animates into place is caught
+  // too. Never while scrolling: links passing underneath would make the button
+  // jump in and out. The wrapper's box is used because it never moves when the
+  // button tucks.
   useEffect(() => {
     let frame = 0;
+    let idle = 0;
     let settle = 0;
     const check = () => {
       frame = 0;
@@ -50,16 +53,20 @@ export default function WhatsAppChat({ phone, avatar }: { phone: string; avatar:
         return Boolean(under?.closest(KEEP_CLEAR));
       }));
     };
+    const run = () => { if (!frame) frame = requestAnimationFrame(check); };
     const schedule = () => {
-      if (!frame) frame = requestAnimationFrame(check);
+      window.clearTimeout(idle);
       window.clearTimeout(settle);
-      settle = window.setTimeout(() => requestAnimationFrame(check), 900);
+      idle = window.setTimeout(run, 180);
+      settle = window.setTimeout(run, 900);
     };
-    schedule();
+    run();
+    settle = window.setTimeout(run, 900);
     window.addEventListener('scroll', schedule, { passive: true });
     window.addEventListener('resize', schedule);
     return () => {
       cancelAnimationFrame(frame);
+      window.clearTimeout(idle);
       window.clearTimeout(settle);
       window.removeEventListener('scroll', schedule);
       window.removeEventListener('resize', schedule);
