@@ -35,6 +35,10 @@ export function OrdersSection({ recent, loading, period }: { recent: AdminOrder[
   });
   const [resending, setResending] = useState<AdminOrder | null>(null);
   const [refunding, setRefunding] = useState<AdminOrder | null>(null);
+  // Orders whose refund was just requested: their Refund button hides at once,
+  // before the list reloads, so it can't be clicked again. It comes back only
+  // if Paystack later reports the refund failed.
+  const [refundRequested, setRefundRequested] = useState<ReadonlySet<string>>(new Set());
   const queryClient = useQueryClient();
   const markChecked = useMutation({
     mutationFn: (orderNumber: string) => api(`/api/orders/${orderNumber}/review`, { method: 'POST' }),
@@ -120,7 +124,7 @@ export function OrdersSection({ recent, loading, period }: { recent: AdminOrder[
                             <Mail aria-hidden /> Email PDFs again
                           </Button>
                         )}
-                        {order.status === 'paid' && order.refundStatus !== 'pending' && (
+                        {order.status === 'paid' && order.refundStatus !== 'pending' && !(refundRequested.has(order.orderNumber) && order.refundStatus !== 'failed') && (
                           <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setRefunding(order)}>
                             <Undo2 aria-hidden /> Refund
                           </Button>
@@ -141,7 +145,11 @@ export function OrdersSection({ recent, loading, period }: { recent: AdminOrder[
       )}
 
       <ResendDialog order={resending} onOpenChange={(open) => { if (!open) setResending(null); }} />
-      <RefundDialog order={refunding} onOpenChange={(open) => { if (!open) setRefunding(null); }} />
+      <RefundDialog
+        order={refunding}
+        onOpenChange={(open) => { if (!open) setRefunding(null); }}
+        onRequested={(orderNumber) => setRefundRequested(previous => new Set(previous).add(orderNumber))}
+      />
     </section>
   );
 }
