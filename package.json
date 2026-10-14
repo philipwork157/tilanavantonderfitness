@@ -22,7 +22,8 @@
     "db:generate": "pnpm --filter @tilana/db db:generate",
     "db:migrate": "pnpm --filter @tilana/db db:migrate",
     "db:add-admin": "pnpm --filter @tilana/db db:add-admin",
-    "storage:move": "pnpm --filter @tilana/db storage:move"
+    "storage:move": "pnpm --filter @tilana/db storage:move",
+    "content:copy": "pnpm --filter @tilana/db content:copy"
   },
   "devDependencies": {
     "turbo": "2.11.5"

@@ -102,6 +102,17 @@ Create two environments (Settings > Environments): `development` and `production
 
 The admin addresses (`PUBLIC_API_BASE_URL`) are fixed in the workflows; the old `PUBLIC_API_BASE_URL_*` secrets are no longer used and can be deleted.
 
+## Launch day (once)
+
+Run from the repo root on your Mac. Each step reads `apps/admin-next/.env.prod` (live) and, for the content copy, `apps/admin-next/.env.local` (development); no values are printed.
+
+1. `bash scripts/backup-prod-db.sh`: read-only backup of the live database into `backups/` (git- and Docker-ignored; customer data, keep it private).
+2. `bash scripts/migrate-prod-db.sh`: runs the migrations on the live database. It asks you to type `live` first and stops when there is no backup.
+3. `pnpm content:copy`: dry run. Lists the volumes, programs, blog posts and recipes that would be added or updated on live, and the files it would copy.
+4. `pnpm content:copy --apply`: copies them. Add `--prune` to also remove live content that is not on dev (e.g. sample recipes deleted on dev).
+
+The content copy matches rows by volume number and slug (dev wins), copies the pictures (dev-public to prod-public) and PDFs (dev-private to prod-private) under the live ids, and writes all rows in one transaction only after every file is in place. It never touches orders, customers, messages, subscribers or admin users, and it refuses to run once the live database has an order: after launch, edit content in the live admin.
+
 ## Everyday use
 
 - Work on `dev`; pushing deploys development.

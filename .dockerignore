@@ -12,6 +12,9 @@
 /tilana-content-work/
 /Claude outputs/
 
+# Local database backups (customer data) never go into an image
+/backups/
+
 # dependencies & package-manager state (reinstalled in the image)
 node_modules
 **/node_modules
