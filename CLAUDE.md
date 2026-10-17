@@ -165,6 +165,12 @@ run migrations against a remote database without explicit authorization.
   stripped); SVG is rejected. Email copies are JPEGs under `email/`.
   `pnpm storage:move` moved everything from Supabase Storage (once per
   environment).
+- Maintenance mode: `apps/web/src/worker.ts` (wrangler `main`) runs before every
+  page, prebuilt ones included (`assets.run_worker_first`, static files excluded),
+  and `src/maintenance.ts` answers 503 while the Worker variable
+  `MAINTENANCE_MODE=on`; `?preview=<MAINTENANCE_BYPASS_TOKEN>` sets a 12-hour
+  bypass cookie. The worker also adds the security headers to prebuilt pages,
+  since `public/_headers` does not apply to Worker responses. See docs/deploy.md.
 - The website is a Cloudflare Worker (`apps/web/wrangler.jsonc`). Every page
   is prebuilt except `/blog`, `/blog/<slug>` and `/sitemap-blog.xml`
   (`prerender = false`), which read `/api/public/blog-posts` live through

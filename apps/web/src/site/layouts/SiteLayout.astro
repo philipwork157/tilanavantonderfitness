@@ -15,7 +15,9 @@ import SiteHeader from '../components/SiteHeader.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import Newsletter from '../components/Newsletter.astro';
 import BasketDrawer from '../components/shop/BasketDrawer';
-import WhatsAppChat from '../components/WhatsAppChat';
+// WhatsApp button switched off for now (new number coming). To bring it back, uncomment this
+// import and the <WhatsAppChat> line near the end of the page.
+// import WhatsAppChat from '../components/WhatsAppChat';
 import { checkoutEnabled, href, site, type NavKey } from '../config';
 import { toProducts, type Program } from '../programs';
 import { isLiveSite } from '@web/utils/site-environment';
@@ -159,7 +161,7 @@ const schema = {
     {newsletter && <Newsletter />}
     <SiteFooter />
     {checkoutEnabled && <BasketDrawer client:idle checkoutHref={href('/checkout')} programsHref={href('/program')} products={products} />}
-    <WhatsAppChat client:idle phone={site.whatsapp} avatar="/images/site/tilana-portrait-480.webp" />
+    {/* <WhatsAppChat client:idle phone={site.whatsapp} avatar="/images/site/tilana-portrait-480.webp" /> */}
     {turnstileSiteKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>}
     <script>
       import { animate, inView } from 'motion';

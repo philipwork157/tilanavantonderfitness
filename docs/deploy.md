@@ -32,6 +32,8 @@ fly secrets import -a tilanavantonder-admin-dev  < admin-dev.env
 fly secrets import -a tilanavantonder-admin-prod < admin-prod.env
 ```
 
+After that, keep production in step with `apps/admin-next/.env.prod` using `bash scripts/fly-prod-secrets.sh` (add `--dry-run` to only see the plan). It adds new settings, sets existing ones, removes settings that are no longer in the file (a renamed setting shows as one added and one removed), and leaves alone anything that is empty in the file, so an empty `PAYSTACK_SECRET_KEY` never deletes the live key. `--keep-old` skips removals. It refuses development values (test Paystack, dev buckets, a dev email redirect, the dev database) and applies everything in one restart. Values are never printed. For development, `scripts/fly-dev-secrets.sh` does the same from `.env.local`.
+
 Production differences from development:
 
 - `PAYSTACK_SECRET_KEY=sk_live_...` and `PAYSTACK_MODE=live`
@@ -111,7 +113,19 @@ Run from the repo root on your Mac. Each step reads `apps/admin-next/.env.prod` 
 3. `pnpm content:copy`: dry run. Lists the volumes, programs, blog posts and recipes that would be added or updated on live, and the files it would copy.
 4. `pnpm content:copy --apply`: copies them. Add `--prune` to also remove live content that is not on dev (e.g. sample recipes deleted on dev).
 
+**Starting over / a new database:** `bash scripts/reset-db.sh dev` or `bash scripts/reset-db.sh prod` drops every table in the public schema plus drizzle's migration history and runs all migrations again (Supabase's own schemas, including sign-in accounts, are untouched). For live it takes a backup first, refuses once there is any order, and asks you to type the database name. On a brand-new Supabase project, create your login under Authentication > Users (with a password, auto-confirmed) before `db:add-admin`.
+
 The content copy matches rows by volume number and slug (dev wins), copies the pictures (dev-public to prod-public) and PDFs (dev-private to prod-private) under the live ids, and writes all rows in one transaction only after every file is in place. It never touches orders, customers, messages, subscribers or admin users, and it refuses to run once the live database has an order: after launch, edit content in the live admin.
+
+## Maintenance mode (website)
+
+Shows a "Back very soon" page (HTTP 503, not indexed) on every page of the website, without a rebuild. The admin keeps running. Still open: newsletter unsubscribe links, `robots.txt` and `/checkout/complete` (people mid-payment). Code: `apps/web/src/maintenance.ts`, run by `apps/web/src/worker.ts` before every page.
+
+- **Set up once:** Cloudflare dashboard → Workers & Pages → `tilanavantonder-website-prod` → Settings → Variables and secrets → add a **Secret** `MAINTENANCE_BYPASS_TOKEN` (a long random value, at least 16 characters, e.g. `openssl rand -hex 24`). Keep it in your password manager. Do the same on `tilanavantonder-website-dev` with a different value if you want it there too.
+- **Turn on:** same page → add a **Text** variable `MAINTENANCE_MODE` = `on` → Deploy. Live within seconds. `keep_vars` in `wrangler.jsonc` stops the next GitHub deploy from removing it.
+- **See the real site while it is on:** open `https://tilanavantonder.co.za/?preview=<token>` once. That browser gets a cookie for 12 hours; `?preview=off` removes it. Changing the secret signs everyone out of the preview.
+- **Turn off:** set `MAINTENANCE_MODE` to `off` (or delete it) → Deploy.
+- **Locally:** set `MAINTENANCE_MODE=on` and `MAINTENANCE_BYPASS_TOKEN` in `apps/web/.env`, restart `pnpm dev`. (Only for your Mac: GitHub builds never read that file.)
 
 ## Everyday use
 
