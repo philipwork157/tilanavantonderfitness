@@ -1,4 +1,4 @@
-// Copied from the live site's privacy and refund pages (apps/web/src/pages). Keep in sync.
+// Shared policy content for the public website's legal pages.
 import { site } from './config';
 
 export const privacySections = [
@@ -13,13 +13,13 @@ export const privacySections = [
     title: 'What information is collected?',
     body: [
       'If you submit an enquiry from the contact page, you provide your name, email address, selected area of interest, message and consent confirmation. Supplying an enquiry is voluntary, but a name, reply address and enough context are needed to respond meaningfully.',
-      'If you join the newsletter, the website collects your email address, consent date, signup source, confirmation status and the applicable privacy-policy version. Newsletter subscription is voluntary and uses a confirmation email before marketing messages are sent.',
+      'If you join the newsletter, the website collects your email address, consent date, signup source and confirmation status. Newsletter subscription is voluntary and uses a confirmation email before marketing messages are sent.',
       'If you buy one or more programs, the checkout collects your name, email address, optional phone number, the programs you selected, and the order, payment and email delivery status. Card and bank details are entered directly into Paystack and are not stored by this website.',
       'Purchased programs are delivered as PDF files attached to an email sent to the address you entered at checkout. You do not need an account. If you ask for your programs to be sent again, the website uses your email address to find your paid orders.',
       'Each program PDF you buy is personalised with your name, order number and purchase date, to discourage unauthorised sharing. Your email address and phone number are not printed on it.',
       'Please do not send diagnoses, medical records, identity numbers, detailed injury information, pregnancy complications or other sensitive health information through the public contact form.',
       'The website uses Cloudflare Web Analytics to understand aggregate visits and website performance. Cloudflare Web Analytics does not use cookies, local storage or fingerprinting to identify or track individual visitors.',
-      'The website also uses PostHog to understand how it is used, for example which pages are viewed and how many people add a program to the basket, start the checkout or complete a purchase. PostHog is set up without cookies or local storage: it counts visits with a temporary code that is worked out on PostHog’s servers from your IP address and browser details and changes every day, so a visit cannot be followed from one day to the next. It does not record your screen or what you type into forms, nobody is identified by name or email address, your IP address is not kept with the analytics, and links in emails and payment references are removed from page addresses before anything is sent.',
+      'The website also uses PostHog to understand which pages are viewed and how many people add a program to the basket, start checkout or complete a purchase. The website configures PostHog in cookieless mode, with person profiles, session recordings and surveys disabled. The analytics integration does not intentionally send your name, email address or message content, and removes sign-in tokens, email addresses, pre-filled messages and payment references from page addresses before sending events. PostHog also receives technical information such as browser details and an IP address when receiving those events.',
       'The website stores a few things in your own browser, never sent anywhere for tracking: your light-or-dark theme preference, the programs in your basket, a payment reference for a checkout you started, without your name or contact details (so the payment is matched to the right order when you return from Paystack), and whether you closed the WhatsApp greeting. You can clear them at any time in your browser settings. The hosting provider may process standard technical information such as an IP address, browser information and security logs to deliver and protect the site.',
     ],
   },
@@ -43,18 +43,25 @@ export const privacySections = [
     body: [
       'Personal information is not sold. It may be processed by service providers that are reasonably necessary to run the website, secure it, provide email, store records or meet professional and legal obligations. Information may also be disclosed where required by law or with your specific permission.',
       'Cloudflare hosts and protects the public website, provides privacy-focused analytics and helps prevent automated spam through Turnstile. Cloudflare may process technical information such as an IP address, browser details and security events when delivering or protecting the website.',
-      'PostHog provides the cookie-free product analytics described above, hosted in the European Union. It receives the pages viewed, the website actions listed above and technical information such as browser type and IP address, which is used only to count visits and is not stored.',
+      'PostHog provides the cookieless product analytics described above, hosted in the European Union. It processes the page visits, website actions and technical information described in this policy to provide website usage statistics.',
       'Supabase provides the protected database and sign-in used for website enquiries, newsletter subscription records, orders and authorised administration data. Amazon Web Services Simple Email Service (AWS SES) delivers contact notifications, newsletter emails and purchase emails with the program files attached; it processes the recipient address and the information needed to deliver each message.',
       'Paystack processes program payments and related payment information. Cloudflare R2 privately stores the program files that are attached to purchase emails.',
       'These providers may process or store information outside South Africa. Where that occurs, reasonable steps will be taken to use providers and arrangements that offer an adequate level of protection and appropriate contractual, organisational and technical safeguards.',
     ],
   },
   {
+    title: 'If you choose WhatsApp',
+    body: [
+      'The WhatsApp button opens an external service. If you choose to use it, WhatsApp handles the information you share under its own privacy policy. WhatsApp is optional; you can use the website contact form instead. Please do not send sensitive health records, identity documents, card details or bank login details through WhatsApp.',
+    ],
+  },
+  {
     title: 'How long is information kept?',
     body: [
-      'Enquiry information is kept only for as long as reasonably necessary to respond, manage follow-up, resolve a concern or maintain an appropriate business record. Enquiries that are no longer needed are periodically deleted. If you become a client, relevant records may be retained for the relationship and for any applicable contractual, accounting or legal obligations.',
-      'A newsletter subscription is kept while it remains active. If you unsubscribe, the address and suppression status may be retained only as needed to honour the opt-out and prevent accidental resubscription. Expired confirmation records are periodically deleted.',
-      'Order and payment records are kept for as long as needed to support your purchase, resend your programs and meet accounting and tax record-keeping obligations. Incomplete checkouts that never became a paid order are periodically deleted.',
+      'Enquiry information is kept only for as long as reasonably necessary to respond, manage follow-up, resolve a concern or maintain an appropriate business record. If you become a client, relevant records may be retained for the relationship and for any applicable contractual, accounting or legal obligations.',
+      'A newsletter subscription is kept while it remains active. If you unsubscribe, the address and suppression status may be retained only as needed to honour the opt-out and prevent accidental resubscription. An expired confirmation link cannot confirm a subscription, but expiry does not automatically delete the subscription record.',
+      'Order and payment records are kept for as long as needed to support your purchase, resend your programs and meet accounting and tax record-keeping obligations. An incomplete or abandoned checkout does not automatically delete its record.',
+      'You can ask through the contact page for a review of information held about you and for deletion where it is no longer needed for an authorised purpose. Information that must be kept for a legal obligation or an unresolved dispute may be retained for that purpose.',
     ],
   },
   {
@@ -95,15 +102,15 @@ export const refundSections = [
   {
     title: 'Changing your mind',
     body: [
-      'Because the program is a digital file that is delivered to you immediately after payment and cannot be returned, a change-of-mind refund is not normally available once the email with your program has been sent, except where the law requires one.',
-      `If you believe you are entitled to cancel, please send a message through the contact page within 7 calendar days of purchase with the purchase email address, order number and program name, and we will respond fairly and in line with the law.`,
+      'Where the cooling-off right in section 44 of the Electronic Communications and Transactions Act applies to a purchase of goods, you may cancel without a reason or penalty within 7 calendar days after receiving them. The Act includes exceptions in section 42(2), including for books. Any exception must apply to the particular purchase; a PDF being emailed or downloaded does not, by itself, remove statutory rights.',
+      'To request a cancellation, contact us promptly with your purchase email address, order number and program name. We will assess the request under the law that applies to your purchase and explain the outcome. Where section 44 applies, the payment will be refunded within 30 days of cancellation. This does not limit any other cancellation right or remedy, including for non-delivery or a faulty or misdescribed program.',
     ],
   },
   {
     title: 'When a refund will be considered',
     body: [
       'Please contact us if you were charged more than once for the same intended purchase, paid the wrong amount because of a website error, did not receive your program after a successful payment, or received a file that is materially different from its description, is damaged or cannot reasonably be opened.',
-      'We will first try to fix the problem, for example by sending the correct or a working file. If it cannot be resolved within a reasonable time, an appropriate full or partial refund will be offered. A partial refund will be agreed with you before it is processed.',
+      'We will try to fix the problem, for example by sending the correct or a working file, unless you are entitled to a different remedy under the law. If the problem cannot be resolved within a reasonable time, we will provide the refund or other remedy required by law. We will confirm the outcome and any refund amount with you before processing it.',
     ],
   },
   {
@@ -117,8 +124,8 @@ export const refundSections = [
     title: 'How to request a refund',
     body: [
       `Send a message through the contact page with your full name, purchase email address, program name, order number or Paystack reference, purchase date, and a short explanation of the request. Do not send card numbers, bank login details or one-time PINs.`,
-      'We will acknowledge your request within 2 working days and may ask for information reasonably needed to locate the transaction or understand the problem. You will receive a decision within 5 working days of us having that information. Decisions are based on the purchase and delivery records, this policy and applicable law.',
-      'An approved refund is processed through Paystack within 2 working days of the decision.',
+      'We aim to acknowledge your request within 2 working days and give you a decision within 5 working days of receiving the information reasonably needed to locate the transaction and understand the problem. If more time is needed, we will explain why and keep you updated. Working days exclude weekends and South African public holidays. These service targets do not extend any deadline required by law.',
+      'Approved refunds are submitted through Paystack without undue delay. We will confirm submission and keep you informed if Paystack requires further action or a delay occurs. Payment-provider or funding delays do not remove our responsibility to meet any refund deadline required by law.',
     ],
   },
   {
@@ -132,7 +139,7 @@ export const refundSections = [
     title: 'Contact and business details',
     body: [
       `Seller: ${site.name}, a sole proprietor trading in South Africa. Contact: ${site.url}/contact. Website: ${site.url}.`,
-      'Please contact us first if you have a question or complaint about a purchase, before disputing the payment with your bank. We will try to resolve it fairly and keep a written record of the outcome.',
+      'Please contact us if you have a question or complaint about a purchase so we can try to resolve it fairly and keep a written record of the outcome. This does not prevent you from contacting your bank or a relevant consumer authority, or exercising any dispute rights within the applicable time limits.',
     ],
   },
 ] as const;
@@ -151,7 +158,7 @@ export const privacySummary = {
     'No sale of personal information',
     'No health records through the public form',
   ],
-  effective: '14 October 2026',
+  effective: '17 October 2026',
 };
 
 export const refundSummary = {
@@ -163,15 +170,15 @@ export const refundSummary = {
   points: [
     'Once-off digital purchases',
     'PDF emailed straight after payment',
-    'Missing or faulty files fixed first',
+    'Help with missing or faulty files',
     'Duplicate charges investigated',
-    'Replies within 2 working days',
+    'Aim to reply within 2 working days',
     'Statutory rights remain protected',
   ],
-  effective: '14 October 2026',
+  effective: '17 October 2026',
 };
 
-/** Terms of sale and use (Electronic Communications and Transactions Act, section 43 details included). */
+/** Terms of sale and use, read together with the refund and privacy policies. */
 export const termsSections = [
   {
     title: 'Who you are buying from',
@@ -207,7 +214,7 @@ export const termsSections = [
   {
     title: 'Cancellations and refunds',
     body: [
-      'Because the program is a digital file delivered immediately, your rights to cancel and receive a refund are set out in the refund and cancellation policy, which forms part of these terms. Nothing in these terms takes away rights you have under the Consumer Protection Act or the Electronic Communications and Transactions Act.',
+      'Your cancellation and refund rights are explained in the refund and cancellation policy, which forms part of these terms. Email delivery or downloading a PDF does not, by itself, remove any statutory right that applies. Nothing in these terms takes away rights you have under the Consumer Protection Act or the Electronic Communications and Transactions Act.',
     ],
   },
   {
@@ -263,6 +270,6 @@ export const termsSummary = {
     'General education, not medical advice',
     'Your consumer rights stay protected',
   ],
-  effective: '14 October 2026',
+  effective: '17 October 2026',
 };
 
