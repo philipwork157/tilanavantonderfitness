@@ -2,11 +2,14 @@ autoInstallPeers: false
 packages:
   - apps/*
   - packages/*
+  - '!tilana-fitness-old/**'
 allowBuilds:
+  core-js: false
   esbuild: true
   unrs-resolver: true
-  vue-demi: true
+  workerd: true
 onlyBuiltDependencies:
   - esbuild
 overrides:
+  '@ai-sdk/provider-utils@>=4.0.0-beta.10 <4.0.33': ^4.0.33
   satteri: 0.10.3

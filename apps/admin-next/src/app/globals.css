@@ -1,0 +1,245 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+/* Dark mode follows the .dark class on <html> (see src/lib/theme.ts). */
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Tilana's brand on shadcn's tokens. Light = the website's cream and soft
+ * black; dark = the website's warm "espresso" theme. Components use these
+ * semantic names (bg-card, text-muted-foreground...), never raw hex.
+ */
+:root {
+  --radius: 0.9rem;
+
+  --background: #f6e4d9;
+  --foreground: #0f0e13;
+  --card: #fffaf6;
+  --card-foreground: #0f0e13;
+  --popover: #fffaf6;
+  --popover-foreground: #0f0e13;
+  --primary: #0f0e13;
+  --primary-foreground: #f6e4d9;
+  --secondary: #ecd5c6;
+  --secondary-foreground: #0f0e13;
+  --muted: #efd7c7;
+  --muted-foreground: #5a4a41;
+  --accent: #ecd5c6;
+  --accent-foreground: #0f0e13;
+  --destructive: #a4483a;
+  --border: #dcc1ae;
+  --input: #d2b49f;
+  --ring: #c08a66;
+
+  --sidebar: #efd7c7;
+  --sidebar-foreground: #0f0e13;
+  --sidebar-primary: #0f0e13;
+  --sidebar-primary-foreground: #f6e4d9;
+  --sidebar-accent: #e5c7b2;
+  --sidebar-accent-foreground: #0f0e13;
+  --sidebar-border: #dcc1ae;
+  --sidebar-ring: #c08a66;
+
+  /* Brand tones for coloured panels and tiles, with readable text on top. */
+  --tone-terracotta: #d5a27f;
+  --tone-sage: #c9d2b3;
+  --tone-sand: #e0c3ae;
+  --tone-caramel: #b88a6c;
+  --on-tone: #0f0e13;
+  --brand-text: #865a3e;
+  --hard-shadow: #0f0e13;
+
+  /* Status colours: text on a soft background, readable in both themes. */
+  --status-neutral: #5a4a41;
+  --status-neutral-bg: #ecd5c6;
+  --status-brand: #7d4f33;
+  --status-brand-bg: #f2d6c3;
+  --status-success: #44602f;
+  --status-success-bg: #e1e8d3;
+  --status-warning: #7f5210;
+  --status-warning-bg: #f4e0b9;
+  --status-danger: #9a3f32;
+  --status-danger-bg: #f4e0dc;
+  --status-info: #3f5866;
+  --status-info-bg: #dce5e8;
+}
+
+.dark {
+  --background: #1c1512;
+  --foreground: #f6e4d9;
+  --card: #2a201a;
+  --card-foreground: #f6e4d9;
+  --popover: #2a201a;
+  --popover-foreground: #f6e4d9;
+  --primary: #f6e4d9;
+  --primary-foreground: #1c1512;
+  --secondary: #3a2c24;
+  --secondary-foreground: #f6e4d9;
+  --muted: #2f241e;
+  --muted-foreground: #cbb4a4;
+  --accent: #3a2c24;
+  --accent-foreground: #f6e4d9;
+  --destructive: #f0a07a;
+  --border: #43342b;
+  --input: #54433a;
+  --ring: #e2ad88;
+
+  --sidebar: #241b16;
+  --sidebar-foreground: #f6e4d9;
+  --sidebar-primary: #f6e4d9;
+  --sidebar-primary-foreground: #1c1512;
+  --sidebar-accent: #33261f;
+  --sidebar-accent-foreground: #f6e4d9;
+  --sidebar-border: #3a2c24;
+  --sidebar-ring: #e2ad88;
+
+  --tone-terracotta: #94502f;
+  --tone-sage: #4c5d3c;
+  --tone-sand: #7a4744;
+  --tone-caramel: #8e5627;
+  --on-tone: #f6e4d9;
+  --brand-text: #e7b591;
+  --hard-shadow: #d5a27f;
+
+  --status-neutral: #cbb4a4;
+  --status-neutral-bg: #3a2c24;
+  --status-brand: #f0c09c;
+  --status-brand-bg: #4a3123;
+  --status-success: #bdd19c;
+  --status-success-bg: #2e3a25;
+  --status-warning: #ebc77f;
+  --status-warning-bg: #41321a;
+  --status-danger: #f3a98a;
+  --status-danger-bg: #47261f;
+  --status-info: #aac6d3;
+  --status-info-bg: #23333b;
+}
+
+@theme inline {
+  --font-sans: 'Montserrat Variable', 'Montserrat', system-ui, sans-serif;
+  --font-heading: 'Playfair Display Variable', 'Playfair Display', Georgia, serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-tone-terracotta: var(--tone-terracotta);
+  --color-tone-sage: var(--tone-sage);
+  --color-tone-sand: var(--tone-sand);
+  --color-tone-caramel: var(--tone-caramel);
+  --color-on-tone: var(--on-tone);
+  --color-brand-text: var(--brand-text);
+  --color-hard-shadow: var(--hard-shadow);
+  --color-status-neutral: var(--status-neutral);
+  --color-status-neutral-bg: var(--status-neutral-bg);
+  --color-status-brand: var(--status-brand);
+  --color-status-brand-bg: var(--status-brand-bg);
+  --color-status-success: var(--status-success);
+  --color-status-success-bg: var(--status-success-bg);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-danger: var(--status-danger);
+  --color-status-danger-bg: var(--status-danger-bg);
+  --color-status-info: var(--status-info);
+  --color-status-info-bg: var(--status-info-bg);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  ::selection {
+    @apply bg-foreground text-background;
+  }
+}
+
+/* Blog editor content (Tiptap), styled like the website's article text. */
+@layer components {
+  .tiptap-content {
+    @apply min-h-72 text-[0.95rem] leading-relaxed outline-none;
+  }
+  .tiptap-content > * + * {
+    @apply mt-3;
+  }
+  .tiptap-content h2 {
+    @apply mt-6 font-heading text-2xl font-bold;
+  }
+  .tiptap-content h3 {
+    @apply mt-5 font-heading text-xl font-bold;
+  }
+  .tiptap-content ul {
+    @apply list-disc pl-6;
+  }
+  .tiptap-content ol {
+    @apply list-decimal pl-6;
+  }
+  .tiptap-content blockquote {
+    @apply border-l-4 border-tone-terracotta pl-4 font-heading text-lg italic;
+  }
+  .tiptap-content a {
+    @apply text-brand-text underline underline-offset-4;
+  }
+  .tiptap-content hr {
+    @apply my-6 border-border;
+  }
+  .tiptap-content code {
+    @apply rounded bg-muted px-1 py-0.5 text-sm;
+  }
+  .tiptap-content p.is-editor-empty:first-child::before {
+    @apply pointer-events-none float-left h-0 text-muted-foreground content-[attr(data-placeholder)];
+  }
+}
+
+/* Top navigation progress bar (components/navigation-progress.tsx).
+   Fades in after a short delay so instant page changes don't flash it,
+   creeps towards the end while loading, then fills and fades out. */
+.nav-progress {
+  opacity: 0;
+  transform: scaleX(1);
+  transition: opacity 0.3s ease 0.1s, transform 0.2s ease;
+}
+.nav-progress[data-loading='true'] {
+  opacity: 1;
+  transition: opacity 0.2s ease 0.12s;
+  animation: nav-progress 10s cubic-bezier(0.08, 0.7, 0.2, 1) forwards;
+}
+@keyframes nav-progress {
+  from { transform: scaleX(0.06); }
+  to { transform: scaleX(0.94); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-progress[data-loading='true'] {
+    animation: none;
+    transform: scaleX(1);
+  }
+}

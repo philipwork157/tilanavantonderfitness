@@ -1,0 +1,9 @@
+# Security headers for the prebuilt pages. Keep in step with src/utils/security-headers.ts (a test checks).
+/*
+  Strict-Transport-Security: max-age=63072000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; object-src 'none'
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://eu-assets.i.posthog.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://media.tilanavantonder.co.za https://media-dev.tilanavantonder.co.za; font-src 'self' data:; connect-src 'self' https://admin.tilanavantonder.co.za https://admin-dev.tilanavantonder.co.za https://eu.i.posthog.com https://eu-assets.i.posthog.com https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; object-src 'none'

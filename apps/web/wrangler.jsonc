@@ -1,0 +1,51 @@
+// Cloudflare Worker for the public website. `pnpm build` writes the final
+// config to dist/server.
+//
+// Every page request goes through src/worker.ts first (run_worker_first), so
+// maintenance mode can cover the prebuilt pages too; scripts, styles, fonts,
+// images and icons are served straight from the assets (free, no Worker run).
+// Pages count as Worker requests (free plan: 100,000 a day).
+//
+// Maintenance mode is switched in the Cloudflare dashboard, not here (see
+// src/maintenance.ts and docs/deploy.md). keep_vars stops a deploy from wiping
+// the MAINTENANCE_MODE variable set there.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tilanavantonder-website-dev",
+  "main": "./src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "keep_vars": true,
+  "assets": {
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/*",
+      "!/_astro/*",
+      "!/images/*",
+      "!/favicon.ico",
+      "!/favicon.svg",
+      "!/apple-touch-icon.png",
+      "!/icon-192.png",
+      "!/icon-512.png",
+      "!/og.png",
+      "!/site.webmanifest",
+      "!/tilana-*",
+      // Local dev only (Vite's own files; these paths never exist in a build).
+      "!/@vite/*",
+      "!/@fs/*",
+      "!/@id/*",
+      "!/@react-refresh",
+      "!/src/*",
+      "!/node_modules/*",
+      // Astro dev asks for component scripts by their full path on the Mac.
+      "!/Applications/*",
+      "!/Users/*"
+    ]
+  },
+  "observability": { "enabled": true },
+  "env": {
+    "production": {
+      "name": "tilanavantonder-website-prod",
+      "keep_vars": true
+    }
+  }
+}

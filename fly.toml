@@ -1,25 +1,34 @@
-# Fly.io config for the Tilana admin backend (Nuxt SSR -> Supabase).
-# Deploy from the repo root: `fly deploy`
+# Admin (apps/admin-next) on Fly.io: DEVELOPMENT. https://admin-dev.tilanavantonder.co.za
+# Deployed by .github/workflows/deploy-dev.yml on every push to dev:
+#   flyctl deploy --config fly.toml --remote-only
+# Settings come from Fly secrets (see apps/admin-next/.env.example and docs/deploy.md).
 app = "tilanavantonder-admin-dev"
-primary_region = "lhr"   # London, matches Supabase eu-west-2
+primary_region = "fra" # Frankfurt, next to Supabase
+# Give PDF emails and newsletter sends time to finish when a new release replaces the machine.
+kill_timeout = "30s"
+# A little swap so a big PDF preview (pdf.js + canvas + sharp) never runs out of memory.
+swap_size_mb = 512
 
 [build]
   dockerfile = "Dockerfile"
 
-[env]
-  NODE_ENV = "production"
-  PORT = "3000"
-  HOST = "0.0.0.0"
-
 [http_service]
   internal_port = 3000
   force_https = true
+  # Development may sleep when nobody uses it; it wakes on the next request.
   auto_stop_machines = "stop"
   auto_start_machines = true
   min_machines_running = 0
   processes = ["app"]
 
+  [[http_service.checks]]
+    grace_period = "20s"
+    interval = "30s"
+    method = "GET"
+    path = "/api/health"
+    timeout = "5s"
 
 [[vm]]
   size = "shared-cpu-1x"
-  memory = "512mb"
+  # Same as production, so PDF previews behave the same; it sleeps when idle, so this costs little.
+  memory = "1gb"

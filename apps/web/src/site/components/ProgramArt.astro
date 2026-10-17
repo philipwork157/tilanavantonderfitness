@@ -1,0 +1,151 @@
+---
+/**
+ * One illustration per program, drawn in SVG so it follows the light/dark theme.
+ * The admin chooses which one a program gets (`illustration`), and the step for the barbell.
+ *  - barbell (Beginner / Intermediate / Advanced): loaded with 1, 2 or 3 plates by `step`.
+ *    Dashed "ghost" plates show the room still to grow into.
+ *  - breath (Reconnect): the breathing "canister". On the in-breath the diaphragm flattens and
+ *    lowers and the pelvic floor lowers with it; on the out-breath both lift together.
+ *  - plate (Nourish): a plate split into the three building blocks of food, each with a
+ *    small drawing: protein (drumstick), carbs (bread) and fats (avocado).
+ * The parts animate in when the art scrolls into view, then idle gently.
+ */
+import type { Program } from '../programs';
+
+interface Props { program: Program; class?: string }
+const { program: p, class: className } = Astro.props;
+
+// Plate heights, from the collar outwards.
+const plates = [84, 70, 56];
+// The admin picks the drawing (`illustration`); a barbell outside the strength series shows fully loaded.
+const level = p.step ?? 3;
+const note = { 1: 'room to grow', 2: 'building up', 3: 'fully loaded' }[level as 1 | 2 | 3];
+---
+<svg
+  class:list={['pa', `pa-${p.illustration}`, className]}
+  viewBox="0 0 240 150"
+  role="img"
+  aria-label={
+    p.illustration === 'barbell'
+      ? `A barbell loaded with ${level} of 3 plates`
+      : p.illustration === 'breath'
+        ? 'The diaphragm and pelvic floor moving together with each breath'
+        : 'A plate split into protein, carbs and fats'
+  }
+>
+  {p.illustration === 'barbell' && (
+    <g class="pa-barbell">
+      <line class="pa-floor" x1="14" y1="136" x2="226" y2="136" />
+      <ellipse class="pa-shadow" cx="120" cy="136" rx="78" ry="5" />
+      <g class="pa-lift">
+        <line class="pa-bar" x1="12" y1="78" x2="228" y2="78" />
+        <g class="pa-knurl">
+          {Array.from({ length: 12 }, (_, i) => <line x1={98 + i * 4} y1="73" x2={98 + i * 4} y2="83" />)}
+        </g>
+        <rect class="pa-collar" x="63" y="69" width="7" height="18" rx="2" />
+        <rect class="pa-collar" x="170" y="69" width="7" height="18" rx="2" />
+        {plates.map((h, i) => {
+          const y = 78 - h / 2;
+          const solid = i < level;
+          const cls = solid ? `pa-plate pa-plate-${i % 2 ? 'b' : 'a'}` : 'pa-ghost';
+          return (
+            <>
+              <g class={`${cls} pa-left`} style={`--d:${i * 0.12}s`}>
+                <rect x={49 - i * 14} y={y} width="12" height={h} rx="4" />
+                {solid && <line class="pa-shine" x1={53 - i * 14} y1={y + 9} x2={53 - i * 14} y2={y + h - 9} />}
+              </g>
+              <g class={`${cls} pa-right`} style={`--d:${i * 0.12}s`}>
+                <rect x={179 + i * 14} y={y} width="12" height={h} rx="4" />
+                {solid && <line class="pa-shine" x1={183 + i * 14} y1={y + 9} x2={183 + i * 14} y2={y + h - 9} />}
+              </g>
+            </>
+          );
+        })}
+      </g>
+      {level === 3 && (
+        <g class="pa-sparks">
+          <path style="--d:0s" d="M24 22c.5 4 2 5.5 6 6-4 .5-5.5 2-6 6-.5-4-2-5.5-6-6 4-.5 5.5-2 6-6z" />
+          <path style="--d:.6s" d="M212 112c.4 3 1.5 4.1 4.5 4.5-3 .4-4.1 1.5-4.5 4.5-.4-3-1.5-4.1-4.5-4.5 3-.4 4.1-1.5 4.5-4.5z" />
+          <path style="--d:1.2s" d="M218 14c.4 3 1.5 4.1 4.5 4.5-3 .4-4.1 1.5-4.5 4.5-.4-3-1.5-4.1-4.5-4.5 3-.4 4.1-1.5 4.5-4.5z" />
+        </g>
+      )}
+      <g class="pa-note">
+        <text x="120" y="30" text-anchor="middle">{note}</text>
+        <path class="pa-arrow" d={level === 3 ? 'M163 26c16-4 26 2 30 12' : 'M163 26c22-6 38 2 44 16'} />
+        <path class="pa-arrow-head" d={level === 3 ? 'M187 35l6 3 1-7' : 'M201 39l6 3 1-7'} />
+      </g>
+    </g>
+  )}
+
+  {p.illustration === 'breath' && (
+    <g class="pa-breath">
+      <g class="pa-walls"><path class="pa-wall" d="M70 50c-12 24-11 52 8 72M170 50c12 24 11 52-8 72" /></g>
+      <path class="pa-dia" d="M64 54Q120 12 176 54Q120 40 64 54Z" />
+      <path class="pa-pf" d="M76 118Q120 146 164 118Q120 128 76 118Z" />
+      <!-- Both move the same way: down on the in-breath, up on the out-breath. -->
+      <g class="pa-dir pa-in"><path d="M111 68l9 8 9-8" /><path d="M111 98l9 8 9-8" /></g>
+      <g class="pa-dir pa-out"><path d="M111 76l9-8 9 8" /><path d="M111 106l9-8 9 8" /></g>
+      <text class="pa-word pa-in" x="214" y="40" text-anchor="middle">inhale</text>
+      <text class="pa-word pa-out" x="214" y="40" text-anchor="middle">exhale</text>
+      <path class="pa-updown pa-in" d="M214 54v46M207 92l7 8 7-8" />
+      <path class="pa-updown pa-out" d="M214 100v-46M207 62l7-8 7 8" />
+      <text class="pa-small" x="26" y="40" text-anchor="middle">DIAPHRAGM</text>
+      <path class="pa-pointer" d="M26 46c0 10 14 14 34 12" />
+      <text class="pa-small" x="26" y="134" text-anchor="middle">PELVIC FLOOR</text>
+      <path class="pa-pointer" d="M26 124c0-6 18-6 44-4" />
+    </g>
+  )}
+
+  {p.illustration === 'plate' && (
+    <g class="pa-meal">
+      <circle class="pa-plate-rim" cx="120" cy="78" r="58" />
+      <circle class="pa-plate-in" cx="120" cy="78" r="47" />
+      <!-- Three equal thirds around the centre (120, 78), radius 42. -->
+      <g class="pa-wedges">
+        <path class="pa-protein" style="--d:0s" d="M120 78L83.63 57A42 42 0 0 1 156.37 57Z" />
+        <path class="pa-carbs" style="--d:.14s" d="M120 78L156.37 57A42 42 0 0 1 120 120Z" />
+        <path class="pa-fats" style="--d:.28s" d="M120 78L120 120A42 42 0 0 1 83.63 57Z" />
+      </g>
+      <g class="pa-icons">
+        <!-- Protein: chicken drumstick (meat upper left, bone lower right) -->
+        <g transform="translate(118 55) rotate(-8)">
+          <path class="pa-bone-ink" d="M1 3l9 8" />
+          <circle class="pa-icon" cx="11.8" cy="9.6" r="2.4" />
+          <circle class="pa-icon" cx="9.4" cy="12.2" r="2.4" />
+          <path class="pa-bone" d="M1 3l9 8" />
+          <path class="pa-icon" d="M4 3C9-3 4-12-4-12C-11-12-14-4-10 2C-7 6-1 7 4 3Z" />
+          <path class="pa-icon-line" d="M-7-5c2-3 5-4 8-3" />
+        </g>
+        <!-- Carbs: slice of bread -->
+        <g transform="translate(141 92) rotate(8)">
+          <path class="pa-icon" d="M-9-1C-12-9-4-13 0-9C4-13 12-9 9-1L8 9H-8Z" />
+          <path class="pa-icon-line" d="M-5 0C-6-5-2-7 0-4C2-7 6-5 5 0" />
+        </g>
+        <!-- Fats: half an avocado -->
+        <g transform="translate(99 91) rotate(-25)">
+          <path class="pa-avo-skin" d="M0-12C6.5-12 8.5-4 8.5 2C8.5 8 5 12 0 12C-5 12-8.5 8-8.5 2C-8.5-4-6.5-12 0-12Z" />
+          <path class="pa-avo-flesh" d="M0-9C4.5-9 6-3 6 1.8C6 6.5 3.5 9 0 9C-3.5 9-6 6.5-6 1.8C-6-3-4.5-9 0-9Z" />
+          <circle class="pa-avo-pit" cx="0" cy="3" r="3.6" />
+        </g>
+      </g>
+      <g class="pa-labels">
+        <text class="pa-small" x="214" y="26" text-anchor="middle">PROTEIN</text>
+        <path class="pa-pointer" d="M214 32c0 10-30 18-70 20" />
+        <text class="pa-small" x="216" y="112" text-anchor="middle">CARBS</text>
+        <path class="pa-pointer" d="M200 108c-16-2-30-6-42-12" />
+        <text class="pa-small" x="26" y="112" text-anchor="middle">FATS</text>
+        <path class="pa-pointer" d="M42 108c16-2 30-6 42-12" />
+      </g>
+      <g class="pa-steam">
+        <path style="--d:0s" d="M134 18c-4-5 4-8 0-14" />
+        <path style="--d:.8s" d="M144 20c-4-5 4-8 0-14" />
+      </g>
+    </g>
+  )}
+</svg>
+
+<script>
+  import { inView } from 'motion';
+  // Start each illustration's entrance when it scrolls into view (CSS does the animating).
+  inView('.pa', (el) => { el.classList.add('is-on'); }, { amount: 0.35 });
+</script>

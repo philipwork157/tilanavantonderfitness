@@ -2,13 +2,18 @@
 node_modules/
 .pnpm-store/
 
-# Astro, Nuxt, Next.js, Nitro, and Turborepo output
+# Local reference snapshot of the retired backend, including private environment files
+/tilana-fitness-old/
+
+# Local PDF, Word, image/video work and UI previews (not application source)
+/tilana-content-work/
+
+# Screenshots the Claude desktop app saves into the project; keep them in tilana-content-work instead
+/Claude outputs/
+
+# Astro and Turborepo output (Next.js output is ignored in apps/admin-next)
 dist/
 .astro/
-.nuxt/
-.next/
-.output/
-.nitro/
 .turbo/
 
 # Tool caches and generated type state
@@ -16,7 +21,6 @@ dist/
 .vite/
 .eslintcache
 *.tsbuildinfo
-/apps/admin-next/next-env.d.ts
 
 # Test and coverage output
 coverage/
@@ -45,12 +49,11 @@ yarn-error.log*
 /output/
 /tmp/
 
-# Local creative work and UI screenshots (keep on disk, not in Git)
-/tilana-content-work/
-/Claude outputs/
-
 # Operating-system and editor files
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
+
+# Local database backups (contain customer data)
+/backups/

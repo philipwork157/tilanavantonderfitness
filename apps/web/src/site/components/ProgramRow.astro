@@ -1,0 +1,34 @@
+---
+/** Full program card for the program page. layout="row" puts the art beside the copy; "stack" puts it on top. */
+import AddToBasket from './shop/AddToBasket';
+import Icon from './Icon';
+import ProgramArt from './ProgramArt.astro';
+import ProgramMarks from './ProgramMarks.astro';
+import { rand } from './shop/basket';
+import { checkoutEnabled, href, programContactHref } from '../config';
+import { productName, type Program } from '../programs';
+interface Props { program: Program; layout?: 'row' | 'stack'; delay?: number }
+const { program: p, layout = 'row', delay = 0 } = Astro.props;
+---
+<article id={p.key} class:list={['prog-row card', `prog-row-${layout}`]} style={`--card-tone: var(--tone-${p.tone})`} data-reveal data-reveal-delay={String(delay)}>
+  <div class={`prog-row-art tone-${p.tone}`}>
+    <ProgramMarks program={p} />
+    <ProgramArt program={p} class="row-art" />
+    <div class="row-name">
+      <h3>{p.name}</h3>
+      <span class="prog-level">{p.level}</span>
+    </div>
+  </div>
+  <div class="prog-row-body">
+    <p class="row-lead">{p.title}</p>
+    <p>{p.description}</p>
+    <ul class="tag-list">{p.tags.map((t) => <li>{t}</li>)}</ul>
+    {p.preview && <a class="row-peek" href={`#peek-${p.slug}`} data-peek={p.slug}><Icon name="spark" /> Peek inside the PDF</a>}
+    <div class="row-buy">
+      <div class="price"><strong>{rand(p.priceCents)}</strong><span>once-off</span></div>
+      {checkoutEnabled
+        ? <><AddToBasket client:load slug={p.slug} name={productName(p)} className="btn btn-primary" /><a class="link-arrow" href={href(`/contact?interest=${p.key}`)}>Ask about {p.name}</a></>
+        : <a class="btn btn-primary" href={programContactHref(p)}>Get {p.name}</a>}
+    </div>
+  </div>
+</article>

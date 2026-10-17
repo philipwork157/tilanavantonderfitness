@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { programmeCatalogByKey } from './programs';
+import { programCatalogByKey } from './programs';
 
 export const contactInterestValues = [
   'move',
@@ -15,13 +15,19 @@ export const contactInterestSchema = z.enum(contactInterestValues);
 
 export type ContactInterest = z.infer<typeof contactInterestSchema>;
 
+/** Older and friendlier ?interest= values on contact links, mapped to the stored keys. */
+export const contactInterestAliases: Record<string, ContactInterest> = {
+  beginner: 'move',
+  advanced: 'strong',
+};
+
 /** Shared display labels used by the public form, admin portal, and notifications. */
 export const contactInterestLabels = {
-  strong: programmeCatalogByKey['strong-volume-1'].volumeName,
-  move: programmeCatalogByKey['move-volume-1'].volumeName,
+  move: programCatalogByKey['move-volume-1'].volumeName,
   intermediate: 'Intermediate · Volume 1',
-  nourish: programmeCatalogByKey['nourish-volume-1'].volumeName,
-  reconnect: programmeCatalogByKey['reconnect-volume-1'].volumeName,
+  strong: programCatalogByKey['strong-volume-1'].volumeName,
+  nourish: programCatalogByKey['nourish-volume-1'].volumeName,
+  reconnect: programCatalogByKey['reconnect-volume-1'].volumeName,
   'one-on-one': 'One-on-one training',
   general: 'General question',
 } as const satisfies Record<ContactInterest, string>;
@@ -49,7 +55,7 @@ export const contactValidationMessages = {
   turnstileToken: 'Please complete the security check.',
 } as const satisfies Record<ContactFormField, string>;
 
-/** Browser-to-Nuxt contract for the public contact form. */
+/** Website-to-admin contract for the public contact form. */
 export const contactFormRequestSchema = z.object({
   name: z.string().trim().min(2).max(100),
   email: z.string().trim().email().max(254),

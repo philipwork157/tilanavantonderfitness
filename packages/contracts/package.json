@@ -4,20 +4,28 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./auth": "./src/auth.ts",
-    "./clients": "./src/clients.ts",
-    "./coaching": "./src/coaching.ts",
+    "./admin-auth": "./src/admin-auth.ts",
+    "./admin-inquiries": "./src/admin-inquiries.ts",
+    "./admin-newsletter": "./src/admin-newsletter.ts",
+    "./admin-orders": "./src/admin-orders.ts",
+    "./admin-programs": "./src/admin-programs.ts",
+    "./blog": "./src/blog.ts",
+    "./catalogue": "./src/catalogue.ts",
+    "./checkout": "./src/checkout.ts",
     "./contact": "./src/contact.ts",
+    "./customer-access": "./src/customer-access.ts",
+    "./kitchen": "./src/kitchen.ts",
     "./newsletter": "./src/newsletter.ts",
     "./newsletter.messages": "./src/newsletter.messages.ts",
-    "./programs": "./src/programs.ts"
+    "./programs": "./src/programs.ts",
+    "./public-programs": "./src/public-programs.ts"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "zod": "latest"
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

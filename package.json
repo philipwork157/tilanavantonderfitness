@@ -10,20 +10,22 @@
     "dev": "node scripts/dev.mjs",
     "dev:stop": "node scripts/dev.mjs --stop",
     "dev:web": "turbo run dev --filter=@tilana/web",
-    "dev:admin": "turbo run dev --filter=@tilana/admin",
-    "build": "turbo run build && node scripts/prepare-site-dist.mjs",
+    "dev:admin-next": "turbo run dev --filter=@tilana/admin-next",
+    "build": "turbo run build",
     "build:web": "turbo run build --filter=@tilana/web",
-    "build:admin": "turbo run build --filter=@tilana/admin",
+    "build:admin-next": "turbo run build --filter=@tilana/admin-next",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "check": "turbo run lint typecheck",
+    "test": "turbo run test",
+    "test:coverage": "turbo run test:coverage",
     "db:generate": "pnpm --filter @tilana/db db:generate",
     "db:migrate": "pnpm --filter @tilana/db db:migrate",
-    "db:apply": "pnpm --filter @tilana/db db:apply",
-    "db:check": "pnpm --filter @tilana/db db:check",
-    "site:build": "pnpm --filter @tilana/web build && node scripts/prepare-site-dist.mjs"
+    "db:add-admin": "pnpm --filter @tilana/db db:add-admin",
+    "storage:move": "pnpm --filter @tilana/db storage:move",
+    "content:copy": "pnpm --filter @tilana/db content:copy"
   },
   "devDependencies": {
-    "turbo": "latest"
+    "turbo": "2.11.5"
   }
 }

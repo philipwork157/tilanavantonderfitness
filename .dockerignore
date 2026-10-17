@@ -5,20 +5,29 @@
 *.md
 .DS_Store
 
+# Never send the retired backend or its private environment files to a build context
+/tilana-fitness-old/
+
+# Private/local creative work is never part of an application build context
+/tilana-content-work/
+/Claude outputs/
+
+# Local database backups (customer data) never go into an image
+/backups/
+
 # dependencies & package-manager state (reinstalled in the image)
 node_modules
 **/node_modules
 .pnpm-store
 
 # build outputs & caches (rebuilt in the image)
-**/.output
-**/.nuxt
-**/.nitro
 **/dist
 **/.astro
 **/.turbo
 **/.cache
 **/.vite
+**/.next
+**/coverage
 *.tsbuildinfo
 
 # local env & scratch

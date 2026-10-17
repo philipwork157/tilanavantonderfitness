@@ -4,11 +4,8 @@ description: "A practical look at protein, muscle recovery, daily intake, protei
 publishedAt: 2026-09-27
 category: "Nourishment"
 readingTime: "8 min read"
-image: "/tilana-blog-protein-strength.png"
-imageAlt: "A balanced high-protein meal with salmon, steak, eggs, lentils, yoghurt and leafy greens beside a dumbbell"
-imageWidth: 1122
-imageHeight: 1402
-draft: false
+coverWord: "Protein"
+coverTone: "terracotta"
 ---
 
 <p class="article-intro"><span class="drop-cap">I</span><span>f carbs have a slightly complicated reputation, protein seems to have the opposite problem.</span></p>
@@ -51,7 +48,7 @@ You can’t just eat loads of protein and expect muscles to magically appear.
 
 And you can’t train hard while completely ignoring your nutrition and expect optimal results either.
 
-**Training and nutrition work together.**
+Training and nutrition work together.
 
 ## How much protein do you actually need?
 
@@ -79,9 +76,9 @@ You don’t win a prize for managing to put protein powder into every food you e
 
 ## Spread it out
 
-Instead of reaching 8 p.m. and realising you’ve eaten approximately seven grams of protein all day...
+Instead of reaching 8 p.m. and realising you’ve eaten approximately seven grams of protein all day…
 
-...and then attempting to consume an entire chicken...
+…and then attempting to consume an entire chicken…
 
 it can be much easier to distribute protein throughout your meals.
 
@@ -109,7 +106,7 @@ If you’re busy and struggling to reach your target, a shake can simply make li
 
 That’s how I prefer looking at supplements in general:
 
-**They’re there to supplement your diet - not become your diet.**
+They’re there to supplement your diet - not become your diet.
 
 ## Now let’s talk about meat
 
@@ -187,7 +184,7 @@ Your carbohydrates can provide fuel for training. Protein provides the amino aci
 
 We don’t need to keep making macronutrients fight each other.
 
-**They are a team.**
+They are a team.
 
 Instead of making foods compete, learn what each macronutrient contributes and how they can work together.
 
@@ -203,7 +200,7 @@ Start simply.
 
 Look at your meals and ask:
 
-**Where is my protein?**
+Where is my protein?
 
 Then build around it.
 
@@ -223,14 +220,10 @@ Lift your weights.
 
 Be patient.
 
-And if there’s steak involved...
+And if there’s steak involved…
 
 I’ll happily join you.
 
 <div class="article-closing">
   <p><strong>Strength is built through consistent training, supportive nutrition, and patience.</strong></p>
-  <div class="article-signature">
-    <span>With love,</span>
-    <strong>Tilana</strong>
-  </div>
 </div>

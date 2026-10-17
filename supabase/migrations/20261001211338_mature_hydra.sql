@@ -1,2 +1,0 @@
-ALTER TABLE "contact_submissions" DROP CONSTRAINT "contact_submissions_interest_value";--> statement-breakpoint
-ALTER TABLE "contact_submissions" ADD CONSTRAINT "contact_submissions_interest_value" CHECK ("contact_submissions"."interest" in ('strong', 'move', 'intermediate', 'nourish', 'reconnect', 'one-on-one', 'general'));

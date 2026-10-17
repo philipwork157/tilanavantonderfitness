@@ -1,98 +1,132 @@
-name: Build and deploy (production)
+name: Deploy (production)
 
-# Production deploys are manual only. Run this existing workflow from main,
-# choose public, admin, or both, and enter deploy to confirm. No dev merge needed.
-
+# Manual only: Actions > Deploy (production) > Run workflow, on the main branch,
+# typing "deploy" to confirm. Runs the checks, then the admin (Fly.io), then the
+# website (Cloudflare Worker). Database migrations are run by hand beforehand.
+#   Admin:   https://admin.tilanavantonder.co.za  (fly.prod.toml)
+#   Website: https://tilanavantonder.co.za, Cloudflare Worker "tilanavantonder-website-prod"
+# One-time setup (secrets, variables, domains): docs/deploy.md
 on:
   workflow_dispatch:
     inputs:
       target:
-        description: What should be deployed?
+        description: What to deploy
         required: true
-        default: both
+        default: everything
         type: choice
         options:
-          - both
-          - public
+          - everything
           - admin
+          - website
       confirm:
-        description: 'Type "deploy" to confirm a production release'
+        description: 'Type "deploy" to confirm the production release'
         required: true
-        default: ""
+        default: ''
 
 concurrency:
-  group: deploy-web-prod
+  group: deploy-production
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
-  deploy:
-    name: Deploy public website (prod)
-    if: ${{ github.ref_name == 'main' && inputs.confirm == 'deploy' && (inputs.target == 'both' || inputs.target == 'public') }}
+  validate:
+    name: Check the request
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      deployments: write
-    env:
-      # Public, build-time values. Set as repository Variables (Settings ->
-      # Secrets and variables -> Actions -> Variables). Use the *_PROD values.
-      PUBLIC_CONTACT_API_URL: ${{ secrets.PUBLIC_CONTACT_API_URL_PROD }}
-      PUBLIC_NEWSLETTER_API_URL: ${{ secrets.PUBLIC_NEWSLETTER_API_URL_PROD }}
-      PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.PUBLIC_TURNSTILE_SITE_KEY_PROD }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build web
-        run: pnpm build:web
-
-      - name: Deploy to Cloudflare Pages (prod)
-        # Run wrangler via pnpm dlx (isolated temp dir) so it never tries to
-        # install into the workspace root. If this project's Pages "production
-        # branch" is not `main`, change --branch below.
-        run: >-
-          pnpm dlx wrangler@4 pages deploy apps/web/dist/client
-          --project-name=tilanavantonder-website-prod
-          --branch=main
+      - name: Require the main branch and confirmation
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CONFIRM: ${{ inputs.confirm }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ "$REF_NAME" != "main" ]; then
+            echo '::error::Production deploys run from the main branch only.'
+            exit 1
+          fi
+          if [ "$CONFIRM" != "deploy" ]; then
+            echo '::error::Type "deploy" in the confirmation field.'
+            exit 1
+          fi
 
-  deploy-admin:
-    name: Deploy admin backend (prod)
-    if: ${{ github.ref_name == 'main' && inputs.confirm == 'deploy' && (inputs.target == 'both' || inputs.target == 'admin') }}
+  quality:
+    name: Quality checks
+    needs: validate
+    uses: ./.github/workflows/quality.yml
+
+  admin:
+    name: Admin (Fly.io)
+    needs: quality
+    if: inputs.target == 'everything' || inputs.target == 'admin'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    concurrency:
-      # Also serialise with the existing standalone admin production workflow.
-      group: deploy-admin-prod
-      cancel-in-progress: false
+    timeout-minutes: 20
+    environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-
-      - name: Validate Fly.io production token
+      - name: Check secrets
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}
-        run: test -n "$FLY_API_TOKEN" || { echo '::error::FLY_API_TOKEN_PROD is missing.'; exit 1; }
-
+        run: |
+          test -n "$FLY_API_TOKEN" || { echo '::error::Add the FLY_API_TOKEN_PROD secret (see docs/deploy.md).'; exit 1; }
       - name: Set up flyctl
-        # Reuse the SHA-pinned action from the standalone admin workflow.
-        uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1
-
-      - name: Deploy admin backend to Fly.io (prod)
+        uses: superfly/flyctl-actions/setup-flyctl@1.5
+      # Database migrations are not part of the deploy: run them by hand first
+      # (pnpm --filter @tilana/db db:migrate) when a release includes new ones.
+      - name: Deploy to Fly.io
         run: flyctl deploy --config fly.prod.toml --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}
+
+  website:
+    name: Website (Cloudflare)
+    needs: [quality, admin]
+    # After the admin when both are deployed; on its own when only the website is.
+    if: >-
+      !cancelled() && needs.quality.result == 'success'
+      && (needs.admin.result == 'success' || needs.admin.result == 'skipped')
+      && (inputs.target == 'everything' || inputs.target == 'website')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    permissions:
+      contents: read
+    env:
+      DEPLOYMENT_ENVIRONMENT: production
+      CLOUDFLARE_ENV: production
+      PUBLIC_API_BASE_URL: https://admin.tilanavantonder.co.za
+      PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY_PROD || secrets.PUBLIC_TURNSTILE_SITE_KEY_PROD }}
+      PUBLIC_POSTHOG_KEY: ${{ vars.PUBLIC_POSTHOG_KEY }}
+      PUBLIC_POSTHOG_HOST: https://eu.i.posthog.com
+      PUBLIC_SITE_ENVIRONMENT: production
+      # Online buying: "true" or "false" (a variable on the GitHub environment).
+      # Empty: on for development, off for the live website until switched on.
+      PUBLIC_CHECKOUT_ENABLED: ${{ vars.PUBLIC_CHECKOUT_ENABLED }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Check website settings
+        run: node apps/web/scripts/validate-public-deployment-env.mjs
+      - name: Check Cloudflare credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo '::error::Add the CLOUDFLARE_API_TOKEN secret.'; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo '::error::Add the CLOUDFLARE_ACCOUNT_ID secret.'; exit 1; }
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter "@tilana/web..."
+      - name: Build the website
+        run: pnpm --filter @tilana/web build
+      - name: Deploy the Cloudflare Worker
+        run: pnpm --filter @tilana/web exec wrangler deploy --config dist/server/wrangler.json
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

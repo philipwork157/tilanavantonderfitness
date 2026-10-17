@@ -11,8 +11,14 @@ export default defineConfig(
   },
   js.configs.recommended,
   {
-    files: ['**/*.ts'],
+    files: ['**/*.ts', '**/*.tsx'],
     extends: [tseslint.configs.recommended],
+  },
+  {
+    files: ['src/**/*.tsx', 'src/**/*.ts'],
+    languageOptions: {
+      globals: globals.browser,
+    },
   },
   ...eslintPluginAstro.configs.recommended,
   {
@@ -35,12 +41,6 @@ export default defineConfig(
     files: ['astro.config.mjs', 'eslint.config.js', 'scripts/**/*.mjs'],
     languageOptions: {
       globals: globals.node,
-    },
-  },
-  {
-    files: ['worker/**/*.js'],
-    languageOptions: {
-      globals: globals.worker,
     },
   },
 );

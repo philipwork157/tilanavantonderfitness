@@ -1,39 +1,100 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
-import { Image } from 'astro:assets';
-import heroImage from '../assets/tilana-home.jpg';
+import SiteLayout from '@web/site/layouts/SiteLayout.astro';
+import Img from '@web/site/components/Img.astro';
+import Icon from '@web/site/components/Icon';
+import ProgramCard from '@web/site/components/ProgramCard.astro';
+import { checkoutEnabled, href } from '@web/site/config';
+import { loadSitePrograms, setProgramCacheHeaders } from '@web/utils/programs';
+
+// Rendered on request so programs published in the admin appear without a rebuild.
+export const prerender = false;
+const { programs, ok: programsLoaded } = await loadSitePrograms();
+setProgramCacheHeaders(Astro.response.headers);
 ---
-<BaseLayout title="Strength, Movement & Healthy Habits">
-  <section class="hero"><div class="container hero-grid"><div class="hero-copy"><p class="eyebrow">Realistic strength for every body</p><h1 class="display"><span class="hero-line">Move better.</span><span class="hero-line">Feel stronger.</span><span class="hero-line script">Live healthier.</span></h1><p class="lede">Whether you are a woman or a man, lasting strength is built through purposeful movement and maintainable systems that work in real life. There is no perfection to chase and no quick fix to sell - only practical habits, steady progress, and a lifelong investment in moving well, feeling capable, and living with greater confidence.</p><div class="actions"><a class="button button-primary" href="/program">Explore the program</a><a class="button button-secondary" href="/about">Meet Tilana</a></div></div><div class="hero-visual"><Image src={heroImage} alt="Tilana van Tonder smiling with her arms crossed" widths={[432, 768, 1023]} sizes="(max-width: 48rem) 92vw, 27rem" loading="eager" fetchpriority="high" /></div></div></section>
-  <section class="simple-cta"><div class="container" data-reveal><h2 class="heading-xl">Want to train one-on-one?</h2><p class="cta-copy">Please contact me to discuss private training.</p><a class="button button-dark" href="/contact?interest=one-on-one">Get in touch</a></div></section>
-</BaseLayout>
-<style>
-  .hero { display: grid; min-height: calc(100svh - 5.5rem); align-items: center; overflow: hidden; padding-block: clamp(2rem, 5vh, 4.5rem); }
-  .hero-grid { display: grid; align-items: center; gap: clamp(2.5rem, 5vw, 5rem); grid-template-columns: minmax(0, 1.08fr) minmax(19rem, 0.92fr); }
-  .hero-copy { max-width: 41rem; }
-  .hero .display { font-size: clamp(3.7rem, 5.8vw, 5.75rem); }
-  .hero-line { display: block; white-space: nowrap; }
-  .hero .lede { margin: 1.6rem 0 2rem; }
-  .hero-copy > * { animation: hero-in 720ms cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .hero-copy .display { animation-delay: 80ms; }
-  .hero-copy .lede { animation-delay: 160ms; }
-  .hero-copy .actions { animation-delay: 240ms; }
-  .hero-visual { width: min(100%, 27rem); overflow: hidden; justify-self: center; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--sand); box-shadow: var(--shadow-md); animation: visual-in 900ms 160ms cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .hero-visual img { display: block; width: 100%; height: auto; }
-  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
-  .simple-cta { padding-block: var(--section-space); text-align: center; background: var(--terracotta); }
-  .simple-cta :is(.heading-xl, .cta-copy) { color: var(--color-on-primary); }
-  .simple-cta .heading-xl { margin-bottom: 0.75rem; }
-  .simple-cta .cta-copy { margin: 0 auto 2rem; font-size: 1.05rem; }
-  @keyframes hero-in { from { opacity: 0; transform: translateY(1.8rem); } }
-  @keyframes visual-in { from { opacity: 0; transform: translateX(2rem) scale(0.96); } }
-  @media (max-width: 48rem) {
-    .hero { min-height: auto; padding-block: 3.5rem 4.5rem; }
-    .hero-grid { grid-template-columns: 1fr; }
-    .hero-line { white-space: normal; }
-  }
-  @media (max-width: 30rem) {
-    .actions .button { width: 100%; }
-    .hero-visual { width: 100%; }
-  }
-</style>
+<SiteLayout title="Strength, Movement & Healthy Habits" current="home" programs={programs}>
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">Realistic strength for every body</p>
+        <h1 class="display hero-title">
+          <span class="line"><span style="--i:0">Move better.</span></span>
+          <span class="line"><span style="--i:1">Feel stronger.</span></span>
+          <span class="line"><span style="--i:2"><em>Live healthier.</em></span></span>
+        </h1>
+        <p class="lede" data-reveal data-reveal-delay="0.45">Whether you are a woman or a man, lasting strength is built through purposeful movement and maintainable systems that work in real life. No perfection to chase and no quick fix to sell, only practical habits and steady progress.</p>
+        <div class="hero-ctas" data-reveal data-reveal-delay="0.55">
+          <a class="btn btn-primary" href={href('/program')}>Explore the programs <Icon name="arrow" /></a>
+          <a class="btn" href={href('/about')}>Meet Tilana</a>
+        </div>
+        <p class="hero-quiz" data-reveal data-reveal-delay="0.65">Not sure where to start? <a href={href('/program#quiz')}>Take the 3-question quiz <Icon name="arrow" /></a></p>
+      </div>
+      <div class="hero-visual" data-reveal data-reveal-delay="0.2">
+        <div class="hero-arch">
+          <Img name="tilana-home" alt="Tilana van Tonder smiling with her arms crossed" sizes="(max-width: 52rem) 78vw, 25rem" priority />
+        </div>
+        <div class="spin-badge" aria-hidden="true">
+          <svg viewBox="0 0 200 200">
+            <defs><path id="badge-circle" d="M100,100 m-78,0 a78,78 0 1,1 156,0 a78,78 0 1,1 -156,0" /></defs>
+            <text><textPath href="#badge-circle" textLength="482" lengthAdjust="spacing">REAL · RAW · HONEST · REAL · RAW · HONEST ·</textPath></text>
+          </svg>
+          <span class="spin-core"><Icon name="spark" /></span>
+        </div>
+        <div class="sticker sticker-a tone-sage"><strong>4:04</strong> marathon<br /><small>six months after giving birth</small></div>
+        <div class="sticker sticker-b tone-white">No perfect bodies.<br /><small>Just strong ones.</small></div>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="section band" id="programs">
+    <div class="wrap">
+      <div class="section-head split" data-reveal>
+        <div>
+          <p class="eyebrow">The program collection</p>
+          <h2 class="h2">Start today, <em>at your pace.</em></h2>
+        </div>
+        <p class="lede">{checkoutEnabled
+          ? 'Choose one or a few. Add them to your basket and pay once, securely with Paystack. Every program is a once-off purchase.'
+          : 'Choose one or a few and get in touch. Every program is a once-off purchase, emailed to you as a PDF.'}</p>
+      </div>
+      <div class="prog-grid">
+        {programs.map((p, i) => <ProgramCard program={p} index={i} />)}
+        {programs.length === 0 && (
+          <article class="prog-card card prog-unavailable" data-reveal>
+            <p class="eyebrow">Programs</p>
+            <h3>{programsLoaded ? 'New programs are on the way.' : 'The programs are taking a moment to load.'}</h3>
+            <p>{programsLoaded ? 'Get in touch and I’ll let you know as soon as they are ready.' : 'Please refresh the page in a minute, or get in touch and I’ll help you directly.'}</p>
+            <div class="private-actions">
+              <a class="btn btn-primary" href={href('/contact')}>Get in touch <Icon name="arrow" /></a>
+            </div>
+          </article>
+        )}
+        <article class="prog-card card private-card" data-reveal data-reveal-delay="0.16">
+          <p class="eyebrow">Private training</p>
+          <h3>Want to train <em>one-on-one?</em></h3>
+          <p>Please contact me to discuss private training: a plan built around you, with regular check-ins along the way.</p>
+          <div class="private-actions">
+            <a class="btn btn-accent" href={href('/contact?interest=one-on-one')}>Get in touch <Icon name="arrow" /></a>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+
+
+  <section class="section">
+    <div class="wrap meet-grid">
+      <figure class="meet-photo" data-reveal>
+        <Img name="tilana-strength" alt="Tilana doing a dumbbell split squat in the gym" sizes="(max-width: 52rem) 92vw, 34rem" />
+      </figure>
+      <div class="meet-copy" data-reveal data-reveal-delay="0.1">
+        <p class="eyebrow">Meet Tilana</p>
+        <h2 class="h2">Hi, I’m <em>Tilana.</em></h2>
+        <blockquote>“Today I train because I love what my body can do, not because I’m trying to earn my worth.”</blockquote>
+        <p>I’m not perfect, and I don’t want to pretend to be. I’m simply someone who loves movement, values health, and wants to be strong enough to enjoy every season.</p>
+        <a class="btn btn-primary" href={href('/about')}>Read my story <Icon name="arrow" /></a>
+      </div>
+    </div>
+  </section>
+</SiteLayout>

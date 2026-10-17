@@ -1,0 +1,19 @@
+---
+import Icon from './Icon';
+import type { PostCard } from './BlogExplorer';
+interface Props { post: PostCard; delay?: number }
+const { post, delay = 0 } = Astro.props;
+---
+<a class="post-card card lift" href={post.href} data-reveal data-reveal-delay={String(delay)}>
+  <div class="post-cover">
+    {post.cover.kind === 'image'
+      ? <img src={post.cover.src} srcset={post.cover.srcSet || undefined} sizes="(max-width: 40rem) 92vw, (max-width: 64rem) 45vw, 26rem" width={post.cover.width} height={post.cover.height} alt={post.cover.alt} loading="lazy" decoding="async" />
+      : <div class={`type-cover tone-${post.cover.tone}`} aria-hidden="true"><span>{post.category}</span><strong>{post.cover.word}</strong></div>}
+  </div>
+  <div class="post-body">
+    <p class="eyebrow">{post.category} · {post.readingTime}</p>
+    <h3>{post.title}</h3>
+    <p>{post.description}</p>
+    <span class="link-arrow">Read article <Icon name="arrow" /></span>
+  </div>
+</a>

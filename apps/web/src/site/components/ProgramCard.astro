@@ -1,0 +1,32 @@
+---
+/**
+ * Compact program card for the home page: name, one line, price and the buy
+ * button. Descriptions and tags live on the program page (ProgramRow).
+ */
+import AddToBasket from './shop/AddToBasket';
+import ProgramArt from './ProgramArt.astro';
+import ProgramMarks from './ProgramMarks.astro';
+import { rand } from './shop/basket';
+import { checkoutEnabled, href, programContactHref } from '../config';
+import { productName, type Program } from '../programs';
+interface Props { program: Program; index?: number }
+const { program: p, index = 0 } = Astro.props;
+---
+<article class="prog-card card lift" style={`--card-tone: var(--tone-${p.tone})`} data-reveal data-reveal-delay={String((index % 3) * 0.08)}>
+  <header class={`prog-head tone-${p.tone}`}>
+    <ProgramMarks program={p} />
+    <ProgramArt program={p} class="prog-art" />
+    <h3>{p.name}</h3>
+    <span class="prog-level">{p.level}</span>
+  </header>
+  <div class="prog-body">
+    <p class="prog-title">{p.title}</p>
+    <div class="prog-foot">
+      <div class="price"><strong>{rand(p.priceCents)}</strong><span>once-off</span></div>
+      {checkoutEnabled
+        ? <AddToBasket client:load slug={p.slug} name={productName(p)} className="btn btn-primary btn-sm" />
+        : <a class="btn btn-primary btn-sm" href={programContactHref(p)}>Get {p.name}</a>}
+    </div>
+    <a class="prog-more" href={href(`/program#${p.key}`)}>Read more about {p.name}</a>
+  </div>
+</article>

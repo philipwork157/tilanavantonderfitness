@@ -1,0 +1,20 @@
+---
+/** Inner-page hero. Pass lines as strings; wrap a word in *asterisks* for the italic accent. */
+interface Props { eyebrow: string; lines: string[]; intro?: string }
+const { eyebrow, lines, intro } = Astro.props;
+const parts = (line: string) => line.split(/(\*[^*]+\*)/g).filter(Boolean);
+---
+<section class="page-hero">
+  <div class="wrap page-hero-grid">
+    <div>
+      <p class="eyebrow">{eyebrow}</p>
+      <h1 class="display">
+        {lines.map((line, i) => (
+          <span class="line"><span style={`--i:${i}`}>{parts(line).map((p) => p.startsWith('*') ? <em>{p.slice(1, -1)}</em> : p)}</span></span>
+        ))}
+      </h1>
+      {intro && <p class="lede" data-reveal data-reveal-delay="0.35">{intro}</p>}
+    </div>
+    <div class="page-hero-side"><slot /></div>
+  </div>
+</section>

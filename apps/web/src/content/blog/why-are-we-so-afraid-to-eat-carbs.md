@@ -4,22 +4,19 @@ description: "A practical look at carbohydrates, training fuel, scale fluctuatio
 publishedAt: 2026-09-13
 category: "Nourishment"
 readingTime: "9 min read"
-image: "/tilana-blog-carbs-are-fuel.png"
-imageAlt: "Bread, oats, rice, pasta and a banana beside a running shoe with the words Carbs are fuel, not the enemy"
-imageWidth: 1122
-imageHeight: 1402
-draft: false
+coverWord: "Carbs"
+coverTone: "sand"
 ---
 
 <p class="article-intro"><span class="drop-cap">C</span><span>arbs.</span></p>
 
 Say the word and suddenly we’re thinking about bread, pasta, pizza, burgers and all the delicious foods we’ve somehow been taught to feel slightly guilty about.
 
-*“I shouldn’t eat that.”*
+“I shouldn’t eat that.”
 
-*“I’m trying to be good.”*
+“I’m trying to be good.”
 
-*“I’m cutting carbs this week.”*
+“I’m cutting carbs this week.”
 
 But why are we so afraid of them?
 
@@ -117,7 +114,7 @@ And it changed the way I looked at food.
 
 I realised:
 
-**I wasn’t exercising to earn my food. My food was helping me exercise.**
+I wasn’t exercising to earn my food. My food was helping me exercise.
 
 Before training, I personally enjoy something simple like sourdough or an English muffin with about 15 g peanut butter, honey and half a banana.
 
@@ -147,7 +144,7 @@ Your training, duration, intensity and gut tolerance matter.
 
 The point is much simpler:
 
-**If you’re asking your body to perform for a long time, don’t wait until the fuel tank is completely empty before deciding to fill it.**
+If you’re asking your body to perform for a long time, don’t wait until the fuel tank is completely empty before deciding to fill it.
 
 ## Then you eat carbs and the scale betrays you…
 
@@ -295,7 +292,7 @@ Food is allowed to be that too.
 
 So the next time you look at a piece of bread and wonder whether you “should” eat it, perhaps ask yourself a different question:
 
-**What if I stopped being afraid of food and started learning how to use it?**
+What if I stopped being afraid of food and started learning how to use it?
 
 Learn what fuels your body. Learn what portions support your goals. Learn how different foods make you feel. Learn when you need more fuel and when you need less.
 
@@ -317,8 +314,4 @@ just keep the burger bun.
 
 <div class="article-closing">
   <p><strong>Food is fuel - not something you need to earn.</strong></p>
-  <div class="article-signature">
-    <span>With love,</span>
-    <strong>Tilana 🤍</strong>
-  </div>
 </div>

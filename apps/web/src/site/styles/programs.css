@@ -1,0 +1,282 @@
+/* program illustrations (ProgramArt), level marks (ProgramMarks) and program layouts. */
+
+/* ── Level meter + volume stamp ── */
+.pm { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.pm-level { display: inline-flex; align-items: center; gap: 0.55rem; padding-top: 0.3rem; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.16em; line-height: 1; text-transform: uppercase; }
+.pm-focus svg { width: 1.15rem; height: 1.15rem; stroke-width: 2; }
+.pm-bars { display: inline-flex; align-items: flex-end; gap: 3px; height: 1rem; }
+.pm-bars i { display: block; width: 0.42rem; border: 1.5px solid currentColor; border-radius: 2px; }
+.pm-bars i:nth-child(1) { height: 0.45rem; }
+.pm-bars i:nth-child(2) { height: 0.72rem; }
+.pm-bars i:nth-child(3) { height: 1rem; }
+.pm-bars i.on { background: currentColor; }
+/* Volume seal: a rubber stamp in the panel's ink colour (currentColor). */
+.vol-stamp {
+  flex: none; width: clamp(4.9rem, 7vw, 5.6rem); aspect-ratio: 1; margin: -0.35rem -0.3rem -1.4rem 0;
+  rotate: -11deg; transition: rotate 500ms var(--ease-out), scale 500ms var(--ease-out);
+}
+.prog-row .vol-stamp { width: clamp(5.4rem, 8vw, 6.6rem); }
+.vol-ink { display: block; width: 100%; height: 100%; overflow: visible; }
+.vol-rim { fill: none; stroke: currentColor; stroke-width: 3.2; }
+.vol-rim-thin { fill: none; stroke: currentColor; stroke-width: 1.1; stroke-dasharray: 1.6 2.4; }
+.vol-disc { fill: currentColor; }
+.vol-ring { transform-origin: 50px 50px; transition: transform 900ms var(--ease-out); }
+.vol-ring-text { fill: currentColor; font-family: var(--font-body); font-size: 9px; font-weight: 800; letter-spacing: 2.6px; }
+.vol-stars { fill: currentColor; }
+.vol-knock-small { font-family: var(--font-body); font-size: 7.4px; font-weight: 800; letter-spacing: 1.6px; }
+.vol-knock-num { font-family: var(--font-heading); font-size: 34px; font-style: italic; font-weight: 900; }
+.prog-card:hover .vol-stamp, .prog-row:hover .vol-stamp { rotate: 4deg; scale: 1.06; }
+.prog-card:hover .vol-ring, .prog-row:hover .vol-ring { transform: rotate(-14deg); }
+@media (prefers-reduced-motion: reduce) {
+  .vol-stamp, .vol-ring { transition: none; }
+}
+
+/* ── The illustrations ── */
+.pa {
+  --pa-protein: #a87e63; --pa-carbs: #e2bf86;
+  display: block; overflow: visible; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round;
+}
+:root[data-theme='dark'] .pa { --pa-protein: #c9946e; --pa-carbs: #dcb67c; }
+.pa text { fill: currentColor; stroke: none; font-family: var(--font-script); font-size: 22px; }
+.pa .pa-small { font-family: var(--font-body); font-size: 8.5px; font-weight: 800; letter-spacing: 0.14em; opacity: 0.75; }
+
+/* Barbell: Beginner, Intermediate, Advanced */
+.pa-floor { stroke-width: 2; stroke-dasharray: 2 6; opacity: 0.45; }
+.pa-shadow { fill: currentColor; stroke: none; opacity: 0.12; transform-box: fill-box; transform-origin: center; animation: pa-shadow 4.8s ease-in-out infinite; }
+.pa-lift { animation: pa-lift 4.8s ease-in-out infinite; }
+.pa-bar { stroke-width: 5; }
+.pa-knurl line { stroke-width: 1.2; opacity: 0.5; }
+.pa-collar { fill: var(--surface); stroke-width: 2.5; }
+.pa-plate rect { stroke-width: 2.5; }
+.pa-plate-a rect { fill: currentColor; }
+.pa-plate-b rect { fill: var(--surface); }
+.pa-shine { stroke-width: 2; opacity: 0.35; }
+.pa-plate-a .pa-shine { stroke: var(--surface); }
+.pa-ghost rect { stroke-width: 2; stroke-dasharray: 4 5; opacity: 0.5; animation: pa-march 1.6s linear infinite; }
+.pa-arrow, .pa-arrow-head { stroke-width: 1.8; }
+.pa-sparks path { fill: currentColor; stroke: none; transform-box: fill-box; transform-origin: center; animation: pa-twinkle 2.4s ease-in-out infinite; animation-delay: var(--d); }
+@keyframes pa-lift { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes pa-shadow { 0%, 100% { transform: scaleX(1); opacity: 0.12; } 50% { transform: scaleX(0.86); opacity: 0.07; } }
+@keyframes pa-march { to { stroke-dashoffset: -18; } }
+@keyframes pa-twinkle { 0%, 100% { transform: scale(0.6); opacity: 0.4; } 50% { transform: scale(1.1); opacity: 1; } }
+
+/* Reconnect: the breathing canister. In-breath (first half): the diaphragm
+   flattens and lowers, the pelvic floor lowers with it and the walls widen a
+   little. Out-breath: everything lifts back together. */
+.pa-wall { stroke-width: 3; }
+.pa-walls { transform-box: fill-box; transform-origin: center; animation: pa-walls 6s ease-in-out infinite; }
+.pa-dia { fill: var(--surface); stroke-width: 2.6; transform-box: fill-box; transform-origin: 50% 100%; animation: pa-dia 6s ease-in-out infinite; }
+.pa-pf { fill: currentColor; stroke-width: 2.6; transform-box: fill-box; transform-origin: 50% 0%; animation: pa-pf 6s ease-in-out infinite; }
+.pa-dir path { stroke-width: 2.4; opacity: 0.55; }
+.pa-word { font-size: 21px; }
+.pa-in { animation: pa-in 6s ease-in-out infinite; }
+.pa-out { animation: pa-out 6s ease-in-out infinite; }
+.pa-updown { stroke-width: 2; }
+.pa-pointer { stroke-width: 1.4; stroke-dasharray: 2 4; opacity: 0.7; }
+@keyframes pa-walls { 0%, 100% { transform: scaleX(1); } 45%, 55% { transform: scaleX(1.05); } }
+@keyframes pa-dia { 0%, 100% { transform: translateY(0) scaleY(1); } 45%, 55% { transform: translateY(9px) scaleY(0.6); } }
+@keyframes pa-pf { 0%, 100% { transform: translateY(0) scaleY(1); } 45%, 55% { transform: translateY(4px) scaleY(1.45); } }
+/* Labels and arrows switch as the movement changes direction (holds at 45-55%). */
+@keyframes pa-in { 0%, 52% { opacity: 1; } 54%, 97% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes pa-out { 0%, 52% { opacity: 0; } 54%, 97% { opacity: 1; } 100% { opacity: 0; } }
+
+/* Nourish: a plate split into protein, carbs and fats */
+.pa-meal { --pa-fats: #a9b78c; --pa-avo: #e4e6b4; --pa-avo-skin: #4f5f2e; }
+:root[data-theme='dark'] .pa-meal { --pa-fats: #97a67a; }
+.pa-plate-rim { fill: var(--surface); stroke-width: 3; }
+.pa-plate-in { stroke-width: 1.5; opacity: 0.35; }
+.pa-protein, .pa-carbs, .pa-fats { stroke: var(--surface); stroke-width: 3; transform-box: view-box; transform-origin: 120px 78px; }
+.pa-protein { fill: var(--pa-protein); }
+.pa-carbs { fill: var(--pa-carbs); }
+.pa-fats { fill: var(--pa-fats); }
+/* Food drawings: cream with dark ink in both themes, so they read on every wedge. */
+.pa-icons { color: #0f0e13; }
+.pa-icon { fill: #fffaf6; stroke: currentColor; stroke-width: 1.6; }
+.pa-icon-line { stroke: currentColor; stroke-width: 1.4; opacity: 0.7; }
+.pa-bone-ink { stroke: currentColor; stroke-width: 5.2; }
+.pa-bone { stroke: #fffaf6; stroke-width: 2; }
+.pa-avo-skin { fill: var(--pa-avo-skin); stroke: currentColor; stroke-width: 1.6; }
+.pa-avo-flesh { fill: var(--pa-avo); stroke: none; }
+.pa-avo-pit { fill: #a87e63; stroke: currentColor; stroke-width: 1.4; }
+.pa-steam path { stroke-width: 2; opacity: 0; animation: pa-steam 3.2s ease-in-out infinite; animation-delay: var(--d); }
+@keyframes pa-steam { 0% { transform: translateY(6px); opacity: 0; } 40% { opacity: 0.6; } 100% { transform: translateY(-6px); opacity: 0; } }
+
+/* Entrance: plates slide on, wedges pop in, the note writes itself (only when motion is OK) */
+.motion-ok .pa-plate, .motion-ok .pa-protein, .motion-ok .pa-carbs, .motion-ok .pa-fats {
+  transition: transform 750ms cubic-bezier(0.34, 1.4, 0.64, 1), opacity 450ms ease; transition-delay: calc(0.15s + var(--d, 0s));
+}
+.motion-ok .pa-note, .motion-ok .pa-icons, .motion-ok .pa-labels { transition: opacity 600ms ease 0.75s; }
+.motion-ok .pa-arrow { stroke-dasharray: 90; stroke-dashoffset: 0; transition: stroke-dashoffset 800ms ease 0.85s; }
+.motion-ok .pa:not(.is-on) .pa-plate.pa-left { transform: translateX(-30px); opacity: 0; }
+.motion-ok .pa:not(.is-on) .pa-plate.pa-right { transform: translateX(30px); opacity: 0; }
+.motion-ok .pa:not(.is-on) :is(.pa-protein, .pa-carbs, .pa-fats) { transform: scale(0.2); opacity: 0; }
+.motion-ok .pa:not(.is-on) :is(.pa-note, .pa-icons, .pa-labels) { opacity: 0; }
+.motion-ok .pa:not(.is-on) .pa-arrow { stroke-dashoffset: 90; }
+@media (prefers-reduced-motion: reduce) {
+  .pa *, .pa-vol { animation: none !important; transition: none !important; }
+  .pa-out, .pa-steam path { display: none; }
+}
+
+/* ── Home: compact program cards ── */
+.prog-head { display: flex; flex-direction: column; padding: 1.1rem 1.3rem 1.4rem; border-bottom: 2px solid var(--line); }
+.prog-art { width: min(100%, 14.5rem); margin: 0.1rem auto 0.5rem; }
+.prog-head h3 { margin: 0.2rem 0 0.3rem; font-family: var(--font-heading); font-size: clamp(2rem, 3vw, 2.6rem); font-style: italic; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
+.prog-level { font-size: 0.74rem; font-weight: 700; opacity: 0.85; }
+
+/* ── Program page: hero map ── */
+.hero-jump { padding: 1.3rem 1.4rem; }
+.hero-jump > p { margin: 0 0 0.5rem; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-text); }
+.hero-jump > p + * { margin-bottom: 1.2rem; }
+.hero-jump ol, .hero-jump ul { margin: 0; padding: 0; list-style: none; }
+.hero-jump ul { margin-bottom: 0; }
+.hero-jump a { display: grid; grid-template-columns: 1.7rem minmax(0, 1fr) auto; align-items: center; gap: 0.8rem; padding: 0.6rem 0; border-top: 1px solid var(--line-soft); text-decoration: none; }
+.hero-jump a strong { font-size: 0.98rem; font-weight: 800; }
+.hero-jump a small { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-soft); }
+.hero-jump a svg { width: 1.25rem; height: 1.25rem; stroke-width: 2; }
+.hero-jump a:hover strong { color: var(--accent-text); }
+
+/* ── Program page: the strength series path ── */
+.series { display: grid; gap: 1.8rem; margin: 0; padding: 0; list-style: none; }
+.series-step { position: relative; display: grid; grid-template-columns: 3.4rem minmax(0, 1fr); gap: 1.4rem; }
+.series-step::before { content: ''; position: absolute; top: 3.8rem; bottom: -1.8rem; left: calc(1.7rem - 1px); border-left: 2px dashed var(--line); }
+.series-step:last-child::before { display: none; }
+.series-dot {
+  position: sticky; top: calc(var(--header-h) + 1.2rem); align-self: start; display: grid; place-items: center; width: 3.4rem; height: 3.4rem;
+  border: 2px solid var(--line); border-radius: 50%; background: var(--surface); box-shadow: 3px 3px 0 var(--hard-shadow);
+  font-family: var(--font-heading); font-size: 1.4rem; font-style: italic; font-weight: 800;
+}
+
+/* ── Program page: full program cards ── */
+.prog-row { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); overflow: hidden; scroll-margin-top: calc(var(--header-h) + 1.5rem); }
+.prog-row-art { display: flex; flex-direction: column; gap: 1rem; min-height: 23rem; padding: clamp(1.3rem, 2.6vw, 2rem); border-right: 2px solid var(--line); }
+.row-art { width: min(100%, 25rem); margin: auto; }
+.row-name h3 { margin: 0 0 0.3rem; font-family: var(--font-heading); font-size: clamp(2.4rem, 4.4vw, 3.6rem); font-style: italic; font-weight: 800; line-height: 0.95; letter-spacing: -0.03em; }
+.prog-row-body { display: flex; flex-direction: column; padding: clamp(1.4rem, 3vw, 2.4rem); }
+.prog-row-body > p { margin: 0 0 1.2rem; color: var(--fg-soft); line-height: 1.75; }
+.prog-row-body > .row-lead { margin: 0 0 0.8rem; color: var(--fg); font-family: var(--font-heading); font-size: clamp(1.5rem, 2.4vw, 2rem); font-weight: 800; line-height: 1.15; }
+.prog-row-body .tag-list { margin-bottom: 1.6rem; }
+.row-buy { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.4rem; margin-top: auto; padding-top: 1.3rem; border-top: 2px solid var(--line); }
+.row-buy .price strong { font-size: 2.2rem; }
+/* Later volumes of the same program */
+.row-volumes { display: grid; gap: 0.6rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+.row-volumes li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem 1rem; padding: 0.7rem 0.9rem; border: 2px dashed var(--line); border-radius: 1rem; }
+.row-volumes strong { margin-right: 0.4rem; font-weight: 900; }
+
+/* Focus programs: art on top */
+.focus-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.4rem; }
+.prog-row-stack { grid-template-columns: minmax(0, 1fr); }
+.prog-row-stack .prog-row-art { min-height: 0; border-right: 0; border-bottom: 2px solid var(--line); }
+.prog-row-stack .row-art { width: min(100%, 22rem); margin-block: 0.4rem; }
+.prog-row-stack .row-name { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.3rem 1rem; }
+
+@media (max-width: 64rem) {
+  .focus-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 52rem) {
+  .series-step { grid-template-columns: minmax(0, 1fr); }
+  .series-step::before, .series-dot { display: none; }
+  .prog-row { grid-template-columns: minmax(0, 1fr); }
+  .prog-row-art { min-height: 0; border-right: 0; border-bottom: 2px solid var(--line); }
+  .row-art { width: min(100%, 18rem); }
+}
+@media (max-width: 40rem) {
+  .row-buy .btn { flex: 1 1 auto; }
+}
+
+/* ── Dark mode: give each program its own colour ──
+   Panels get a soft light glow behind the seal, the card body takes a tint of
+   the program's tone, and the hard shadow uses that tone too. */
+:root[data-theme='dark'] .prog-head,
+:root[data-theme='dark'] .prog-row-art {
+  background-image:
+    radial-gradient(circle at 88% 8%, rgb(255 236 220 / 16%), transparent 42%),
+    linear-gradient(180deg, transparent 55%, rgb(0 0 0 / 18%));
+}
+:root[data-theme='dark'] .prog-card:not(.private-card),
+:root[data-theme='dark'] .prog-row {
+  background: color-mix(in srgb, var(--card-tone) 16%, var(--surface));
+  box-shadow: 6px 6px 0 var(--card-tone);
+}
+:root[data-theme='dark'] .prog-card.lift:not(.private-card):hover { box-shadow: 10px 10px 0 var(--card-tone); }
+:root[data-theme='dark'] .prog-row .tag-list li,
+:root[data-theme='dark'] .prog-card .tag-list li { border-color: color-mix(in srgb, var(--card-tone) 45%, var(--fg)); }
+
+/* Shown instead of the programs when none are published or the admin API is down */
+.prog-unavailable { display: flex; flex-direction: column; justify-content: center; padding: clamp(1.6rem, 3vw, 2.4rem); }
+.prog-unavailable h3 { margin: 0 0 0.8rem; font-family: var(--font-heading); font-size: clamp(1.7rem, 2.6vw, 2.2rem); font-weight: 800; line-height: 1.1; }
+.prog-unavailable p:not(.eyebrow) { margin: 0 0 1.4rem; color: var(--fg-soft); line-height: 1.6; }
+#strength-series, #focus-programs { scroll-margin-top: var(--header-h); }
+
+/* ── Peek inside the PDFs (components/PdfPeek.tsx) ──
+   Program tabs, a short summary, and a small stack of pages to flip through. */
+.row-peek { display: inline-flex; align-items: center; gap: 0.45rem; align-self: flex-start; margin: -0.6rem 0 1.5rem; padding: 0.45rem 0.85rem; border: 2px dashed var(--line); border-radius: 999px; color: var(--fg); font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em; text-decoration: none; text-transform: uppercase; transition: background 200ms ease, border-style 200ms ease; }
+.row-peek:hover { border-style: solid; background: var(--card-tone); color: var(--on-tone); }
+.row-peek svg { width: 1em; height: 1em; }
+#peek { scroll-margin-top: var(--header-h); }
+
+.peek-tabs { display: flex; gap: 0.7rem; margin-bottom: 1.6rem; padding: 0.3rem 0.3rem 0.6rem; overflow-x: auto; scrollbar-width: thin; }
+.peek-tab { display: flex; flex: none; align-items: center; gap: 0.75rem; padding: 0.55rem 1rem 0.55rem 0.6rem; border: 2px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--fg); text-align: left; scroll-margin-top: calc(var(--header-h) + 6rem); transition: transform 220ms var(--ease-out), box-shadow 220ms var(--ease-out), background 200ms ease; }
+.peek-tab .program-thumb { width: 2.6rem; height: 2.6rem; border-radius: 12px; box-shadow: 2px 2px 0 var(--line); }
+.peek-tab .program-thumb svg { width: 2.15rem; height: 2.15rem; }
+.peek-tab strong { display: block; font-size: 0.92rem; }
+.peek-tab small { display: block; font-size: 0.7rem; color: var(--fg-soft); }
+.peek-tab:hover { transform: translateY(-2px); }
+.peek-tab[aria-selected='true'] { background: var(--bg-2); box-shadow: 4px 4px 0 var(--line); transform: translateY(-2px); }
+
+.peek-body { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: clamp(1.6rem, 4vw, 4rem); align-items: center; }
+.peek-info h3 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.8rem; margin: 0 0 0.8rem; font-family: var(--font-heading); font-size: clamp(2.4rem, 4.4vw, 3.4rem); font-style: italic; font-weight: 800; line-height: 0.95; letter-spacing: -0.03em; }
+.peek-info h3 em { font-family: var(--font-body, inherit); font-size: 0.8rem; font-style: normal; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent-text); }
+.peek-format { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 1.2rem; color: var(--fg-soft); font-size: 0.92rem; }
+.peek-format svg { width: 1.1em; height: 1.1em; color: var(--accent-text); }
+.peek-info h4 { margin: 1.4rem 0 0.8rem; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; }
+.peek-inside { display: grid; gap: 0.7rem; margin: 0; padding: 0; list-style: none; }
+.peek-inside li { display: flex; gap: 0.6rem; line-height: 1.5; }
+.peek-inside svg { flex: none; width: 1.1rem; height: 1.1rem; margin-top: 0.2rem; color: var(--accent-text); }
+.peek-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.4rem; margin-top: 2rem; }
+
+/* The page stack: pictures of the real PDF, the cover first. */
+.peek-reader { display: grid; justify-items: center; gap: 1.4rem; }
+/* Room on the right for the pages fanned out behind the front one. The aspect ratio comes from the cover picture. */
+.peek-book { position: relative; width: min(100% - 2.4rem, 24rem); aspect-ratio: 1 / 1.414; margin-right: 2.4rem; }
+.peek-page { position: absolute; inset: 0; margin: 0; overflow: hidden; border: 2px solid var(--line); border-radius: 14px; background: #fff; box-shadow: 5px 5px 0 var(--line); }
+.peek-page img { display: block; width: 100%; height: 100%; object-fit: cover; user-select: none; -webkit-user-drag: none; }
+.peek-page::after { content: ''; position: absolute; inset: 0 auto 0 0; width: 10px; background: linear-gradient(90deg, rgb(0 0 0 / 7%), transparent); pointer-events: none; }
+.peek-lock { position: absolute; top: 50%; left: 50%; display: flex; align-items: center; gap: 0.45rem; margin: 0; padding: 0.55rem 1rem; border: 2px solid var(--line); border-radius: 999px; background: var(--surface); box-shadow: 3px 3px 0 var(--line); color: var(--fg); font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em; white-space: nowrap; translate: -50% -50%; }
+.peek-lock svg { width: 1rem; height: 1rem; }
+.peek-summary { margin: 0 0 1.2rem; color: var(--fg-soft); line-height: 1.6; }
+.peek-note { display: flex; gap: 0.6rem; margin: 1.6rem 0 0; color: var(--fg-soft); font-size: 0.9rem; line-height: 1.55; }
+.peek-note svg { flex: none; width: 1.05rem; height: 1.05rem; margin-top: 0.2rem; color: var(--accent-text); }
+
+/* Page turning */
+.peek-controls { display: flex; align-items: center; gap: 1rem; margin-right: 2.4rem; }
+.peek-controls p { display: grid; justify-items: center; gap: 0.4rem; min-width: 6.5rem; margin: 0; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; }
+.peek-dots { display: flex; gap: 0.35rem; }
+.peek-dots i { width: 0.45rem; height: 0.45rem; border-radius: 50%; background: color-mix(in srgb, var(--line) 25%, transparent); transition: width 250ms var(--ease-out), background 250ms ease; }
+.peek-dots i.on { width: 1.3rem; border-radius: 999px; background: var(--line); }
+.peek-turn { display: grid; place-items: center; width: 2.8rem; height: 2.8rem; border: 2px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--fg); box-shadow: 3px 3px 0 var(--line); transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out); }
+.peek-turn svg { width: 1.1rem; height: 1.1rem; rotate: 180deg; }
+.peek-turn.next svg { rotate: 0deg; }
+.peek-turn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--line); }
+.peek-turn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--line); }
+
+/* The peek as a pop-up from a program card (components/PeekDialog.tsx). */
+html.peek-open { overflow: hidden; }
+.peek-layer { position: fixed; inset: 0; z-index: 1150; display: grid; place-items: center; padding: clamp(0.75rem, 3vw, 2rem); }
+.peek-scrim { position: absolute; inset: 0; background: rgb(15 14 19 / 45%); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+.peek-dialog { position: relative; width: min(100%, 62rem); max-height: calc(100dvh - 1.5rem); overflow-y: auto; overscroll-behavior: contain; padding: clamp(1.1rem, 3vw, 2.2rem); }
+.peek-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.peek-dialog-head .eyebrow { margin: 0; }
+.peek-close { display: grid; flex: none; place-items: center; width: 2.75rem; height: 2.75rem; padding: 0; border: 2px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--fg); }
+.peek-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.peek-dialog .peek-info h3 { font-size: clamp(2rem, 3.6vw, 2.8rem); }
+.peek-dialog .peek-book { width: min(100% - 2.4rem, 21rem); }
+
+:root[data-theme='dark'] .peek-page::after { background: linear-gradient(90deg, rgb(0 0 0 / 25%), transparent); }
+
+@media (max-width: 56rem) {
+  .peek-body { grid-template-columns: minmax(0, 1fr); gap: 2.6rem; }
+  .peek-reader { order: -1; }
+  .peek-dialog .peek-body { gap: 1.8rem; }
+  .peek-dialog .peek-book { width: min(100% - 2.4rem, 17rem); }
+}
+
