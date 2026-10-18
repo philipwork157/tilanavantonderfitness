@@ -98,7 +98,7 @@ export const timeline = [
   { when: 'Teaching', title: 'Helping people grow', copy: 'Music led me to study education and become a teacher. I love seeing people grow in confidence.' },
   { when: 'University', title: 'The hard lesson', copy: 'An unhealthy relationship with food slowly taught me that my worth is not a number on the scale.' },
   { when: 'Motherhood', title: 'Training through pregnancy', copy: 'I trained throughout my first pregnancy, with my doctor’s approval.' },
-  { when: '6 months postpartum', title: 'A 4:04 marathon', copy: 'I ran my fastest marathon in 4 hours and 4 minutes, and I’m excited to chase a new personal best after my first pregnancy.' },
+  { when: '6 months postpartum', title: 'A 4:04 marathon', copy: 'I ran my fastest marathon in 4 hours and 4 minutes. After my second pregnancy, I’m going to try to break that record.' },
   { when: 'Today', title: 'This dream, from home', copy: 'Building a space for healthy, sustainable living, one step at a time.' },
 ];
 
