@@ -6,6 +6,10 @@
 #
 #   bash scripts/reset-db.sh dev     uses DATABASE_URL from apps/admin-next/.env.local
 #   bash scripts/reset-db.sh prod    uses DATABASE_URL from apps/admin-next/.env.prod
+#   bash scripts/reset-db.sh prod --delete-orders
+#                                    only for replacing an old database that still has
+#                                    orders (e.g. the previous website's): you type the
+#                                    number of orders to confirm, after the backup
 #
 # For the LIVE database it takes a backup first (scripts/backup-prod-db.sh)
 # and refuses once there is any order, so it can only be used before launch.
@@ -18,6 +22,12 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 TARGET="${1:-}"
+DELETE_ORDERS=0
+case "${2:-}" in
+  '') ;;
+  --delete-orders) DELETE_ORDERS=1 ;;
+  *) echo "Unknown option: $2" >&2; exit 1 ;;
+esac
 case "$TARGET" in
   dev)  ENV_FILE=apps/admin-next/.env.local; LABEL="DEVELOPMENT" ;;
   prod) ENV_FILE=apps/admin-next/.env.prod;  LABEL="LIVE" ;;
@@ -60,13 +70,21 @@ echo
 
 if [ "$TARGET" = prod ]; then
   ORDERS="$(rows_in public.orders)"
-  if [ "$ORDERS" != 0 ]; then
+  if [ "$ORDERS" != 0 ] && [ "$DELETE_ORDERS" = 0 ]; then
     echo "Refusing: the live database has $ORDERS order(s). It is selling, so it must never be reset." >&2
+    echo "Only if this is an old database you are replacing (and you have a backup), run:" >&2
+    echo "  bash scripts/reset-db.sh prod --delete-orders" >&2
     exit 1
   fi
   echo "Taking a backup first..."
   bash scripts/backup-prod-db.sh
   echo
+  if [ "$ORDERS" != 0 ]; then
+    echo "WARNING: this deletes $ORDERS real order(s) and everything linked to them."
+    echo "Keep the backup above (and your own export): it is your record of those sales."
+    read -r -p "Type the number of orders ($ORDERS) to confirm you want them deleted: " answer
+    [ "$answer" = "$ORDERS" ] || { echo "Stopped. Nothing was changed."; exit 1; }
+  fi
 fi
 
 read -r -p "Type the database name ($DB_NAME) to delete everything and rebuild it: " answer

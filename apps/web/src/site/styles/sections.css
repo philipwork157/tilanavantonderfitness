@@ -152,6 +152,8 @@
 .author img { width: 4.2rem; height: 4.2rem; border: 2px solid var(--line); border-radius: 50%; object-fit: cover; object-position: 50% 18%; }
 .author strong { display: block; font-size: 0.95rem; }
 .author span { display: block; font-size: 0.8rem; color: var(--fg-soft); line-height: 1.5; }
+/* The grid would stretch the link (and its underline) across the whole column. */
+.author .link-arrow { justify-self: start; }
 .prose { font-size: 1.08rem; line-height: 1.85; }
 .prose p { margin: 0 0 1.2rem; }
 .prose h2 { margin: 2.8rem 0 1rem; font-family: var(--font-heading); font-size: clamp(1.6rem, 2.6vw, 2.1rem); font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; }
