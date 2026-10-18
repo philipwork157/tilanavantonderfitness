@@ -5,11 +5,11 @@ import { postHogSettings } from '@/server/services/posthog';
 import { periodFrom, siteFrom } from '@/server/services/website-request';
 import { websiteStats } from '@/server/services/website-stats';
 
-/** Website analytics from PostHog for the Website page: ?days=7|30|90&site=live|testing. */
+/** Website analytics from PostHog for the Website page: ?days=7|30|90 (this admin's site only). */
 export const GET = handle(async (request: Request) => {
   await requireAdmin();
   const settings = postHogSettings();
   if (!settings) return Response.json({ configured: false });
   const url = new URL(request.url);
-  return Response.json(await websiteStats(getDatabase(), settings, periodFrom(url), siteFrom(url)));
+  return Response.json(await websiteStats(getDatabase(), settings, periodFrom(url), siteFrom()));
 });

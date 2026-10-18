@@ -63,6 +63,13 @@ export function serverConfig() {
     posthogPersonalApiKey: env.POSTHOG_PERSONAL_API_KEY ?? '',
     posthogProjectId: env.POSTHOG_PROJECT_ID ?? '',
     posthogHost: env.POSTHOG_HOST || 'https://eu.posthog.com',
+    /**
+     * Whose visits the Website page shows: "production" (the live website) or
+     * "development" (localhost and the dev website). Set in fly.toml / fly.prod.toml;
+     * when empty, local `next dev` shows development and a production build shows production.
+     */
+    siteEnvironment: (env.SITE_ENVIRONMENT || (isDevelopment ? 'development' : 'production')) === 'production'
+      ? 'production' as const : 'development' as const,
   };
 }
 

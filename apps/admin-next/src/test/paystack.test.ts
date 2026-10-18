@@ -87,6 +87,9 @@ describe('Paystack API', () => {
     expect(isValidPaystackSignature(`${body} `, good, 'sk_test_abc')).toBe(false);
     expect(isValidPaystackSignature(body, null, 'sk_test_abc')).toBe(false);
     expect(isValidPaystackSignature(body, 'abc', 'sk_test_abc')).toBe(false);
+    // No key (payments not set up): even a signature made with an empty key is refused.
+    const emptyKey = createHmac('sha512', '').update(body).digest('hex');
+    expect(isValidPaystackSignature(body, emptyKey, '')).toBe(false);
   });
 });
 

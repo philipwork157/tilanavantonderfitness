@@ -5,7 +5,7 @@ import {
   ArrowDownRight, ArrowUpRight, BadgeCheck, CreditCard, ExternalLink, Eye, Globe, Info, Monitor, MousePointerClick, ShoppingBasket, Smartphone,
   Tablet, TriangleAlert, Zap, type LucideIcon,
 } from 'lucide-react';
-import { useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { EmptyState } from '@/components/empty-state';
 import { PageHeader } from '@/components/page-header';
@@ -43,28 +43,19 @@ function duration(seconds: number): string {
   return hours ? `${hours}h ${minutes}m` : `${minutes}m ${total % 60}s`;
 }
 
-/** The default matches the server: your own test visits on localhost, the website everywhere else. */
-const subscribeNever = () => () => {};
-function useDefaultSite(): Site {
-  return useSyncExternalStore(subscribeNever, () => (/^(localhost|127\.0\.0\.1)$/.test(window.location.hostname) ? 'testing' : 'live'), () => 'live');
-}
-
 /** Website: visitors, visits, pages, channels, clicks and the buying funnel from PostHog, plus who is on the site now. */
-export function WebsiteView() {
-  const defaultSite = useDefaultSite();
+export function WebsiteView({ site }: { site: Site }) {
   const [days, setDays] = useState<number>(30);
-  const [chosenSite, setSite] = useState<Site | null>(null);
-  const site = chosenSite ?? defaultSite;
 
   const stats = useQuery({
     queryKey: ['website', days, site],
-    queryFn: () => api<AdminWebsiteStats>(`/api/website?days=${days}&site=${site}`),
+    queryFn: () => api<AdminWebsiteStats>(`/api/website?days=${days}`),
     placeholderData: (previous) => previous,
     staleTime: 60_000,
   });
   const live = useQuery({
     queryKey: ['website-live', site],
-    queryFn: () => api<AdminWebsiteLive>(`/api/website/live?site=${site}`),
+    queryFn: () => api<AdminWebsiteLive>('/api/website/live'),
     refetchInterval: 15_000,
     placeholderData: (previous) => previous,
   });
@@ -101,10 +92,13 @@ export function WebsiteView() {
         <ToggleGroup type="single" variant="outline" value={String(days)} onValueChange={(next) => next && setDays(Number(next))} className="bg-card" aria-label="Period">
           {PERIODS.map((item) => <ToggleGroupItem key={item} value={String(item)} className="px-4">{item} days</ToggleGroupItem>)}
         </ToggleGroup>
-        <ToggleGroup type="single" variant="outline" value={site} onValueChange={(next) => next && setSite(next as Site)} className="bg-card" aria-label="Which visits">
-          <ToggleGroupItem value="live" className="px-4">Live website</ToggleGroupItem>
-          <ToggleGroupItem value="testing" className="px-4">My testing</ToggleGroupItem>
-        </ToggleGroup>
+        <span
+          className="inline-flex items-center gap-2 rounded-full border bg-card px-4 py-2 text-sm font-medium"
+          title={site === 'live' ? 'Visits to the live website' : 'Your own visits on localhost and the dev website'}
+        >
+          <span className={cn('size-2 rounded-full', site === 'live' ? 'bg-status-success' : 'bg-status-warning')} aria-hidden />
+          {site === 'live' ? 'Live website' : 'My testing'}
+        </span>
       </div>
 
       {stats.error ? (

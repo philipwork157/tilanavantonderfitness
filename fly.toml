@@ -9,6 +9,10 @@ kill_timeout = "30s"
 # A little swap so a big PDF preview (pdf.js + canvas + sharp) never runs out of memory.
 swap_size_mb = 512
 
+[env]
+  # The admin Website page shows only this site's visits (see SITE_ENVIRONMENT in server/config.ts).
+  SITE_ENVIRONMENT = "development"
+
 [build]
   dockerfile = "Dockerfile"
 

@@ -134,6 +134,8 @@ export async function verifyPayment(reference: string, fetcher: typeof fetch = f
 
 /** Webhook check: Paystack signs the raw body with HMAC-SHA512 of the secret key. */
 export function isValidPaystackSignature(rawBody: string, signature: string | null, secretKey: string): boolean {
+  // No key yet (payments not set up): accept nothing, or anyone could sign with an empty key.
+  if (!secretKey) return false;
   if (!signature || !/^[a-f0-9]{128}$/i.test(signature)) return false;
   const expected = createHmac('sha512', secretKey).update(rawBody).digest();
   return timingSafeEqual(expected, Buffer.from(signature, 'hex'));

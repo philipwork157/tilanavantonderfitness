@@ -14,6 +14,10 @@ swap_size_mb = 512
   # so a release never takes the admin (and the website's programs) offline.
   strategy = "bluegreen"
 
+[env]
+  # The admin Website page shows only this site's visits (see SITE_ENVIRONMENT in server/config.ts).
+  SITE_ENVIRONMENT = "production"
+
 [build]
   dockerfile = "Dockerfile"
 
