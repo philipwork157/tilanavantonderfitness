@@ -202,6 +202,7 @@
 .legal-list .n { font-family: var(--font-heading); font-size: 1.6rem; font-style: italic; font-weight: 800; color: var(--accent-text); }
 .legal-list h2 { margin: 0 0 0.7rem; font-family: var(--font-heading); font-size: 1.45rem; font-weight: 800; line-height: 1.2; }
 .legal-list p { margin: 0 0 0.8rem; color: var(--fg-soft); line-height: 1.75; }
+.legal-list .legal-action { margin-top: 0.3rem; color: var(--fg); }
 .legal-list a { color: var(--fg); font-weight: 700; }
 
 /* ── Checkout page shell ── */

@@ -18,8 +18,8 @@ export const privacySections = [
       'Purchased programs are delivered as PDF files attached to an email sent to the address you entered at checkout. You do not need an account. If you ask for your programs to be sent again, the website uses your email address to find your paid orders.',
       'Each program PDF you buy is personalised with your name, order number and purchase date, to discourage unauthorised sharing. Your email address and phone number are not printed on it.',
       'Please do not send diagnoses, medical records, identity numbers, detailed injury information, pregnancy complications or other sensitive health information through the public contact form.',
-      'The website uses Cloudflare Web Analytics to understand aggregate visits and website performance. Cloudflare Web Analytics does not use cookies, local storage or fingerprinting to identify or track individual visitors.',
-      'The website also uses PostHog to understand which pages are viewed and how many people add a program to the basket, start checkout or complete a purchase. The website configures PostHog in cookieless mode, with person profiles, session recordings and surveys disabled. The analytics integration does not intentionally send your name, email address or message content, and removes sign-in tokens, email addresses, pre-filled messages and payment references from page addresses before sending events. PostHog also receives technical information such as browser details and an IP address when receiving those events.',
+      'The website uses a privacy-focused analytics service to understand aggregate visits and website performance. It does not use cookies, local storage or fingerprinting to identify or track individual visitors.',
+      'The website also uses a product analytics service to understand which pages are viewed and how many people add a program to the basket, start checkout or complete a purchase. The website configures it in cookieless mode, with person profiles, session recordings and surveys disabled. The analytics integration does not intentionally send your name, email address or message content, and removes sign-in tokens, email addresses, pre-filled messages and payment references from page addresses before sending events. The analytics service also receives technical information such as browser details and an IP address when receiving those events.',
       'The website stores a few things in your own browser, never sent anywhere for tracking: your light-or-dark theme preference, the programs in your basket, a payment reference for a checkout you started, without your name or contact details (so the payment is matched to the right order when you return from Paystack), and whether you closed the WhatsApp greeting. You can clear them at any time in your browser settings. The hosting provider may process standard technical information such as an IP address, browser information and security logs to deliver and protect the site.',
     ],
   },
@@ -42,11 +42,9 @@ export const privacySections = [
     title: 'Who may receive the information?',
     body: [
       'Personal information is not sold. It may be processed by service providers that are reasonably necessary to run the website, secure it, provide email, store records or meet professional and legal obligations. Information may also be disclosed where required by law or with your specific permission.',
-      'Cloudflare hosts and protects the public website, provides privacy-focused analytics and helps prevent automated spam through Turnstile. Cloudflare may process technical information such as an IP address, browser details and security events when delivering or protecting the website.',
-      'PostHog provides the cookieless product analytics described above, hosted in the European Union. It processes the page visits, website actions and technical information described in this policy to provide website usage statistics.',
-      'Supabase provides the protected database and sign-in used for website enquiries, newsletter subscription records, orders and authorised administration data. Amazon Web Services Simple Email Service (AWS SES) delivers contact notifications, newsletter emails and purchase emails with the program files attached; it processes the recipient address and the information needed to deliver each message.',
-      'Paystack processes program payments and related payment information. Cloudflare R2 privately stores the program files that are attached to purchase emails.',
-      'These providers may process or store information outside South Africa. Where that occurs, reasonable steps will be taken to use providers and arrangements that offer an adequate level of protection and appropriate contractual, organisational and technical safeguards.',
+      'These service providers include website hosting, security and spam-protection services, which may process technical information such as an IP address, browser details and security events; cookieless website analytics, hosted in the European Union, which process page visits and website actions to provide usage statistics; secure cloud database, file storage and server providers, which store enquiries, newsletter records, orders and program files; and email delivery services, which process the recipient address and the information needed to deliver contact, newsletter and purchase emails.',
+      'Program payments are processed by Paystack, which handles your payment information under its own privacy policy. Card details are entered on Paystack’s secure payment page and are never received or stored by this website.',
+      'These providers may process or store information outside South Africa. Where that occurs, reasonable steps will be taken to use providers and arrangements that offer an adequate level of protection and appropriate contractual, organisational and technical safeguards. A list of the current service providers is available on request through the contact page.',
     ],
   },
   {
@@ -98,6 +96,7 @@ export const refundSections = [
       'As soon as Paystack confirms your payment, your program is emailed to the address you entered at checkout, with the PDF attached. If you bought more than one program, they may arrive together or in separate emails.',
       `If the email has not arrived within an hour, please check your spam or promotions folder first. If it is not there, send a message through the contact page with your order number and we will send your programs again.`,
     ],
+    action: { label: 'Ask for my programs again', kind: 'resend' },
   },
   {
     title: 'Changing your mind',
@@ -127,6 +126,7 @@ export const refundSections = [
       'We aim to acknowledge your request within 2 working days and give you a decision within 5 working days of receiving the information reasonably needed to locate the transaction and understand the problem. If more time is needed, we will explain why and keep you updated. Working days exclude weekends and South African public holidays. These service targets do not extend any deadline required by law.',
       'Approved refunds are submitted through Paystack without undue delay. We will confirm submission and keep you informed if Paystack requires further action or a delay occurs. Payment-provider or funding delays do not remove our responsibility to meet any refund deadline required by law.',
     ],
+    action: { label: 'Request a refund', kind: 'refund' },
   },
   {
     title: 'How refunds are paid',

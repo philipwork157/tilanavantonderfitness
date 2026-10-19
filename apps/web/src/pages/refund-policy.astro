@@ -1,14 +1,14 @@
 ---
 import LegalPage from '@web/site/components/LegalPage.astro';
 import { refundSections, refundSummary } from '@web/site/legal';
-import { href } from '@web/site/config';
+import { orderContactHref, REFUND_MESSAGE } from '@web/site/config';
 ---
 <LegalPage pageTitle="Refund & Cancellation Policy" description="Refund and cancellation policy for once-off digital program purchases." summary={refundSummary} sections={refundSections}>
   <li data-reveal>
     <span class="n">{String(refundSections.length + 1).padStart(2, '0')}</span>
     <div>
       <h2>Start a request</h2>
-      <p>Send a message through the <a href={href('/contact')}>contact page</a> and keep your order or Paystack reference available so the payment can be located safely.</p>
+      <p>Send a message through the <a href={orderContactHref(REFUND_MESSAGE)}>contact page</a> and keep your order or Paystack reference available so the payment can be located safely.</p>
     </div>
   </li>
 </LegalPage>

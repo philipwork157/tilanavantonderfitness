@@ -8,6 +8,7 @@ export const contactInterestValues = [
   'nourish',
   'reconnect',
   'one-on-one',
+  'order',
   'general',
 ] as const;
 
@@ -29,6 +30,7 @@ export const contactInterestLabels = {
   nourish: programCatalogByKey['nourish-volume-1'].volumeName,
   reconnect: programCatalogByKey['reconnect-volume-1'].volumeName,
   'one-on-one': 'One-on-one training',
+  order: 'An order, payment or refund',
   general: 'General question',
 } as const satisfies Record<ContactInterest, string>;
 

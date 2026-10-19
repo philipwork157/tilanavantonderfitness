@@ -4,6 +4,14 @@ import { SITE_ENVIRONMENT } from '@web/utils/site-environment';
 export const BASE = '';
 
 /** Builds an internal link: href('/about') → '/about'. */
+/** The contact form, opened on "An order, payment or refund" with a starter message. */
+export function orderContactHref(message: string): string {
+  return href(`/contact?interest=order&message=${encodeURIComponent(message)}`);
+}
+
+export const REFUND_MESSAGE = 'Refund request\nPurchase email:\nProgram:\nOrder number or Paystack reference:\nPurchase date:\nWhat went wrong:';
+export const RESEND_MESSAGE = 'Please send my programs again.\nPurchase email:\nOrder number:';
+
 export function href(path: string): string {
   if (path === '/' || path === '') return `${BASE}/`;
   return `${BASE}${path.startsWith('/') ? path : `/${path}`}`;

@@ -5,6 +5,6 @@ import { href } from '@web/site/config';
 ---
 <SiteLayout title="Payment status" current="checkout" newsletter={false} robots="noindex, nofollow" description="Check the status of your program payment.">
   <section class="wrap">
-    <CheckoutComplete client:load checkoutHref={href('/checkout')} programsHref={href('/program')} homeHref={href('/')} contactHref={href('/contact')} />
+    <CheckoutComplete client:load checkoutHref={href('/checkout')} programsHref={href('/program')} homeHref={href('/')} contactHref={href('/contact?interest=order')} />
   </section>
 </SiteLayout>
