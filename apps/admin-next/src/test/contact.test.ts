@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { escapeHtml, formatFromAddress, routeEmail } from '@/server/utils/email-routing';
+import { escapeHtml, formatFromAddress, redirectOptions, routeEmail } from '@/server/utils/email-routing';
 import { verifyTurnstileToken } from '@/server/utils/turnstile';
 import { parseOrigins } from '@/server/utils/website-origins';
 import { inquiryNotificationEmail } from '@/server/services/inquiries';
@@ -20,6 +20,17 @@ describe('routeEmail', () => {
 
   it('refuses to send in development without a redirect address', () => {
     expect(() => routeEmail(email, { requireRedirect: true })).toThrow(/EMAIL_DEV_REDIRECT_TO/);
+  });
+});
+
+describe('redirectOptions', () => {
+  it('always redirects on development, including the deployed develop admin', () => {
+    expect(redirectOptions('development', 'dev@example.com')).toEqual({ devRedirectTo: 'dev@example.com', requireRedirect: true });
+    expect(() => routeEmail(email, redirectOptions('development', ''))).toThrow(/EMAIL_DEV_REDIRECT_TO/);
+  });
+
+  it('never redirects on the live site, even if a redirect was left set', () => {
+    expect(routeEmail(email, redirectOptions('production', 'dev@example.com'))).toEqual(email);
   });
 });
 

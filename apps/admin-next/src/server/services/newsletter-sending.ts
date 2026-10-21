@@ -18,12 +18,13 @@ const STALE_SENDING_MS = 10 * 60 * 1000;
 /**
  * Locks in the recipients and marks the campaign as sending. Refuses unless a
  * test email was sent after the last edit, the post is published, and the
- * number of subscribers still matches what Tilana reviewed.
+ * number of subscribers still matches what Tilana reviewed. `onlyEmail`
+ * (development) sends to that one subscriber instead of everyone.
  */
 export async function prepareCampaignSend(
   db: Database,
   campaignId: number,
-  options: { userId: number; recipientCount: number; now?: Date },
+  options: { userId: number; recipientCount: number; onlyEmail?: string | null; now?: Date },
 ): Promise<{ recipientCount: number }> {
   const now = options.now ?? new Date();
   return db.transaction(async (tx) => {
@@ -38,8 +39,12 @@ export async function prepareCampaignSend(
       : [];
     if (post?.status !== 'published') throw new CampaignError('The blog post is not published.', 409);
 
-    const recipients = await activeSubscribers(tx as unknown as Database);
-    if (!recipients.length) throw new CampaignError('There are no confirmed subscribers yet.', 409);
+    const recipients = await activeSubscribers(tx as unknown as Database, { onlyEmail: options.onlyEmail });
+    if (!recipients.length) {
+      throw new CampaignError(options.onlyEmail
+        ? `On development, newsletters only go to ${options.onlyEmail}. Sign it up on the development website and confirm it first.`
+        : 'There are no confirmed subscribers yet.', 409);
+    }
     if (recipients.length !== options.recipientCount) {
       throw new CampaignError('The subscriber list changed while you were reviewing it. Please review the recipients again.', 409);
     }

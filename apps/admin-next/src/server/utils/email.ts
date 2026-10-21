@@ -1,7 +1,7 @@
 import 'server-only';
 import { SendEmailCommand, SESv2Client } from '@aws-sdk/client-sesv2';
-import { formatFromAddress, routeEmail, type OutgoingEmail } from './email-routing';
-import { isDevelopment, serverConfig } from '../config';
+import { formatFromAddress, redirectOptions, routeEmail, type OutgoingEmail } from './email-routing';
+import { serverConfig } from '../config';
 
 let client: SESv2Client | undefined;
 
@@ -16,10 +16,9 @@ export async function sendEmail(email: OutgoingEmail): Promise<{ messageId: stri
     throw new Error('EMAIL_FROM_ADDRESS is not set.');
   }
 
-  const routed = routeEmail(email, {
-    devRedirectTo: config.emailDevRedirectTo,
-    requireRedirect: isDevelopment,
-  });
+  // SITE_ENVIRONMENT, not NODE_ENV: the develop admin on Fly runs a
+  // production build but must still only email the developer.
+  const routed = routeEmail(email, redirectOptions(config.siteEnvironment, config.emailDevRedirectTo));
 
   client ??= new SESv2Client({});
   const result = await client.send(new SendEmailCommand({

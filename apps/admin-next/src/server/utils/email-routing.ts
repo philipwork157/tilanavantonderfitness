@@ -44,6 +44,20 @@ export function routeEmail(
   };
 }
 
+/**
+ * Which redirect applies on each site. Development (localhost and the develop
+ * admin) always redirects and refuses to send without an address. Production
+ * never redirects, even if EMAIL_DEV_REDIRECT_TO was left set by mistake, so
+ * emails always reach the real people there.
+ */
+export function redirectOptions(
+  siteEnvironment: 'development' | 'production',
+  devRedirectTo: string | undefined,
+): { devRedirectTo?: string; requireRedirect: boolean } {
+  if (siteEnvironment === 'production') return { requireRedirect: false };
+  return { devRedirectTo, requireRedirect: true };
+}
+
 /** "Name" <address>, with characters that could break the header removed. */
 export function formatFromAddress(address: string, name?: string): string {
   const cleanName = name?.replace(/[\r\n]+/g, ' ').replace(/["<>]/g, '').replace(/\s+/g, ' ').trim();

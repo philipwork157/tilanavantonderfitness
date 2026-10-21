@@ -12,13 +12,13 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "markdown-it": "15.0.2"
+    "markdown-it": "15.0.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "eslint": "^10.8.1",
+    "eslint": "^10.13.0",
     "typescript": "^6.0.0",
-    "typescript-eslint": "^8.67.0",
-    "vitest": "5.0.0"
+    "typescript-eslint": "^8.72.0",
+    "vitest": "5.0.5"
   }
 }

@@ -236,7 +236,7 @@ function Campaign({ data, refetch, refetching }: { data: CampaignDetail; refetch
       {devRedirectTo && (
         <div role="note" className="mb-5 flex items-start gap-3 rounded-xl border border-status-info/30 bg-status-info-bg p-4 text-sm text-status-info">
           <FlaskConical className="mt-0.5 size-4 shrink-0" aria-hidden />
-          <p><strong>Development.</strong> Every email from this admin, tests and newsletters, goes only to {devRedirectTo}.</p>
+          <p><strong>Development.</strong> Every email from this admin goes only to {devRedirectTo}. A newsletter is sent only to that address&apos;s own subscription (sign it up on the development website), so you can test its unsubscribe link. On the live site it goes to every confirmed subscriber.</p>
         </div>
       )}
 
@@ -442,7 +442,7 @@ function Campaign({ data, refetch, refetching }: { data: CampaignDetail; refetch
           <dl className="grid gap-1 rounded-xl border bg-muted/30 p-3 text-sm">
             <Envelope label="Subject">{form.subject}</Envelope>
           </dl>
-          {devRedirectTo && <p className="text-xs text-muted-foreground">Development: these emails all go to {devRedirectTo} instead.</p>}
+          {devRedirectTo && <p className="text-xs text-muted-foreground">Development: only {devRedirectTo} gets this newsletter, and only if it is signed up and confirmed on the development website. On the live site every confirmed subscriber gets it.</p>}
           {review.isPending
             ? <p className="text-sm text-muted-foreground">Loading recipients…</p>
             : (
