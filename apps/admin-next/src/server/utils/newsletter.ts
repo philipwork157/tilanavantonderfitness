@@ -27,18 +27,6 @@ export function devRedirectAddress(): string | null {
   return String(config.emailDevRedirectTo ?? '').trim().toLowerCase() || null;
 }
 
-/**
- * Who a newsletter may go to. Live site: null, meaning every confirmed
- * subscriber. Development: only the developer's own subscription
- * (EMAIL_DEV_REDIRECT_TO, signed up and confirmed on the develop website), so
- * a send never emails real people and its unsubscribe link can be tested.
- */
-export function newsletterOnlyTo(): string | null {
-  if (serverConfig().siteEnvironment === 'production') return null;
-  const developer = devRedirectAddress();
-  if (!developer) throw new HttpError(503, 'Set EMAIL_DEV_REDIRECT_TO before sending newsletters in development.');
-  return developer;
-}
 
 /**
  * Who receives test emails: NEWSLETTER_TEST_TO in production. In

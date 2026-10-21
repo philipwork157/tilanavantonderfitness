@@ -4,7 +4,7 @@ import { isSameOrigin } from '@/server/auth/admin-access';
 import { getDatabase } from '@/server/db';
 import { handle, HttpError, readJson, routeId, sameOriginOnly, type IdContext } from '@/server/http';
 import { prepareCampaignSend } from '@/server/services/newsletter-sending';
-import { newsletterOnlyTo, startCampaignRunner } from '@/server/utils/newsletter';
+import { startCampaignRunner } from '@/server/utils/newsletter';
 import { campaignAction } from '@/server/utils/newsletter-errors';
 
 /** Locks in the recipients and starts sending in the background. */
@@ -17,7 +17,6 @@ export const POST = handle(async (request: Request, context: IdContext) => {
   const result = await campaignAction(() => prepareCampaignSend(getDatabase(), id, {
     userId: admin.id,
     recipientCount: parsed.data.recipientCount,
-    onlyEmail: newsletterOnlyTo(),
   }));
   startCampaignRunner(id);
   return Response.json(result, { status: 202 });

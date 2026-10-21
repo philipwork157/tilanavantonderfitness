@@ -14,7 +14,6 @@ import {
   type Database,
 } from '@tilana/db';
 import {
-  activeSubscribers,
   confirmSubscription,
   startSubscription,
   subscriberCounts,
@@ -187,44 +186,6 @@ describe.skipIf(!url)('newsletter (database)', () => {
 
       // Running again sends nothing more.
       expect(await runCampaignDeliveries(db, id, { buildEmail: () => { throw new Error('no'); }, send: async () => ({ messageId: null }), sleep: noSleep })).toBe('stopped');
-    });
-
-    it('on development sends only to the developer, whose unsubscribe link then works', async () => {
-      const id = await readyCampaign();
-      await subscribed('anna@example.com');
-      await subscribed('dev@example.com');
-      await subscribed('ben@example.com');
-
-      // The admin reviews 1 recipient on development, not all 3.
-      expect((await activeSubscribers(db, { onlyEmail: 'DEV@example.com' })).map(person => person.email)).toEqual(['dev@example.com']);
-      await expect(prepareCampaignSend(db, id, { userId: 1, recipientCount: 3, onlyEmail: 'dev@example.com' })).rejects.toThrow('subscriber list changed');
-      expect(await prepareCampaignSend(db, id, { userId: 1, recipientCount: 1, onlyEmail: 'dev@example.com' })).toEqual({ recipientCount: 1 });
-
-      const sent: string[] = [];
-      let token = '';
-      await runCampaignDeliveries(db, id, {
-        buildEmail: (person) => { token = person.unsubscribeToken; return { to: [person.email], subject: 's', text: 't' }; },
-        send: async (email) => { sent.push(email.to[0]!); return { messageId: null }; },
-        sleep: noSleep,
-      });
-      expect(sent).toEqual(['dev@example.com']);
-
-      // The one-click unsubscribe in that email unsubscribes the developer only.
-      vi.stubEnv('DATABASE_URL', url!);
-      const response = await oneClick(new Request('http://admin.test/api/newsletter/one-click', {
-        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token }),
-      }));
-      vi.unstubAllEnvs();
-      expect(response.status).toBe(200);
-      const people = await db.select({ email: newsletterSubscribers.email, status: newsletterSubscribers.status }).from(newsletterSubscribers);
-      expect(Object.fromEntries(people.map(person => [person.email, person.status]))).toEqual({
-        'anna@example.com': 'subscribed', 'dev@example.com': 'unsubscribed', 'ben@example.com': 'subscribed',
-      });
-
-      // Once unsubscribed, the next development newsletter has no one to go to.
-      const next = await createCampaign(db, (await db.select().from(blogPosts))[0]!.id, 1);
-      await markTestSent(db, next);
-      await expect(prepareCampaignSend(db, next, { userId: 1, recipientCount: 0, onlyEmail: 'dev@example.com' })).rejects.toThrow('only go to dev@example.com');
     });
 
     it('skips people who unsubscribed after sending started', async () => {

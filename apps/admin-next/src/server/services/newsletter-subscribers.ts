@@ -152,16 +152,10 @@ export async function subscriberCounts(db: Database): Promise<Record<NewsletterS
   };
 }
 
-/**
- * Everyone a campaign would go to right now, oldest subscriber first.
- * `onlyEmail` limits it to that one address (development).
- */
-export async function activeSubscribers(db: Database, options: { onlyEmail?: string | null } = {}) {
-  const onlyEmail = options.onlyEmail?.trim().toLowerCase();
+/** Everyone a campaign would go to right now, oldest subscriber first. */
+export async function activeSubscribers(db: Database) {
   return db.select({ id: newsletterSubscribers.id, email: newsletterSubscribers.email })
     .from(newsletterSubscribers)
-    .where(onlyEmail
-      ? and(eq(newsletterSubscribers.status, 'subscribed'), eq(newsletterSubscribers.email, onlyEmail))
-      : eq(newsletterSubscribers.status, 'subscribed'))
+    .where(eq(newsletterSubscribers.status, 'subscribed'))
     .orderBy(asc(newsletterSubscribers.confirmedAt), asc(newsletterSubscribers.id));
 }

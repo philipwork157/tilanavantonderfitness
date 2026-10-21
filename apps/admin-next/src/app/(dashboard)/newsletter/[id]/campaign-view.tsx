@@ -226,6 +226,11 @@ function Campaign({ data, refetch, refetching }: { data: CampaignDetail; refetch
           <StatusBadge label={status.label} tone={status.tone} className="max-sm:hidden" />
           <RefreshButton loading={refetching || preview.isFetching} onClick={() => { refetch(); void (isDraft ? upcoming.refetch() : deliveries.refetch()); }} />
           {isDraft && (
+            <Button variant="outline" className="rounded-full bg-card text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteOpen(true)}>
+              <Trash2 /> Delete draft
+            </Button>
+          )}
+          {isDraft && (
             <Button variant="outline" className="rounded-full bg-card" disabled={!dirty || save.isPending} onClick={() => save.mutate()}>
               {save.isPending ? <Loader2 className="animate-spin" /> : <Save />} Save
             </Button>
@@ -236,7 +241,7 @@ function Campaign({ data, refetch, refetching }: { data: CampaignDetail; refetch
       {devRedirectTo && (
         <div role="note" className="mb-5 flex items-start gap-3 rounded-xl border border-status-info/30 bg-status-info-bg p-4 text-sm text-status-info">
           <FlaskConical className="mt-0.5 size-4 shrink-0" aria-hidden />
-          <p><strong>Development.</strong> Every email from this admin goes only to {devRedirectTo}. A newsletter is sent only to that address&apos;s own subscription (sign it up on the development website), so you can test its unsubscribe link. On the live site it goes to every confirmed subscriber.</p>
+          <p><strong>Development.</strong> Every email from this admin, tests and newsletters, goes only to {devRedirectTo}. A newsletter sends one copy per subscriber, each with that subscriber&apos;s own unsubscribe link. On the live site the copies go to the real subscribers.</p>
         </div>
       )}
 
@@ -282,6 +287,7 @@ function Campaign({ data, refetch, refetching }: { data: CampaignDetail; refetch
                   <Step ready={testedAndSaved} icon={Users} title="2. Send to subscribers">
                     <p>
                       {plural(upcomingRecipients.length, 'confirmed subscriber', 'confirmed subscribers')}.
+                      {devRedirectTo && upcomingRecipients.length > 0 && ` Development: every copy goes to ${devRedirectTo} instead.`}
                       {!testedAndSaved && ' Available once the test email has been sent.'}
                     </p>
                     {upcomingRecipients.length > 0 && (
@@ -299,11 +305,6 @@ function Campaign({ data, refetch, refetching }: { data: CampaignDetail; refetch
                 </ol>
               </Panel>
 
-              <div className="flex justify-end">
-                <Button variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteOpen(true)}>
-                  <Trash2 /> Delete draft
-                </Button>
-              </div>
             </>
           ) : (
             <>
@@ -442,7 +443,7 @@ function Campaign({ data, refetch, refetching }: { data: CampaignDetail; refetch
           <dl className="grid gap-1 rounded-xl border bg-muted/30 p-3 text-sm">
             <Envelope label="Subject">{form.subject}</Envelope>
           </dl>
-          {devRedirectTo && <p className="text-xs text-muted-foreground">Development: only {devRedirectTo} gets this newsletter, and only if it is signed up and confirmed on the development website. On the live site every confirmed subscriber gets it.</p>}
+          {devRedirectTo && <p className="text-xs text-muted-foreground">Development: these emails all go to {devRedirectTo} instead.</p>}
           {review.isPending
             ? <p className="text-sm text-muted-foreground">Loading recipients…</p>
             : (
@@ -466,7 +467,7 @@ function Campaign({ data, refetch, refetching }: { data: CampaignDetail; refetch
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this draft?</AlertDialogTitle>
+            <AlertDialogTitle>Are you sure you want to delete this draft?</AlertDialogTitle>
             <AlertDialogDescription>The draft email is removed. The blog post is not affected.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

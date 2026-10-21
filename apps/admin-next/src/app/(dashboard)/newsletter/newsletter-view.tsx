@@ -1,9 +1,11 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Hourglass, MailX, Plus, Send, Users } from 'lucide-react';
+import { Hourglass, MailX, Plus, Send, Trash2, Users } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
+import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { NavLink } from '@/components/nav-link';
 import { PageHeader } from '@/components/page-header';
@@ -96,6 +98,18 @@ export function NewsletterView() {
     if (postId) create.mutate();
   }
 
+  /* Delete a draft from the list */
+  const [draftToDelete, setDraftToDelete] = useState<CampaignSummary | null>(null);
+  const removeDraft = useMutation({
+    mutationFn: (id: number) => api(`/api/newsletter-campaigns/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      setDraftToDelete(null);
+      void queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      toast.success('Draft deleted');
+    },
+    onError: (error) => toast.error('Not deleted', { description: error instanceof ApiError ? error.message : 'Please try again.' }),
+  });
+
   const refreshing = campaigns.isFetching || subscribers.isFetching;
   const newEmailButton = <Button className="rounded-full" onClick={openCreate}><Plus /> New email</Button>;
 
@@ -149,10 +163,11 @@ export function NewsletterView() {
                   <TableHead className="px-5">Status</TableHead>
                   <TableHead className="hidden px-5 md:table-cell">Recipients</TableHead>
                   <TableHead className="hidden px-5 lg:table-cell">Date</TableHead>
+                  <TableHead className="w-14 px-3"><span className="sr-only">Actions</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {campaigns.isPending && <LoadingRows columns={4} />}
+                {campaigns.isPending && <LoadingRows columns={5} />}
                 {campaignRows.map((campaign) => {
                   const status = statusStyle(campaignStatus, campaign.status);
                   return (
@@ -168,6 +183,20 @@ export function NewsletterView() {
                         {campaign.status === 'draft' ? <span className="text-muted-foreground">Not sent</span> : `${campaign.sentCount} of ${campaign.recipientCount ?? 0}`}
                       </TableCell>
                       <TableCell className="hidden px-5 whitespace-nowrap lg:table-cell">{formatDateTime(campaign.finishedAt ?? campaign.startedAt ?? campaign.updatedAt)}</TableCell>
+                      <TableCell className="px-3 text-right">
+                        {campaign.status === 'draft' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            aria-label={`Delete draft ${campaign.subject}`}
+                            title="Delete draft"
+                            onClick={(e) => { e.stopPropagation(); setDraftToDelete(campaign); }}
+                          >
+                            <Trash2 />
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -234,6 +263,17 @@ export function NewsletterView() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={draftToDelete !== null}
+        onOpenChange={(open) => { if (!open) setDraftToDelete(null); }}
+        title="Are you sure you want to delete this draft?"
+        description={`"${draftToDelete?.subject ?? ''}" is removed. The blog post is not affected.`}
+        confirmLabel="Delete draft"
+        cancelLabel="Keep draft"
+        pending={removeDraft.isPending}
+        onConfirm={() => { if (draftToDelete) removeDraft.mutate(draftToDelete.id); }}
+      />
     </div>
   );
 }
