@@ -5,6 +5,23 @@ import { requireAdmin } from '@/server/auth/admin';
 import { isSameOrigin } from '@/server/auth/admin-access';
 import { getDatabase } from '@/server/db';
 import { handle, HttpError, readJson, routeId, sameOriginOnly, type IdContext } from '@/server/http';
+import { matchInquiryOrders } from '@/server/services/inquiries';
+
+/** The order an order/payment/refund enquiry is about (matched by order number, then email). */
+export const GET = handle(async (_request: Request, context: IdContext) => {
+  await requireAdmin();
+  const id = await routeId(context, 'Unknown enquiry.');
+  const db = getDatabase();
+  const [inquiry] = await db.select({
+    orderTopic: inquiries.orderTopic,
+    orderNumber: inquiries.orderNumber,
+    purchaseEmail: inquiries.purchaseEmail,
+    email: inquiries.email,
+  }).from(inquiries).where(eq(inquiries.id, id)).limit(1);
+  if (!inquiry) throw new HttpError(404, 'Enquiry not found.');
+  if (!inquiry.orderTopic) return Response.json({ match: null });
+  return Response.json({ match: await matchInquiryOrders(db, inquiry) });
+});
 
 /** Change an enquiry's status (archive, restore, mark replied). */
 export const PATCH = handle(async (request: Request, context: IdContext) => {

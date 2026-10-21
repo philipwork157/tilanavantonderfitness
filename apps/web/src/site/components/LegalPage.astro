@@ -2,7 +2,7 @@
 import SiteLayout from '../layouts/SiteLayout.astro';
 import PageHero from './PageHero.astro';
 import Icon from './Icon';
-import { orderContactHref, REFUND_MESSAGE, RESEND_MESSAGE } from '../config';
+import { orderContactHref } from '../config';
 
 /** Optional button under a section that opens the contact form on the order option. */
 type Action = { label: string; kind: 'refund' | 'resend' };
@@ -28,7 +28,7 @@ const { pageTitle, description, summary, sections } = Astro.props;
             <h2>{s.title}</h2>
             {s.body.map((p) => <p>{p}</p>)}
             {s.action && (
-              <a class="link-arrow legal-action" href={orderContactHref(s.action.kind === 'refund' ? REFUND_MESSAGE : RESEND_MESSAGE)}>
+              <a class="link-arrow legal-action" href={orderContactHref(s.action.kind === 'refund' ? 'refund' : 'not-received')}>
                 {s.action.label} <Icon name="arrow" />
               </a>
             )}

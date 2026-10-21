@@ -74,7 +74,7 @@ export async function salesSummary(db: Database, days: number, now = new Date())
 type OrderRow = typeof orders.$inferSelect;
 
 /** Orders as the Sales page lists them, with their program names. */
-async function withPrograms(db: Database, rows: OrderRow[]) {
+export async function withPrograms(db: Database, rows: OrderRow[]) {
   const items = rows.length
     ? await db.select({ orderId: orderItems.orderId, label: orderItems.label }).from(orderItems).where(inArray(orderItems.orderId, rows.map(order => order.id)))
     : [];

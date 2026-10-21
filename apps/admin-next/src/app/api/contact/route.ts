@@ -4,7 +4,8 @@ import { isDevelopment, serverConfig } from '@/server/config';
 import { websitePreflight, websiteRoute } from '@/server/cors';
 import { getDatabase } from '@/server/db';
 import { clientIp, HttpError, readJson } from '@/server/http';
-import { createInquiry, inquiryNotificationEmail } from '@/server/services/inquiries';
+import { createInquiry, inquiryNotificationEmail, matchInquiryOrders } from '@/server/services/inquiries';
+import { logger } from '@/server/logger';
 import { sendEmail } from '@/server/utils/email';
 import { verifyTurnstileToken } from '@/server/utils/turnstile';
 
@@ -36,10 +37,19 @@ export const POST = websiteRoute(async (request) => {
   }
 
   const notifyTo = config.contactNotifyTo;
-  await createInquiry(getDatabase(), input, {
+  const db = getDatabase();
+  await createInquiry(db, input, {
     notify: async (inquiry) => {
       if (!notifyTo) throw new Error('CONTACT_NOTIFY_TO is not set.');
-      await sendEmail(inquiryNotificationEmail(inquiry, notifyTo));
+      // Order enquiries: add the matching order to Tilana's email. A lookup
+      // problem never stops the email.
+      const match = inquiry.orderTopic
+        ? await matchInquiryOrders(db, inquiry).catch((error: unknown) => {
+            logger.warn({ err: error }, 'Could not match the enquiry to an order');
+            return null;
+          })
+        : null;
+      await sendEmail(inquiryNotificationEmail(inquiry, notifyTo, match));
     },
   });
 

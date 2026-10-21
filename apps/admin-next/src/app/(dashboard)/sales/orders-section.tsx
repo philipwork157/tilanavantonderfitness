@@ -3,7 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Mail, Search, ShoppingBag, TriangleAlert, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useDeferredValue, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useDeferredValue, useEffect, useState } from 'react';
 import { EmptyState } from '@/components/empty-state';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,12 @@ import { ResendDialog } from './resend-dialog';
  * on orders that need a person.
  */
 export function OrdersSection({ recent, loading, period }: { recent: AdminOrder[] | undefined; loading: boolean; period: string }) {
-  const [query, setQuery] = useState('');
+  // "Open in Sales" from an enquiry links to /sales?q=TV-7K4Q9P: start with that search.
+  const linkedSearch = useSearchParams().get('q')?.trim().slice(0, 100) ?? '';
+  const [query, setQuery] = useState(linkedSearch);
+  useEffect(() => {
+    if (linkedSearch) document.getElementById('sales-orders')?.scrollIntoView({ block: 'start' });
+  }, [linkedSearch]);
   const deferred = useDeferredValue(query.trim());
   const searching = deferred.length >= 2;
   const search = useQuery({

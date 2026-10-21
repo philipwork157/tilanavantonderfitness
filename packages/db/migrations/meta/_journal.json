@@ -141,6 +141,13 @@
       "when": 1791835764414,
       "tag": "0019_order_item_fingerprint",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792581281556,
+      "tag": "0020_inquiry_order_details",
+      "breakpoints": true
     }
   ]
 }

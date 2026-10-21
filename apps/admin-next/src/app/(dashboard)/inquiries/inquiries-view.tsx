@@ -2,7 +2,7 @@
 
 import type { InquiryView } from '@tilana/contracts/admin-inquiries';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Archive, ArchiveRestore, Inbox, MailX, Reply } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowUpRight, Inbox, MailX, Reply } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/empty-state';
@@ -15,8 +15,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/lib/api';
-import { formatDateTime, plural } from '@/lib/format';
-import { inquiryStatus, statusStyle } from '@/lib/status';
+import { formatDate, formatDateTime, plural } from '@/lib/format';
+import { formatRand } from '@/lib/programs';
+import { NavLink } from '@/components/nav-link';
+import type { AdminOrder } from '@/lib/types';
+import { inquiryStatus, orderDeliveryStatus, orderRefundStatus, orderStatus, statusStyle } from '@/lib/status';
 
 interface Inquiry {
   id: number;
@@ -24,6 +27,11 @@ interface Inquiry {
   email: string;
   interestLabel: string;
   message: string;
+  /** Order, payment or refund enquiries only. */
+  orderTopic: string | null;
+  orderTopicLabel: string | null;
+  orderNumber: string | null;
+  purchaseEmail: string | null;
   status: string;
   privacyAcceptedAt: string;
   notifiedAt: string | null;
@@ -31,8 +39,17 @@ interface Inquiry {
   createdAt: string;
 }
 
+interface OrderMatch {
+  matchedBy: 'order-number' | 'email' | 'none';
+  orderNumberNotFound: boolean;
+  orders: AdminOrder[];
+}
+
 function replyLink(inquiry: Inquiry) {
-  return `mailto:${inquiry.email}?subject=${encodeURIComponent(`Re: your enquiry about ${inquiry.interestLabel}`)}`;
+  const about = inquiry.orderTopicLabel
+    ? `${inquiry.orderNumber ? `${inquiry.orderNumber}: ` : ''}${inquiry.orderTopicLabel}`
+    : `your enquiry about ${inquiry.interestLabel}`;
+  return `mailto:${inquiry.email}?subject=${encodeURIComponent(`Re: ${about}`)}`;
 }
 
 export function InquiriesView() {
@@ -123,7 +140,12 @@ export function InquiriesView() {
                         <span className="text-xs text-muted-foreground md:hidden">{formatDateTime(inquiry.createdAt)}</span>
                       </button>
                     </TableCell>
-                    <TableCell className="hidden px-5 py-4 md:table-cell">{inquiry.interestLabel}</TableCell>
+                    <TableCell className="hidden px-5 py-4 whitespace-normal md:table-cell">
+                      <span className="grid">
+                        <span>{inquiry.orderTopicLabel ?? inquiry.interestLabel}</span>
+                        {inquiry.orderTopicLabel && <span className="text-xs text-muted-foreground">{inquiry.orderNumber ?? 'No order number'}</span>}
+                      </span>
+                    </TableCell>
                     <TableCell className="px-5 py-4">
                       <div className="flex flex-wrap gap-1">
                         <StatusBadge label={status.label} tone={status.tone} />
@@ -160,13 +182,25 @@ export function InquiriesView() {
               <dl className="grid flex-1 content-start gap-5 overflow-y-auto px-4">
                 <Detail label="Email"><a className="text-brand-text underline underline-offset-4" href={`mailto:${selected.email}`}>{selected.email}</a></Detail>
                 <Detail label="Interested in">{selected.interestLabel}</Detail>
+                {selected.orderTopicLabel && (
+                  <>
+                    <Detail label="Needs help with"><span className="font-semibold">{selected.orderTopicLabel}</span></Detail>
+                    <Detail label="Order number">{selected.orderNumber ?? <span className="text-muted-foreground">Not given</span>}</Detail>
+                    {selected.purchaseEmail && selected.purchaseEmail !== selected.email && <Detail label="Bought with">{selected.purchaseEmail}</Detail>}
+                    <Detail label="Order"><InquiryOrder inquiry={selected} /></Detail>
+                  </>
+                )}
                 <Detail label="Privacy policy accepted">{formatDateTime(selected.privacyAcceptedAt)}</Detail>
                 <Detail label="Email to Tilana">
                   {selected.notifiedAt
                     ? `Sent ${formatDateTime(selected.notifiedAt)}`
                     : <span className="text-destructive">Not sent{selected.notificationError ? `: ${selected.notificationError}` : ''}</span>}
                 </Detail>
-                <Detail label="Message"><span className="whitespace-pre-wrap leading-relaxed">{selected.message}</span></Detail>
+                <Detail label="Message">
+                  {selected.message
+                    ? <span className="whitespace-pre-wrap leading-relaxed">{selected.message}</span>
+                    : <span className="text-muted-foreground">No message. The topic says what they need.</span>}
+                </Detail>
               </dl>
               <SheetFooter className="flex-row flex-wrap">
                 <Button asChild className="rounded-full">
@@ -185,6 +219,54 @@ export function InquiriesView() {
           )}
         </SheetContent>
       </Sheet>
+    </div>
+  );
+}
+
+/** The order this enquiry is about: by its order number, or else the latest orders for their email. */
+function InquiryOrder({ inquiry }: { inquiry: Inquiry }) {
+  const { data, isPending, isError } = useQuery({
+    queryKey: ['inquiry-order', inquiry.id],
+    queryFn: () => api<{ match: OrderMatch | null }>(`/api/inquiries/${inquiry.id}`),
+  });
+  if (isPending) return <Skeleton className="h-20 w-full" />;
+  if (isError || !data?.match) return <span className="text-muted-foreground">Could not look up the order.</span>;
+  const { match } = data;
+  return (
+    <div className="grid gap-2">
+      {match.orderNumberNotFound && (
+        <p className="text-sm text-status-warning">No order {inquiry.orderNumber} exists{match.orders.length ? '. These orders use their email:' : '.'}</p>
+      )}
+      {match.matchedBy === 'email' && !match.orderNumberNotFound && (
+        <p className="text-sm text-muted-foreground">{match.orders.length === 1 ? 'Found by their email:' : `Latest ${match.orders.length} orders for their email:`}</p>
+      )}
+      {match.matchedBy === 'none' && (
+        <p className="text-sm text-muted-foreground">No orders for {inquiry.purchaseEmail ?? inquiry.email}. They may have bought with another email; ask them for the order number.</p>
+      )}
+      {match.orders.map((order) => {
+        const status = statusStyle(orderStatus, order.status);
+        const delivery = order.status === 'paid' ? statusStyle(orderDeliveryStatus, order.deliveryStatus) : null;
+        const refund = order.refundStatus && order.refundStatus !== 'processed' ? statusStyle(orderRefundStatus, order.refundStatus) : null;
+        return (
+          <div key={order.orderNumber} className="grid gap-1.5 rounded-xl border bg-muted/30 p-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-semibold tabular-nums">{order.orderNumber}</span>
+              <span className="font-semibold tabular-nums">{formatRand(order.totalCents)}</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              <StatusBadge label={status.label} tone={status.tone} />
+              {delivery && <StatusBadge label={delivery.label} tone={delivery.tone} />}
+              {refund && <StatusBadge label={refund.label} tone={refund.tone} />}
+              {order.testPayment && <StatusBadge label="Test" tone="neutral" />}
+            </div>
+            <p className="text-muted-foreground">{order.programs.join(', ') || 'No programs'} · {formatDate(order.paidAt ?? order.createdAt)}</p>
+            {order.email !== inquiry.email && <p className="text-xs text-muted-foreground">Bought with {order.email}</p>}
+            <NavLink href={`/sales?q=${encodeURIComponent(order.orderNumber)}`} className="inline-flex items-center gap-1 justify-self-start font-semibold text-brand-text underline underline-offset-4">
+              Open in Sales <ArrowUpRight className="size-3.5" aria-hidden />
+            </NavLink>
+          </div>
+        );
+      })}
     </div>
   );
 }

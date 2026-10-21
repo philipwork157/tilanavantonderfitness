@@ -73,6 +73,12 @@ export const inquiries = pgTable('inquiries', {
   // The label exactly as shown to the visitor, kept even if options change.
   interestLabel: text('interest_label').notNull(),
   message: text('message').notNull(),
+  // "An order, payment or refund" only: what went wrong (e.g. 'not-received',
+  // 'refund'), the order number they gave (TV-XXXXXX) and the email they
+  // bought with, so the admin can find the order. Null for other enquiries.
+  orderTopic: text('order_topic'),
+  orderNumber: text('order_number'),
+  purchaseEmail: text('purchase_email'),
   // When the visitor accepted the privacy policy for this enquiry.
   privacyAcceptedAt: timestamp('privacy_accepted_at', { withTimezone: true }).notNull(),
   status: text('status', { enum: INQUIRY_STATUSES }).notNull().default('new'),

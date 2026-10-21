@@ -3,6 +3,7 @@ import { escapeHtml, formatFromAddress, redirectOptions, routeEmail } from '@/se
 import { verifyTurnstileToken } from '@/server/utils/turnstile';
 import { parseOrigins } from '@/server/utils/website-origins';
 import { inquiryNotificationEmail } from '@/server/services/inquiries';
+import { contactFormRequestSchema, normalizeOrderNumber } from '@tilana/contracts/contact';
 
 const email = { to: ['tilana@example.com'], subject: 'Hello', text: 'Body' };
 
@@ -86,6 +87,9 @@ describe('inquiryNotificationEmail', () => {
     email: 'anna@example.com',
     interestLabel: 'Beginner · Volume 1',
     message: 'Hi\n<script>x</script>',
+    orderTopic: null,
+    orderNumber: null,
+    purchaseEmail: null,
     privacyAcceptedAt: new Date('2026-10-05T12:00:00Z'),
   };
 
@@ -102,5 +106,29 @@ describe('inquiryNotificationEmail', () => {
     expect(html).not.toContain('<script>');
     expect(html).toContain('&lt;script&gt;');
     expect(html).toContain('Anna &lt;b&gt;');
+  });
+});
+
+describe('contact form: order, payment or refund', () => {
+  const base = { name: 'Anna Smith', email: 'anna@example.com', consent: true };
+
+  it('needs a topic, and lets most topics be sent without a message', () => {
+    expect(contactFormRequestSchema.safeParse({ ...base, interest: 'order' }).success).toBe(false);
+    expect(contactFormRequestSchema.safeParse({ ...base, interest: 'order', orderTopic: 'not-received' }).success).toBe(true);
+    expect(contactFormRequestSchema.safeParse({ ...base, interest: 'order', orderTopic: 'other' }).success).toBe(false);
+    expect(contactFormRequestSchema.safeParse({ ...base, interest: 'order', orderTopic: 'other', message: 'Something odd happened.' }).success).toBe(true);
+    expect(contactFormRequestSchema.safeParse({ ...base, interest: 'general', message: 'short' }).success).toBe(false);
+  });
+
+  it('tidies the order number and rejects ones that cannot exist', () => {
+    const parsed = contactFormRequestSchema.parse({ ...base, interest: 'order', orderTopic: 'refund', orderNumber: '#tv7k4q9p', purchaseEmail: ' Old@Example.com ' });
+    expect(parsed).toMatchObject({ orderNumber: 'TV-7K4Q9P', purchaseEmail: 'old@example.com' });
+    expect(contactFormRequestSchema.safeParse({ ...base, interest: 'order', orderTopic: 'refund', orderNumber: '12345' }).success).toBe(false);
+    expect(normalizeOrderNumber('TV-7K4Q9P')).toBe('TV-7K4Q9P');
+  });
+
+  it('drops order fields on other enquiries', () => {
+    const parsed = contactFormRequestSchema.parse({ ...base, interest: 'general', message: 'A question about training.', orderTopic: 'refund', orderNumber: 'TV-7K4Q9P' });
+    expect(parsed).toMatchObject({ orderTopic: null, orderNumber: null, purchaseEmail: null });
   });
 });

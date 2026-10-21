@@ -4,6 +4,7 @@ import { desc, eq, ne } from 'drizzle-orm';
 import { requireAdmin } from '@/server/auth/admin';
 import { getDatabase } from '@/server/db';
 import { handle } from '@/server/http';
+import { orderTopicLabel } from '@/server/services/inquiries';
 
 /** Admin list of website enquiries, newest first. ?view=active (default) or archived. */
 export const GET = handle(async (request: Request) => {
@@ -15,6 +16,9 @@ export const GET = handle(async (request: Request) => {
     email: inquiries.email,
     interestLabel: inquiries.interestLabel,
     message: inquiries.message,
+    orderTopic: inquiries.orderTopic,
+    orderNumber: inquiries.orderNumber,
+    purchaseEmail: inquiries.purchaseEmail,
     status: inquiries.status,
     privacyAcceptedAt: inquiries.privacyAcceptedAt,
     notifiedAt: inquiries.notifiedAt,
@@ -25,5 +29,5 @@ export const GET = handle(async (request: Request) => {
     .where(view === 'archived' ? eq(inquiries.status, 'archived') : ne(inquiries.status, 'archived'))
     .orderBy(desc(inquiries.createdAt))
     .limit(500);
-  return Response.json({ inquiries: rows });
+  return Response.json({ inquiries: rows.map(row => ({ ...row, orderTopicLabel: orderTopicLabel(row.orderTopic) })) });
 });
