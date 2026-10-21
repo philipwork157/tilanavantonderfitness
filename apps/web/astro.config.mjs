@@ -19,7 +19,12 @@ export default defineConfig({
   build: { format: 'file' },
   // No visitor sessions, so the adapter does not create a Cloudflare KV store.
   session: false,
-  adapter: cloudflare({ imageService: 'compile', prerenderEnvironment: 'node' }),
+  // persistState: false keeps the local Cloudflare runtime's data in memory.
+  // Otherwise it keeps writing small database files under .wrangler/state
+  // inside the project, and the admin's dev server (which watches the whole
+  // repo) sees those writes as changes and reloads the dashboard over and over.
+  // The site has no local KV, D1 or R2 data worth keeping between restarts.
+  adapter: cloudflare({ imageService: 'compile', prerenderEnvironment: 'node', persistState: false }),
   // React islands (with Motion) for the interactive parts of the site, and the
   // sitemap of the prebuilt pages (the pages rendered on request have their own:
   // src/pages/sitemap-*.xml.ts).
