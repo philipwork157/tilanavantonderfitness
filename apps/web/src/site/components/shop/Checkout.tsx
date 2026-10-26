@@ -273,6 +273,7 @@ export default function Checkout({ programsHref, completeHref, refundHref, priva
           </button>
           <p className="co-status" role="status" aria-live="polite">{status}</p>
           <p className="co-fineprint">You’ll be taken to Paystack to pay by card or another available method. Your card details go to Paystack, never to this site.</p>
+          <p className="pay-badge co-pay-badge"><Icon name="lock" /><span>Secure payments by <strong>Paystack</strong></span></p>
         </form>
 
         <aside className="co-order" aria-label="Order summary">

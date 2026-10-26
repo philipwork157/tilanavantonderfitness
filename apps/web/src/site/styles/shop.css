@@ -143,6 +143,7 @@
 .co-form .co-consent.invalid { border-color: var(--danger); }
 .co-form .co-consent-error { margin: -0.7rem 0 1.1rem; }
 .co-pay { width: 100%; margin-top: 0.3rem; padding-block: 1.1rem; font-size: 1rem; }
+.co-pay-badge { display: flex; width: fit-content; margin: 0.9rem auto 0; }
 .co-fineprint { margin: 0.9rem 0 0; font-size: 0.76rem; line-height: 1.6; text-align: center; color: var(--fg-soft); }
 
 .co-order { position: sticky; top: 6rem; padding: clamp(1.4rem, 3vw, 2rem); border: 1px solid var(--line); border-radius: 28px; background: var(--bg-2); }

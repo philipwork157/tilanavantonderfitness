@@ -1,4 +1,5 @@
 ---
+import Icon from './Icon';
 import { href, navigation, site } from '../config';
 // Program names change in the admin, so the footer links to the program page's sections instead.
 const programLinks = [
@@ -8,12 +9,15 @@ const programLinks = [
   { label: 'One-on-one training', path: '/contact?interest=one-on-one' },
 ];
 const year = 2026;
+// Prebuilt pages always carry the badge; <html data-checkout> hides it while checkout is off (base.css).
+const withBadge = Astro.locals.checkout || Astro.isPrerendered;
 ---
 <footer class="site-footer">
   <div class="wrap footer-top">
     <div class="footer-brand">
       <a class="wordmark" href={href('/')}>TILANA<span>van Tonder</span></a>
       <p>{site.tagline}</p>
+      {withBadge && <div data-checkout-only><span class="pay-badge"><Icon name="lock" /><span>Secure payments by <strong>Paystack</strong></span></span></div>}
     </div>
     <div class="footer-col">
       <h3>Explore</h3>
