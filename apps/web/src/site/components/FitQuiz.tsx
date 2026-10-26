@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { checkoutEnabled, href, programContactHref } from '../config';
+import { href, programContactHref } from '../config';
 import type { Program } from '../programs';
 import { addAndOpen, rand } from './shop/basket';
 
@@ -68,7 +68,7 @@ function recommend(a: Answers): { keys: Pick[]; why: string } {
  * or to the contact form while checkout is off). Programs that are not for
  * sale right now are left out of the recommendation.
  */
-export default function FitQuiz({ programs }: { programs: Program[] }) {
+export default function FitQuiz({ programs, checkout }: { programs: Program[]; checkout: boolean }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Answers>({});
   const done = step >= questions.length;
@@ -123,7 +123,7 @@ export default function FitQuiz({ programs }: { programs: Program[] }) {
             <div className="quiz-actions">
               {picks.length === 0 ? (
                 <a className="btn btn-primary" href={href('/contact')}>Ask Tilana</a>
-              ) : checkoutEnabled ? (
+              ) : checkout ? (
                 <button type="button" className="btn btn-primary" onClick={() => addAndOpen(picks.map((p) => p.slug))}>
                   {picks.length > 1 ? `Add both · ${rand(total)}` : `Add ${picks[0]!.name} · ${rand(total)}`}
                 </button>

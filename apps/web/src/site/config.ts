@@ -47,6 +47,10 @@ export function checkoutSetting(value: unknown, environment: 'production' | 'dev
  * checkout page. When off, every program button opens the contact form with
  * that program chosen, and /checkout says online checkout is coming soon. The
  * rest of the site (programs, prices, sneak peeks, quiz) stays the same.
+ *
+ * This is only the build's default. The Cloudflare variable CHECKOUT_MODE
+ * overrides it per request without a rebuild (src/checkout-switch.ts), so
+ * pages read Astro.locals.checkout instead of this value.
  */
 export const checkoutEnabled = checkoutSetting(import.meta.env.PUBLIC_CHECKOUT_ENABLED, SITE_ENVIRONMENT);
 

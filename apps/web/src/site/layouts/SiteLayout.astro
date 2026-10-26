@@ -18,7 +18,7 @@ import BasketDrawer from '../components/shop/BasketDrawer';
 // WhatsApp button switched off for now (new number coming). To bring it back, uncomment this
 // import and the <WhatsAppChat> line near the end of the page.
 // import WhatsAppChat from '../components/WhatsAppChat';
-import { checkoutEnabled, href, site, type NavKey } from '../config';
+import { href, site, type NavKey } from '../config';
 import { toProducts, type Program } from '../programs';
 import { isLiveSite } from '@web/utils/site-environment';
 import { canonicalPath } from '@web/utils/sitemap';
@@ -60,6 +60,9 @@ const {
 // The development copy of the site is never indexed, whatever the page asks for.
 const robots = isLiveSite ? pageRobots : 'noindex, nofollow';
 const products = programs?.length ? toProducts(programs) : undefined;
+// Prebuilt pages always carry the basket; the Worker's <html data-checkout> shows or hides it (base.css).
+const checkout = Astro.locals.checkout;
+const withBasket = checkout || Astro.isPrerendered;
 
 const pageTitle = title === site.name ? title : `${title} | ${site.name}`;
 // The page's one address: prebuilt pages are files (about.html) served at /about.
@@ -105,7 +108,7 @@ const schema = {
 };
 ---
 <!doctype html>
-<html lang="en-ZA">
+<html lang="en-ZA" data-checkout={checkout ? 'on' : 'off'}>
   <head>
     <meta charset="utf-8" />
     <script is:inline>
@@ -156,11 +159,11 @@ const schema = {
   </head>
   <body class="site">
     <a class="skip-link" href="#main">Skip to content</a>
-    <SiteHeader current={current} />
+    <SiteHeader current={current} withBasket={withBasket} />
     <main id="main"><slot /></main>
     {newsletter && <Newsletter />}
     <SiteFooter />
-    {checkoutEnabled && <BasketDrawer client:idle checkoutHref={href('/checkout')} programsHref={href('/program')} products={products} />}
+    {withBasket && <div data-checkout-only><BasketDrawer client:idle checkoutHref={href('/checkout')} programsHref={href('/program')} products={products} /></div>}
     {/* <WhatsAppChat client:idle phone={site.whatsapp} avatar="/images/site/tilana-portrait-480.webp" /> */}
     {turnstileSiteKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>}
     <script>

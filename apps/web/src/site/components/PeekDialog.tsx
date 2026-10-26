@@ -9,7 +9,7 @@ import PeekView, { type PeekProgram } from './PeekView';
  * `data-peek="<slug>"` opens it; without JavaScript the link still goes to the
  * "Take a peek inside" section.
  */
-export default function PeekDialog({ programs }: { programs: PeekProgram[] }) {
+export default function PeekDialog({ programs, checkout }: { programs: PeekProgram[]; checkout: boolean }) {
   const [slug, setSlug] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -83,7 +83,7 @@ export default function PeekDialog({ programs }: { programs: PeekProgram[] }) {
               </button>
             </div>
             {/* Adding to the basket closes this first, so the basket opens on its own. */}
-            <PeekView key={program.slug} program={program} headingId="peek-dialog-title" onAdd={close} />
+            <PeekView key={program.slug} program={program} checkout={checkout} headingId="peek-dialog-title" onAdd={close} />
           </motion.div>
         </div>
       )}

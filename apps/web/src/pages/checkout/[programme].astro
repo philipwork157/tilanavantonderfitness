@@ -1,10 +1,9 @@
 ---
-import { checkoutEnabled } from '@web/site/config';
 // Old "buy this program" links: /checkout/move-volume-1 → the checkout with that volume added.
 // Rendered on request so links to volumes added later in the admin also work; the
 // checkout ignores anything that is not a valid volume slug. With online
 // checkout off they go to the programs page instead.
 export const prerender = false;
-if (!checkoutEnabled) return Astro.redirect('/program', 302);
+if (!Astro.locals.checkout) return Astro.redirect('/program', 302);
 return Astro.redirect(`/checkout?programme=${encodeURIComponent(Astro.params.programme ?? '')}`, 308);
 ---

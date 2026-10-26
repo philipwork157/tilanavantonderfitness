@@ -7,7 +7,7 @@ import Faq from '@web/site/components/Faq';
 import ProgramRow from '@web/site/components/ProgramRow.astro';
 import PdfPeek, { type PeekProgram } from '@web/site/components/PdfPeek';
 import PeekDialog from '@web/site/components/PeekDialog';
-import { checkoutEnabled, href } from '@web/site/config';
+import { href } from '@web/site/config';
 import { programDisclaimer, programFaqs } from '@web/site/data';
 import { loadSitePrograms, setProgramCacheHeaders } from '@web/utils/programs';
 import { productName } from '@web/site/programs';
@@ -17,6 +17,8 @@ import { faqStructuredData, programsStructuredData } from '@web/site/structured-
 export const prerender = false;
 const { programs, ok: programsLoaded } = await loadSitePrograms();
 setProgramCacheHeaders(Astro.response.headers);
+const { checkout } = Astro.locals;
+const faqs = programFaqs(checkout);
 
 const strength = programs.filter((p) => p.series === 'strength').sort((a, b) => (a.step ?? 0) - (b.step ?? 0));
 const focus = programs.filter((p) => p.series === 'focus');
@@ -43,7 +45,7 @@ const structuredData = [
     about: { '@id': personId },
   },
   ...(programs.length ? [programsStructuredData([...strength, ...focus], pageUrl, personId, new URL('/og.png', Astro.site).href)] : []),
-  faqStructuredData(programFaqs, pageUrl),
+  faqStructuredData(faqs, pageUrl),
 ];
 ---
 <SiteLayout title="Programs & Pricing" current="program" description={description} programs={programs} structuredData={structuredData}>
@@ -77,9 +79,9 @@ const structuredData = [
       <div class="section-head" data-reveal>
         <p class="eyebrow">Find your fit</p>
         <h2 class="h2">Not sure where <em>to start?</em></h2>
-        <p class="lede">Three quick questions and you’ll have a recommendation{checkoutEnabled ? ', ready to add to your basket' : ''}. Still unsure? <a href={href('/contact')}>Ask me directly</a>.</p>
+        <p class="lede">Three quick questions and you’ll have a recommendation{checkout ? ', ready to add to your basket' : ''}. Still unsure? <a href={href('/contact')}>Ask me directly</a>.</p>
       </div>
-      <div data-reveal data-reveal-delay="0.1"><FitQuiz client:visible programs={programs} /></div>
+      <div data-reveal data-reveal-delay="0.1"><FitQuiz client:visible programs={programs} checkout={checkout} /></div>
     </div>
   </section>
 
@@ -140,9 +142,9 @@ const structuredData = [
       </div>
       <p class="lede">What each program covers, and real pages to flip through: the cover, then a few pages from inside. The details are blurred here and waiting in your PDF.</p>
     </div>
-    <div data-reveal data-reveal-delay="0.1"><PdfPeek client:visible programs={peekPrograms} /></div>
+    <div data-reveal data-reveal-delay="0.1"><PdfPeek client:visible programs={peekPrograms} checkout={checkout} /></div>
   </section>}
-  {peekPrograms.length > 0 && <PeekDialog client:idle programs={peekPrograms} />}
+  {peekPrograms.length > 0 && <PeekDialog client:idle programs={peekPrograms} checkout={checkout} />}
 
   <section class="wrap">
     <div class="cta-band card private-card" data-reveal>
@@ -163,7 +165,7 @@ const structuredData = [
       <h2 class="h2">Good to <em>know.</em></h2>
       <p class="lede">The <a href={href('/terms')}>terms of sale</a>, <a href={href('/refund-policy')}>refund policy</a> and <a href={href('/privacy')}>privacy policy</a> have the full details.</p>
     </div>
-    <div data-reveal data-reveal-delay="0.1"><Faq client:visible items={programFaqs} /></div>
+    <div data-reveal data-reveal-delay="0.1"><Faq client:visible items={faqs} /></div>
   </section>
 
   <section class="wrap">

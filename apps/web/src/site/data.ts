@@ -1,4 +1,3 @@
-import { checkoutEnabled } from './config';
 
 // Website copy that lives in code. Programs and prices come from the admin (see programs.ts).
 
@@ -102,23 +101,27 @@ export const timeline = [
   { when: 'Today', title: 'This dream, from home', copy: 'Building a space for healthy, sustainable living, one step at a time.' },
 ];
 
-const buyingFaqs = checkoutEnabled
-  ? [
-      { q: 'How do I receive my program?', a: 'Once your payment is confirmed, your program is emailed to you with the PDF attached. Lost the email? Ask for it to be sent again from the checkout page, or email me. No account or password needed.' },
-      { q: 'Can I buy more than one program?', a: 'Yes. Add as many as you like to your basket and pay once, securely through Paystack.' },
-    ]
-  : [
-      { q: 'How do I buy a program?', a: 'Tap the button on the program you want and send me the short message that is already filled in. I’ll reply personally with the next steps.' },
-      { q: 'Can I buy more than one program?', a: 'Yes. Mention every program you’d like in your message and I’ll help you with all of them at once.' },
-    ];
-
-export const programFaqs = [
-  buyingFaqs[0]!,
-  { q: 'Is this a subscription?', a: 'No. Every program is a once-off purchase. There is nothing to cancel and nothing renews.' },
-  buyingFaqs[1]!,
-  { q: 'Do I need a gym?', a: 'Beginner works with bodyweight or dumbbells, at home or in the gym. Each program description explains who it is designed for.' },
-  { q: 'Can I get a refund?', a: 'The program is emailed to you straight after payment, so change-of-mind refunds are not normally available once it has been sent. If something went wrong, like a double charge or a file that will not open, I will fix it or refund you. The refund policy explains everything.' },
+const checkoutFaqs = [
+  { q: 'How do I receive my program?', a: 'Once your payment is confirmed, your program is emailed to you with the PDF attached. Lost the email? Ask for it to be sent again from the checkout page, or email me. No account or password needed.' },
+  { q: 'Can I buy more than one program?', a: 'Yes. Add as many as you like to your basket and pay once, securely through Paystack.' },
 ];
+
+const contactFaqs = [
+  { q: 'How do I buy a program?', a: 'Tap the button on the program you want and send me the short message that is already filled in. I’ll reply personally with the next steps.' },
+  { q: 'Can I buy more than one program?', a: 'Yes. Mention every program you’d like in your message and I’ll help you with all of them at once.' },
+];
+
+/** The program page FAQs; the buying answers depend on whether online checkout is on. */
+export function programFaqs(checkout: boolean) {
+  const buying = checkout ? checkoutFaqs : contactFaqs;
+  return [
+    buying[0]!,
+    { q: 'Is this a subscription?', a: 'No. Every program is a once-off purchase. There is nothing to cancel and nothing renews.' },
+    buying[1]!,
+    { q: 'Do I need a gym?', a: 'Beginner works with bodyweight or dumbbells, at home or in the gym. Each program description explains who it is designed for.' },
+    { q: 'Can I get a refund?', a: 'The program is emailed to you straight after payment, so change-of-mind refunds are not normally available once it has been sent. If something went wrong, like a double charge or a file that will not open, I will fix it or refund you. The refund policy explains everything.' },
+  ];
+}
 
 /** Contact form options come from the shared contract (the admin stores these keys). */
 export { contactInterestOptions as contactInterests } from '@tilana/contracts/contact';

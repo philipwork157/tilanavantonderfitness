@@ -78,6 +78,17 @@ function redirect(location: string, cookie: string): Response {
 }
 
 /**
+ * Whether this browser holds a valid preview cookie (set with ?preview=<token>).
+ * Also used by src/checkout-switch.ts: preview browsers see the checkout while
+ * it is switched off for everyone else.
+ */
+export async function hasPreviewCookie(request: Request, env: MaintenanceEnv): Promise<boolean> {
+  const token = bypassToken(env);
+  const cookie = readCookie(request, PREVIEW_COOKIE);
+  return Boolean(token && cookie && sameText(cookie, await sha256(token)));
+}
+
+/**
  * What to do with a request: null = serve the website as usual, or a Response
  * (the maintenance page, or the redirect that sets or clears the preview cookie).
  */
@@ -100,9 +111,7 @@ export async function maintenanceResponse(request: Request, env: MaintenanceEnv)
   }
 
   if (!maintenanceOn(env) || alwaysOpen(url.pathname)) return null;
-
-  const cookie = readCookie(request, PREVIEW_COOKIE);
-  if (token && cookie && sameText(cookie, await sha256(token))) return null;
+  if (await hasPreviewCookie(request, env)) return null;
 
   return new Response(request.method === 'HEAD' ? null : MAINTENANCE_PAGE, {
     status: 503,

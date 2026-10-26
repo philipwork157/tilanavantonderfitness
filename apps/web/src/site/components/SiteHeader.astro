@@ -1,11 +1,11 @@
 ---
-import { checkoutEnabled, href, navigation, type NavKey } from '../config';
+import { href, navigation, type NavKey } from '../config';
 import ThemeToggle from './ThemeToggle.astro';
 import BasketButton from './shop/BasketButton';
 import MobileMenu from './MobileMenu';
 
-interface Props { current: NavKey }
-const { current } = Astro.props;
+interface Props { current: NavKey; withBasket: boolean }
+const { current, withBasket } = Astro.props;
 const links = navigation.map((n) => ({ label: n.label, href: href(n.path), current: n.key === current }));
 ---
 <header class="site-header">
@@ -16,7 +16,7 @@ const links = navigation.map((n) => ({ label: n.label, href: href(n.path), curre
     </nav>
     <div class="header-actions">
       <ThemeToggle />
-      {checkoutEnabled && <BasketButton client:load />}
+      {withBasket && <div data-checkout-only><BasketButton client:load /></div>}
       {current !== 'contact' && <a class="btn btn-primary btn-sm header-cta" href={href('/contact')}>Get in touch</a>}
       <MobileMenu client:idle links={links} homeHref={href('/')} contactHref={href('/contact')} />
     </div>

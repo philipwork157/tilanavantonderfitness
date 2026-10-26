@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Icon from './Icon';
 import AddToBasket from './shop/AddToBasket';
 import type { ProgramPreview } from '@tilana/contracts/public-programs';
-import { checkoutEnabled, href } from '../config';
+import { href } from '../config';
 import type { Product } from '../programs';
 
 export type PeekProgram = Pick<Product, 'slug' | 'name' | 'tone' | 'illustration' | 'step' | 'volume'> & {
@@ -26,7 +26,7 @@ const pageName = (page: ProgramPreview['pages'][number]) => (page.page === 1 ? '
  * Used in the "Take a peek inside" section and in the pop-up on each card.
  * Give it a `key` per program so the page stack starts at the cover.
  */
-export default function PeekView({ program, headingId, onAdd }: { program: PeekProgram; headingId?: string; onAdd?: () => void }) {
+export default function PeekView({ program, checkout, headingId, onAdd }: { program: PeekProgram; checkout: boolean; headingId?: string; onAdd?: () => void }) {
   const [page, setPage] = useState(0);
   const [forward, setForward] = useState(true);
   const reduce = useReducedMotion();
@@ -59,7 +59,7 @@ export default function PeekView({ program, headingId, onAdd }: { program: PeekP
           <p className="peek-note"><Icon name="lock" /> These are real pages from the PDF. The plan is blurred here and clear in your copy.</p>
         )}
         <div className="peek-actions">
-          {checkoutEnabled && <AddToBasket slug={program.slug} name={program.basketName} onAdd={onAdd} />}
+          {checkout && <AddToBasket slug={program.slug} name={program.basketName} onAdd={onAdd} />}
           <a className="link-arrow" href={href(`/contact?interest=${program.slug}`)}>Ask me a question <Icon name="arrow" /></a>
         </div>
       </div>

@@ -2,7 +2,10 @@
 import SiteLayout from '@web/site/layouts/SiteLayout.astro';
 import Checkout from '@web/site/components/shop/Checkout';
 import Icon from '@web/site/components/Icon';
-import { checkoutEnabled, href } from '@web/site/config';
+import { href } from '@web/site/config';
+
+// Rendered on request so the Cloudflare checkout switch (src/checkout-switch.ts) applies at once.
+export const prerender = false;
 ---
 <SiteLayout title="Your basket" current="checkout" newsletter={false} robots="noindex, nofollow" description="Review your programs and pay once, securely through Paystack.">
   <section class="shop-hero wrap">
@@ -11,7 +14,7 @@ import { checkoutEnabled, href } from '@web/site/config';
     <p class="lede">Review your programs, enter your details, and complete one secure payment.</p>
   </section>
   <section class="wrap shop-body">
-    {checkoutEnabled
+    {Astro.locals.checkout
       ? <Checkout client:load programsHref={href('/program')} completeHref={href('/checkout/complete')} refundHref={href('/refund-policy')} privacyHref={href('/privacy')} termsHref={href('/terms')} />
       : (
         <div class="co-state co-empty">

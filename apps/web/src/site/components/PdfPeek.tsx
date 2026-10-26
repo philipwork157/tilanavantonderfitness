@@ -9,7 +9,7 @@ export type { PeekProgram } from './PeekView';
  * "Take a peek inside" section: a tab per program, then that program's peek
  * (what's inside, and its real pages to flip through).
  */
-export default function PdfPeek({ programs }: { programs: PeekProgram[] }) {
+export default function PdfPeek({ programs, checkout }: { programs: PeekProgram[]; checkout: boolean }) {
   const [active, setActive] = useState(programs[0]?.slug ?? '');
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   const reduce = useReducedMotion();
@@ -70,7 +70,7 @@ export default function PdfPeek({ programs }: { programs: PeekProgram[] }) {
             exit={reduce ? { opacity: 0, transition: { duration: 0 } } : { opacity: 0, y: -8 }}
             transition={reduce ? { duration: 0 } : { duration: 0.25 }}
           >
-            <PeekView program={program} />
+            <PeekView program={program} checkout={checkout} />
           </motion.div>
         </AnimatePresence>
       </div>

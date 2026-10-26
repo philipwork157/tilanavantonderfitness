@@ -5,7 +5,7 @@ import Icon from './Icon';
 import ProgramArt from './ProgramArt.astro';
 import ProgramMarks from './ProgramMarks.astro';
 import { rand } from './shop/basket';
-import { checkoutEnabled, href, programContactHref } from '../config';
+import { href, programContactHref } from '../config';
 import { productName, type Program } from '../programs';
 interface Props { program: Program; layout?: 'row' | 'stack'; delay?: number }
 const { program: p, layout = 'row', delay = 0 } = Astro.props;
@@ -26,7 +26,7 @@ const { program: p, layout = 'row', delay = 0 } = Astro.props;
     {p.preview && <a class="row-peek" href={`#peek-${p.slug}`} data-peek={p.slug}><Icon name="spark" /> Peek inside the PDF</a>}
     <div class="row-buy">
       <div class="price"><strong>{rand(p.priceCents)}</strong><span>once-off</span></div>
-      {checkoutEnabled
+      {Astro.locals.checkout
         ? <><AddToBasket client:load slug={p.slug} name={productName(p)} className="btn btn-primary" /><a class="link-arrow" href={href(`/contact?interest=${p.key}`)}>Ask about {p.name}</a></>
         : <a class="btn btn-primary" href={programContactHref(p)}>Get {p.name}</a>}
     </div>

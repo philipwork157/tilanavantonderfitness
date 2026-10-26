@@ -60,6 +60,11 @@ body.site {
 }
 
 :root[data-theme='dark'] { color-scheme: dark; }
+
+/* The basket button and drawer: on prebuilt pages they are always in the HTML and the
+   Worker's <html data-checkout> decides (src/checkout-switch.ts). The wrapper adds no box. */
+[data-checkout-only] { display: contents; }
+:root[data-checkout='off'] [data-checkout-only] { display: none; }
 .site ::selection { background: var(--fg); color: var(--bg); }
 .site :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 .site main { display: block; }

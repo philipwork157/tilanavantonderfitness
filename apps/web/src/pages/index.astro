@@ -3,7 +3,7 @@ import SiteLayout from '@web/site/layouts/SiteLayout.astro';
 import Img from '@web/site/components/Img.astro';
 import Icon from '@web/site/components/Icon';
 import ProgramCard from '@web/site/components/ProgramCard.astro';
-import { checkoutEnabled, href } from '@web/site/config';
+import { href } from '@web/site/config';
 import { loadSitePrograms, setProgramCacheHeaders } from '@web/utils/programs';
 
 // Rendered on request so programs published in the admin appear without a rebuild.
@@ -53,7 +53,7 @@ setProgramCacheHeaders(Astro.response.headers);
           <p class="eyebrow">The program collection</p>
           <h2 class="h2">Start today, <em>at your pace.</em></h2>
         </div>
-        <p class="lede">{checkoutEnabled
+        <p class="lede">{Astro.locals.checkout
           ? 'Choose one or a few. Add them to your basket and pay once, securely with Paystack. Every program is a once-off purchase.'
           : 'Choose one or a few and get in touch. Every program is a once-off purchase, emailed to you as a PDF.'}</p>
       </div>

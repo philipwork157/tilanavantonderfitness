@@ -100,7 +100,7 @@ Create two environments (Settings > Environments): `development` and `production
 |---|---|
 | `PUBLIC_TURNSTILE_SITE_KEY_DEV`, `PUBLIC_TURNSTILE_SITE_KEY_PROD` | Turnstile site keys (if they already exist as secrets, those keep working) |
 | `PUBLIC_POSTHOG_KEY` | The PostHog project token (`phc_...`). Empty = no analytics |
-| `PUBLIC_CHECKOUT_ENABLED` | Variable on the GitHub **environment** (development / production). `true` shows Add to basket, the basket and checkout; `false` hides them (program buttons open the contact form). Empty: on for development, **off for the live website**. Set it to `true` on production only after Paystack has approved the business and the live keys are on Fly; the admin refuses checkouts with test keys on the live website anyway |
+| `PUBLIC_CHECKOUT_ENABLED` | Variable on the GitHub **environment** (development / production): the build's **default** for online checkout. `true` shows Add to basket, the basket and checkout; `false` hides them (program buttons open the contact form). Empty: on for development, **off for the live website**. The Cloudflare variable `CHECKOUT_MODE` overrides it without a rebuild (see Checkout switch below); the admin refuses checkouts with test keys on the live website anyway |
 
 The admin addresses (`PUBLIC_API_BASE_URL`) are fixed in the workflows; the old `PUBLIC_API_BASE_URL_*` secrets are no longer used and can be deleted.
 
@@ -126,6 +126,17 @@ Shows a "Back very soon" page (HTTP 503, not indexed) on every page of the websi
 - **See the real site while it is on:** open `https://tilanavantonder.co.za/?preview=<token>` once. That browser gets a cookie for 12 hours; `?preview=off` removes it. Changing the secret signs everyone out of the preview.
 - **Turn off:** set `MAINTENANCE_MODE` to `off` (or delete it) → Deploy.
 - **Locally:** set `MAINTENANCE_MODE=on` and `MAINTENANCE_BYPASS_TOKEN` in `apps/web/.env`, restart `pnpm dev`. (Only for your Mac: GitHub builds never read that file.)
+
+## Checkout switch (website)
+
+Shows or hides online checkout without a rebuild. Off looks exactly like the site before Paystack: no Add to basket, no basket, program buttons open the contact form, the program FAQs explain buying by message, and `/checkout` says online checkout is coming soon. Code: `apps/web/src/checkout-switch.ts`, run by `apps/web/src/worker.ts` before every page.
+
+- **Turn off:** Cloudflare dashboard → Workers & Pages → `tilanavantonder-website-prod` → Settings → Variables and secrets → add a **Text** variable `CHECKOUT_MODE` = `off` → Deploy. Live within seconds (a visitor's open page shows the change on its next load; browsers may keep `/` and `/program` for up to a minute). `keep_vars` stops the next GitHub deploy from removing it.
+- **Turn on:** set `CHECKOUT_MODE` to `on` → Deploy.
+- **Not set:** the build's `PUBLIC_CHECKOUT_ENABLED` decides (off on the live website unless that GitHub variable is `true`). Any value other than on/off (a typo) counts as **off**.
+- **Test on the live site while it is off for everyone:** with `MAINTENANCE_BYPASS_TOKEN` set (see Maintenance mode), open `https://tilanavantonder.co.za/?preview=<token>` once. That browser sees the checkout for 12 hours; `?preview=off` hides it again. This is a real live payment: refund it from Sales afterwards.
+- **What it does not do:** it hides the website's buttons only. The admin still accepts and verifies payments, so someone already on the Paystack page finishes normally, `/checkout/complete` keeps working, and the order checks, emails and refunds carry on. To stop the admin itself, put the website in maintenance mode or switch the programs off in the admin.
+- **Locally:** set `CHECKOUT_MODE=off` in `apps/web/.env`, restart `pnpm dev`.
 
 ## Everyday use
 

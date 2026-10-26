@@ -169,7 +169,14 @@ run migrations against a remote database without explicit authorization.
   page, prebuilt ones included (`assets.run_worker_first`, static files excluded),
   and `src/maintenance.ts` answers 503 while the Worker variable
   `MAINTENANCE_MODE=on`; `?preview=<MAINTENANCE_BYPASS_TOKEN>` sets a 12-hour
-  bypass cookie. The worker also adds the security headers to prebuilt pages,
+  bypass cookie. The Worker variable `CHECKOUT_MODE` (on/off; unset = the
+  build's `PUBLIC_CHECKOUT_ENABLED`) shows or hides online checkout per request
+  (`src/checkout-switch.ts`): the Worker passes its decision to Astro in the
+  `x-tvt-checkout` header (`Astro.locals.checkout`) and marks
+  `<html data-checkout>` so prebuilt pages hide the basket with CSS. Preview
+  cookie browsers always see the checkout. Pages read `Astro.locals.checkout`,
+  never `checkoutEnabled` directly. `/checkout` is rendered on request.
+  The worker also adds the security headers to prebuilt pages,
   since `public/_headers` does not apply to Worker responses. See docs/deploy.md.
 - The website is a Cloudflare Worker (`apps/web/wrangler.jsonc`). Every page
   is prebuilt except `/blog`, `/blog/<slug>` and `/sitemap-blog.xml`

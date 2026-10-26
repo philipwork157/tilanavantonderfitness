@@ -6,9 +6,10 @@
 // images and icons are served straight from the assets (free, no Worker run).
 // Pages count as Worker requests (free plan: 100,000 a day).
 //
-// Maintenance mode is switched in the Cloudflare dashboard, not here (see
-// src/maintenance.ts and docs/deploy.md). keep_vars stops a deploy from wiping
-// the MAINTENANCE_MODE variable set there.
+// Maintenance mode and the checkout switch are set in the Cloudflare
+// dashboard, not here (see src/maintenance.ts, src/checkout-switch.ts and
+// docs/deploy.md). keep_vars stops a deploy from wiping the MAINTENANCE_MODE
+// and CHECKOUT_MODE variables set there.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "tilanavantonder-website-dev",

@@ -7,7 +7,7 @@ import AddToBasket from './shop/AddToBasket';
 import ProgramArt from './ProgramArt.astro';
 import ProgramMarks from './ProgramMarks.astro';
 import { rand } from './shop/basket';
-import { checkoutEnabled, href, programContactHref } from '../config';
+import { href, programContactHref } from '../config';
 import { productName, type Program } from '../programs';
 interface Props { program: Program; index?: number }
 const { program: p, index = 0 } = Astro.props;
@@ -23,7 +23,7 @@ const { program: p, index = 0 } = Astro.props;
     <p class="prog-title">{p.title}</p>
     <div class="prog-foot">
       <div class="price"><strong>{rand(p.priceCents)}</strong><span>once-off</span></div>
-      {checkoutEnabled
+      {Astro.locals.checkout
         ? <AddToBasket client:load slug={p.slug} name={productName(p)} className="btn btn-primary btn-sm" />
         : <a class="btn btn-primary btn-sm" href={programContactHref(p)}>Get {p.name}</a>}
     </div>
