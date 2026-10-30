@@ -430,8 +430,9 @@ function PagesTable({ rows, loading }: { rows: Stats['pages'] | undefined; loadi
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const WEEKDAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const hourLabel = (hour: number) => `${String(hour).padStart(2, '0')}:00`;
+const visitorCount = (visitors: number) => `${n(visitors)} visitor${visitors === 1 ? '' : 's'}`;
 
-/** Weekday by hour: darker squares had more visitors. */
+/** Weekday by hour: each square shows its visitor count; darker squares had more visitors. */
 function Heatmap({ cells, loading }: { cells: Stats['hours'] | undefined; loading: boolean }) {
   if (loading) return <Skeleton className="h-56 w-full" />;
   if (!cells) return <p className="text-sm text-muted-foreground">Could not load the busiest times.</p>;
@@ -445,10 +446,11 @@ function Heatmap({ cells, loading }: { cells: Stats['hours'] | undefined; loadin
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
       <p className="text-sm">
         Busiest hour: <span className="font-semibold">{WEEKDAY_NAMES[busiest.weekday - 1]} {hourLabel(busiest.hour)}</span>
-        <span className="text-muted-foreground"> · busiest day: </span><span className="font-semibold">{WEEKDAY_NAMES[topDay]}</span>
+        <span className="text-muted-foreground"> ({visitorCount(busiest.visitors)}) · busiest day: </span><span className="font-semibold">{WEEKDAY_NAMES[topDay]}</span>
+        <span className="text-muted-foreground"> ({visitorCount(byDay[topDay] ?? 0)})</span>
       </p>
       <div className="relative overflow-x-auto pb-1">
-        <table className="w-full min-w-[34rem] table-fixed border-separate border-spacing-[3px] text-[10px]">
+        <table className="w-full min-w-[44rem] table-fixed border-separate border-spacing-[3px] text-[10px] tabular-nums">
           <caption className="sr-only">Visitors per weekday and hour</caption>
           <thead>
             <tr>
@@ -464,10 +466,15 @@ function Heatmap({ cells, loading }: { cells: Stats['hours'] | undefined; loadin
                 <th scope="row" className="pr-1 text-left font-semibold text-muted-foreground">{day}</th>
                 {Array.from({ length: 24 }, (_, hour) => {
                   const visitors = grid.get(`${index + 1}-${hour}`) ?? 0;
+                  const top = index + 1 === busiest.weekday && hour === busiest.hour;
                   return (
-                    <td key={hour} className="h-6 rounded-[4px] bg-muted p-0" title={`${WEEKDAY_NAMES[index]} ${hourLabel(hour)}: ${n(visitors)} visitor${visitors === 1 ? '' : 's'}`}>
-                      {visitors > 0 && <span className="block size-full rounded-[4px] bg-tone-terracotta" style={{ opacity: 0.2 + 0.8 * (visitors / most) }} />}
-                      <span className="sr-only">{n(visitors)}</span>
+                    <td
+                      key={hour}
+                      className={cn('relative h-7 rounded-[4px] bg-muted p-0 text-center font-semibold text-foreground', top && 'ring-2 ring-foreground/70')}
+                      title={`${WEEKDAY_NAMES[index]} ${hourLabel(hour)}: ${visitorCount(visitors)}`}
+                    >
+                      {visitors > 0 && <span className="absolute inset-0 rounded-[4px] bg-tone-terracotta" style={{ opacity: 0.2 + 0.8 * (visitors / most) }} aria-hidden />}
+                      {visitors > 0 ? <span className="relative">{n(visitors)}</span> : <span className="sr-only">0</span>}
                     </td>
                   );
                 })}
