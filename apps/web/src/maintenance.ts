@@ -157,7 +157,7 @@ export const MAINTENANCE_PAGE = `<!doctype html>
   <p class="brand">Tilana <span>van Tonder</span></p>
   <h1>Back <em>very soon.</em></h1>
   <p>The website is having a little maintenance and will be back shortly. Thank you for your patience.</p>
-  <p>Need me in the meantime? Email <a href="mailto:tilanavantonder@gmail.com">tilanavantonder@gmail.com</a>.</p>
+  <p>Need me in the meantime? Email <a href="mailto:contact@tilanavantonder.co.za">contact@tilanavantonder.co.za</a>.</p>
 </main>
 </body>
 </html>

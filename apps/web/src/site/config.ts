@@ -18,7 +18,7 @@ export function href(path: string): string {
 export const site = {
   name: 'Tilana van Tonder',
   /** Shown on the contact page only. No phone number or home address anywhere on the website. */
-  email: 'tilanavantonder@gmail.com',
+  email: 'contact@tilanavantonder.co.za',
   /** Used only by the WhatsApp button's link; never printed on a page. */
   whatsapp: '27728803734',
   url: 'https://tilanavantonder.co.za',
